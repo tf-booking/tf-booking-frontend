@@ -10,9 +10,15 @@
                     </p>
                 </div>
 
-                <button class="btn btn-accent">
-                    Nova marcação
-                </button>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" type="button" @click="logout">
+                        Sair
+                    </button>
+
+                    <button class="btn btn-accent" type="button">
+                        Nova marcação
+                    </button>
+                </div>
             </div>
 
             <div class="stats-grid">
@@ -77,12 +83,75 @@
                     </div>
                 </article>
             </div>
+
+            <article class="card services-test-card">
+                <div class="card-title-row">
+                    <h2>Teste API — Serviços</h2>
+
+                    <button class="btn btn-secondary" type="button" @click="loadServices">
+                        Atualizar
+                    </button>
+                </div>
+
+                <p v-if="isLoadingServices" class="muted-text">
+                    A carregar serviços...
+                </p>
+
+                <p v-else-if="services.length === 0" class="muted-text">
+                    Ainda não existem serviços ou o pedido à API falhou.
+                </p>
+
+                <div v-else class="services-list">
+                    <div v-for="service in services" :key="service.uuid" class="service-item">
+                        <div>
+                            <strong>{{ service.name }}</strong>
+                            <span>{{ service.business_name }}</span>
+                        </div>
+
+                        <small>{{ service.duration_minutes }} min · {{ service.price }}€</small>
+                    </div>
+                </div>
+
+                <p v-if="apiError" class="error-message">
+                    {{ apiError }}
+                </p>
+            </article>
         </section>
     </div>
 </template>
 
 <script setup lang="ts">
-const appointments = [
+definePageMeta({
+    middleware: ['auth'],
+})
+
+type Service = {
+    id: number
+    uuid: string
+    business: number
+    business_name: string
+    name: string
+    description: string
+    duration_minutes: number
+    price: string
+    is_active: boolean
+}
+
+type AppointmentPreview = {
+    time: string
+    service: string
+    customer: string
+    source: string
+}
+
+const { logout } = useAuth()
+const { apiFetch } = useApi()
+
+const services = ref<Service[]>([])
+const isLoadingServices = ref(false)
+const apiError = ref('')
+
+const appointments: AppointmentPreview[] = [
     {
         time: '09:30',
         service: 'Corte cabelo',
@@ -102,6 +171,31 @@ const appointments = [
         source: 'WhatsApp',
     },
 ]
+
+const loadServices = async () => {
+    try {
+        isLoadingServices.value = true
+        apiError.value = ''
+
+        const response = await apiFetch<{
+            count: number
+            next: string | null
+            previous: string | null
+            results: Service[]
+        }>('/services/')
+
+        services.value = response.results
+    } catch (error) {
+        console.error('Erro ao carregar serviços:', error)
+        apiError.value = 'Não foi possível carregar os serviços. Confirma se fizeste login e se o backend está ligado.'
+    } finally {
+        isLoadingServices.value = false
+    }
+}
+
+onMounted(() => {
+    loadServices()
+})
 </script>
 
 <style scoped>
@@ -128,6 +222,12 @@ const appointments = [
     margin: 16px 0 0;
     color: var(--tf-muted);
     font-size: 18px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 .stats-grid {
@@ -173,7 +273,8 @@ const appointments = [
 }
 
 .agenda-card,
-.source-card {
+.source-card,
+.services-test-card {
     padding: 28px;
 }
 
@@ -181,6 +282,7 @@ const appointments = [
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 22px;
 }
 
@@ -259,6 +361,54 @@ const appointments = [
     font-weight: 900;
 }
 
+.services-test-card {
+    margin-top: 16px;
+}
+
+.services-list {
+    display: grid;
+    gap: 12px;
+}
+
+.service-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--tf-bg);
+}
+
+.service-item strong {
+    display: block;
+}
+
+.service-item span {
+    display: block;
+    margin-top: 4px;
+    color: var(--tf-muted);
+}
+
+.service-item small {
+    font-weight: 900;
+    color: var(--tf-muted);
+}
+
+.muted-text {
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.error-message {
+    margin: 18px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 700;
+}
+
 @media (max-width: 920px) {
 
     .dashboard-header,
@@ -270,6 +420,16 @@ const appointments = [
 
     .dashboard-header {
         align-items: start;
+        flex-direction: column;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .service-item {
+        align-items: flex-start;
         flex-direction: column;
     }
 }

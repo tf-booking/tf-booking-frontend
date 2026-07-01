@@ -26,7 +26,7 @@
                 </div>
 
                 <div class="hero-panel">
-                    <div class="floating-word word-one">TF creative</div>
+                    <div class="floating-word word-one">creative</div>
                     <div class="floating-word word-two">booking</div>
 
                     <article class="card booking-card">

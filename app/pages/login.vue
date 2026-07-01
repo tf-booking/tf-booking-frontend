@@ -9,24 +9,68 @@
                 Acede ao painel de gestão das tuas marcações.
             </p>
 
-            <form class="form">
+            <form class="form" @submit.prevent="handleLogin">
                 <div>
                     <label class="label">Username</label>
-                    <input class="input" type="text" placeholder="admin" />
+                    <input v-model="form.username" class="input" type="text" placeholder="admin"
+                        autocomplete="username" />
                 </div>
 
                 <div>
                     <label class="label">Password</label>
-                    <input class="input" type="password" placeholder="••••••••" />
+                    <input v-model="form.password" class="input" type="password" placeholder="••••••••"
+                        autocomplete="current-password" />
                 </div>
 
-                <button class="btn btn-accent" type="button">
-                    Entrar
+                <p v-if="errorMessage" class="error-message">
+                    {{ errorMessage }}
+                </p>
+
+                <button class="btn btn-accent" type="submit" :disabled="isLoading">
+                    {{ isLoading ? 'A entrar...' : 'Entrar' }}
                 </button>
             </form>
         </div>
     </div>
 </template>
+
+<script setup lang="ts">
+import { useAuth } from '~/composables/useAuth'
+
+const { login } = useAuth()
+
+const form = reactive({
+    username: '',
+    password: '',
+})
+
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+const handleLogin = async () => {
+    errorMessage.value = ''
+
+    if (!form.username || !form.password) {
+        errorMessage.value = 'Preenche o username e a password.'
+        return
+    }
+
+    try {
+        isLoading.value = true
+
+        await login({
+            username: form.username,
+            password: form.password,
+        })
+
+        await navigateTo('/dashboard')
+    } catch (error) {
+        errorMessage.value = 'Credenciais inválidas ou erro ao entrar.'
+    } finally {
+        isLoading.value = false
+    }
+}
+</script>
 
 <style scoped>
 .login-page {
@@ -56,5 +100,19 @@ h1 {
 .form {
     display: grid;
     gap: 18px;
+}
+
+.error-message {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 700;
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 </style>
