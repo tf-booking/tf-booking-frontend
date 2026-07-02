@@ -1288,6 +1288,227 @@ onMounted(() => {
     }
 }
 
+@media (min-width: 920px) {
+    .booking-viewport {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        background:
+            radial-gradient(circle at 18% 18%, rgba(215, 255, 62, 0.14), transparent 28%),
+            var(--tf-canvas);
+    }
+
+    .device {
+        width: min(1180px, 100%);
+        min-height: calc(100svh - 64px);
+        border: 1px solid #d9d2c2;
+        border-radius: 30px;
+        box-shadow: 0 34px 90px -46px rgba(11, 11, 15, 0.48);
+        overflow: hidden;
+    }
+
+    .screen {
+        min-height: calc(100svh - 64px);
+    }
+
+    .landing {
+        display: grid;
+        grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+        grid-template-rows: 1fr auto;
+        background: #fdfcf9;
+    }
+
+    .landing .hero {
+        grid-row: 1 / 3;
+        height: auto;
+        min-height: calc(100svh - 64px);
+    }
+
+    .landing .hero-brand,
+    .landing .hero-title {
+        max-width: none;
+        margin: 0;
+    }
+
+    .landing .hero-brand {
+        top: 54px;
+        left: 54px;
+    }
+
+    .landing .hero-title {
+        right: 54px;
+        bottom: 56px;
+        left: 54px;
+    }
+
+    .landing .hero-title h1 {
+        font-size: clamp(46px, 5vw, 72px);
+        max-width: 9ch;
+    }
+
+    .landing-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 70px 72px 24px;
+    }
+
+    .landing-lede {
+        max-width: 36ch;
+        font-size: 20px;
+    }
+
+    .landing-stats {
+        max-width: 420px;
+    }
+
+    .landing .screen-cta {
+        position: static;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 24px 72px 56px;
+        border-top: 0;
+        background: transparent;
+    }
+
+    .landing .block-btn {
+        max-width: 420px;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) {
+        display: grid;
+        grid-template-columns: minmax(300px, 0.82fr) minmax(440px, 1.18fr);
+        grid-template-rows: auto 1fr auto;
+        column-gap: 56px;
+        padding: 44px 58px;
+        background: #fdfcf9;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .step-head {
+        grid-column: 1 / -1;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 0 34px;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .step-intro {
+        grid-column: 1;
+        grid-row: 2 / 4;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 6px 0 0;
+        align-self: start;
+        position: sticky;
+        top: 44px;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .step-intro h2 {
+        max-width: 9ch;
+        font-size: clamp(46px, 5vw, 68px);
+        line-height: 0.9;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .screen-body {
+        grid-column: 2;
+        grid-row: 2;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .screen-cta {
+        position: static;
+        grid-column: 2;
+        grid-row: 3;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 24px 0 0;
+        border-top: 0;
+        background: transparent;
+    }
+
+    .screen:not(.landing):not(.success):not(.state-screen) .block-btn {
+        max-width: 420px;
+    }
+
+    .service-list {
+        gap: 14px;
+    }
+
+    .service-row {
+        min-height: 98px;
+        padding: 22px 24px;
+        border-radius: 24px;
+    }
+
+    .service-name {
+        font-size: 20px;
+    }
+
+    .service-price {
+        font-size: 26px;
+    }
+
+    .day-row {
+        max-width: 520px;
+        gap: 14px;
+    }
+
+    .day {
+        min-height: 86px;
+    }
+
+    .slot-grid {
+        grid-template-columns: repeat(4, minmax(96px, 1fr));
+        max-width: 640px;
+        gap: 12px;
+    }
+
+    .slot {
+        min-height: 58px;
+        padding: 0;
+        font-size: 17px;
+    }
+
+    .summary-card {
+        max-width: 620px;
+    }
+
+    .success {
+        align-items: center;
+    }
+
+    .success-body {
+        width: min(680px, 100%);
+        max-width: none;
+        margin: 0 auto;
+        padding: 72px 40px;
+    }
+
+    .success h2 {
+        font-size: 58px;
+        max-width: 9ch;
+    }
+
+    .success-card {
+        max-width: 560px;
+    }
+
+    .state-screen {
+        max-width: 680px;
+        margin: 0 auto;
+    }
+}
+
 @media (max-width: 420px) {
     .hero {
         height: 320px;
