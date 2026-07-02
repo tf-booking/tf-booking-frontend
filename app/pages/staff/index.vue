@@ -3,16 +3,13 @@
         <section class="container">
             <div class="staff-header">
                 <div>
-                    <p class="tf-eyebrow">Colaboradores</p>
-                    <h1>Equipa do negócio</h1>
-                    <p>
-                        Cria colaboradores e associa os serviços que cada um pode realizar.
-                    </p>
+                    <p class="tf-eyebrow">{{ staffMembers.length }} colaboradores · {{ selectedBusiness?.name || 'Negócio' }}</p>
+                    <h1>Equipa</h1>
                 </div>
 
-                <NuxtLink to="/dashboard" class="btn btn-secondary">
-                    Voltar ao dashboard
-                </NuxtLink>
+                <button class="btn btn-accent header-new-button" type="button" @click="openCreateStaff">
+                    + Novo colaborador
+                </button>
             </div>
 
             <div v-if="isLoadingBusinesses" class="card empty-card">
@@ -24,12 +21,17 @@
             </div>
 
             <div v-else class="staff-grid">
-                <article class="card form-card">
-                    <h2>{{ editingStaff ? 'Editar colaborador' : 'Criar colaborador' }}</h2>
+                <article ref="formCardRef" class="card form-card" :class="{ 'form-card-open': isFormOpen || editingStaff }">
+                    <div class="form-card-head">
+                        <div>
+                            <p class="business-label">Negócio: <strong>{{ selectedBusiness.name }}</strong></p>
+                            <h2>{{ editingStaff ? 'Editar colaborador' : 'Criar colaborador' }}</h2>
+                        </div>
 
-                    <p class="business-label">
-                        Negócio: <strong>{{ selectedBusiness.name }}</strong>
-                    </p>
+                        <button class="form-close" type="button" aria-label="Fechar formulário" @click="closeForm">
+                            ×
+                        </button>
+                    </div>
 
                     <form class="form" @submit.prevent="saveStaff">
                         <div>
@@ -52,7 +54,7 @@
                         <div>
                             <label class="label">Bio / descrição</label>
                             <textarea v-model="form.bio" class="input textarea"
-                                placeholder="Especialista em estética, cabelo, unhas..." />
+                                placeholder="Especialista em estética facial e cabelo." />
                         </div>
 
                         <div>
@@ -70,7 +72,7 @@
                             </div>
                         </div>
 
-                        <label class="checkbox-row">
+                        <label class="toggle-row">
                             <input v-model="form.is_active" type="checkbox" />
                             <span>Colaborador ativo</span>
                         </label>
@@ -98,9 +100,12 @@
 
                 <article class="card list-card">
                     <div class="card-title-row">
-                        <h2>Colaboradores</h2>
+                        <div>
+                            <h2>Colaboradores</h2>
+                            <p>{{ activeStaffCount }} ativos · {{ inactiveStaffCount }} inativos</p>
+                        </div>
 
-                        <button class="btn btn-secondary" type="button" @click="loadStaff">
+                        <button class="mini-button refresh-button" type="button" @click="loadStaff">
                             Atualizar
                         </button>
                     </div>
@@ -114,13 +119,19 @@
                     </p>
 
                     <div v-else class="staff-list">
-                        <div v-for="staff in staffMembers" :key="staff.uuid" class="staff-item">
-                            <div>
-                                <strong>{{ staff.name }}</strong>
+                        <div v-for="staff in staffMembers" :key="staff.uuid" class="staff-item" :class="{ inactive: !staff.is_active }">
+                            <div class="staff-avatar">
+                                {{ staffInitials(staff.name) }}
+                            </div>
+
+                            <div class="staff-main">
+                                <div class="staff-topline">
+                                    <strong>{{ staff.name }}</strong>
+                                    <span class="staff-status-dot" :class="{ inactive: !staff.is_active }"></span>
+                                </div>
 
                                 <span>
-                                    {{ staff.email || 'Sem email' }}
-                                    <template v-if="staff.phone"> · {{ staff.phone }}</template>
+                                    {{ staff.phone || staff.email || 'Sem contacto' }}
                                 </span>
 
                                 <div class="staff-services">
@@ -131,7 +142,7 @@
                             </div>
 
                             <div class="staff-actions">
-                                <small :class="{ inactive: !staff.is_active }">
+                                <small class="status-pill" :class="{ inactive: !staff.is_active }">
                                     {{ staff.is_active ? 'Ativo' : 'Inativo' }}
                                 </small>
 
@@ -147,6 +158,10 @@
                     </div>
                 </article>
             </div>
+
+            <button v-if="selectedBusiness" class="floating-add" type="button" aria-label="Novo colaborador" @click="openCreateStaff">
+                +
+            </button>
         </section>
     </div>
 </template>
@@ -197,6 +212,7 @@ const { apiFetch } = useApi()
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
+const formCardRef = ref<HTMLElement | null>(null)
 
 const services = ref<Service[]>([])
 const staffMembers = ref<StaffMember[]>([])
@@ -205,6 +221,7 @@ const isLoadingBusinesses = ref(false)
 const isLoadingServices = ref(false)
 const isLoadingStaff = ref(false)
 const isSaving = ref(false)
+const isFormOpen = ref(false)
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -220,6 +237,31 @@ const form = reactive({
     is_active: true,
 })
 
+const activeStaffCount = computed(() => staffMembers.value.filter((staff) => staff.is_active).length)
+const inactiveStaffCount = computed(() => staffMembers.value.length - activeStaffCount.value)
+
+const staffInitials = (name: string) => {
+    const words = name.trim().split(/\s+/).filter(Boolean)
+
+    if (!words.length) {
+        return 'TF'
+    }
+
+    return words
+        .slice(0, 2)
+        .map((word) => word.charAt(0))
+        .join('')
+        .toUpperCase()
+}
+
+const focusForm = async () => {
+    await nextTick()
+
+    if (import.meta.client && formCardRef.value) {
+        formCardRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
+
 const resetMessages = () => {
     errorMessage.value = ''
     successMessage.value = ''
@@ -234,6 +276,19 @@ const resetForm = () => {
     form.bio = ''
     form.services = []
     form.is_active = true
+}
+
+const openCreateStaff = async () => {
+    resetMessages()
+    resetForm()
+    isFormOpen.value = true
+    await focusForm()
+}
+
+const closeForm = () => {
+    resetMessages()
+    resetForm()
+    isFormOpen.value = false
 }
 
 const loadBusinesses = async () => {
@@ -358,6 +413,7 @@ const saveStaff = async () => {
         }
 
         resetForm()
+        isFormOpen.value = false
         await loadStaff()
     } catch (error: any) {
         console.error(error)
@@ -376,6 +432,7 @@ const editStaff = (staff: StaffMember) => {
     resetMessages()
 
     editingStaff.value = staff
+    isFormOpen.value = true
 
     form.name = staff.name
     form.email = staff.email || ''
@@ -383,11 +440,14 @@ const editStaff = (staff: StaffMember) => {
     form.bio = staff.bio || ''
     form.services = [...staff.services]
     form.is_active = staff.is_active
+
+    focusForm()
 }
 
 const cancelEdit = () => {
     resetMessages()
     resetForm()
+    isFormOpen.value = false
 }
 
 const deleteStaff = async (staff: StaffMember) => {
@@ -426,52 +486,82 @@ onMounted(async () => {
 
 <style scoped>
 .staff-page {
-    padding: 56px 0 88px;
+    padding: 42px 0 96px;
 }
 
 .staff-header {
     display: flex;
-    align-items: end;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 24px;
-    margin-bottom: 28px;
+    margin-bottom: 22px;
 }
 
 .staff-header h1 {
     margin: 0;
-    font-size: clamp(42px, 6vw, 74px);
+    font-size: clamp(36px, 7vw, 56px);
     line-height: 0.92;
-    letter-spacing: -0.07em;
+    letter-spacing: -0.055em;
 }
 
-.staff-header p:last-child {
-    margin: 16px 0 0;
-    color: var(--tf-muted);
-    font-size: 18px;
+.staff-header .tf-eyebrow {
+    margin-bottom: 8px;
 }
 
 .staff-grid {
     display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 18px;
+    grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+    gap: 16px;
     align-items: start;
 }
 
 .form-card,
 .list-card,
 .empty-card {
-    padding: 28px;
+    padding: 20px;
+    border-radius: 18px;
 }
 
-.form-card h2,
+.form-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.form-card h2 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.045em;
+}
+
+.form-close {
+    display: none;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: var(--tf-white);
+    color: var(--tf-black);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
+
 .list-card h2 {
     margin: 0;
-    font-size: 30px;
-    letter-spacing: -0.05em;
+    font-size: 22px;
+    letter-spacing: -0.04em;
 }
 
 .business-label {
-    margin: 10px 0 0;
+    margin: 0 0 8px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--tf-muted);
 }
 
@@ -482,7 +572,7 @@ onMounted(async () => {
 }
 
 .textarea {
-    min-height: 110px;
+    min-height: 104px;
     padding-top: 14px;
     resize: vertical;
 }
@@ -494,21 +584,69 @@ onMounted(async () => {
 }
 
 .services-check-list {
-    display: grid;
-    gap: 10px;
-    padding: 14px;
-    border: 1px solid var(--tf-border);
-    border-radius: 18px;
-    background: var(--tf-bg);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.service-check,
-.checkbox-row {
+.service-check {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 7px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #f0ece2;
+    font-size: 12px;
     font-weight: 800;
-    color: var(--tf-muted);
+    color: var(--tf-black);
+}
+
+.service-check input {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--tf-black);
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    font-weight: 800;
+    color: var(--tf-black);
+}
+
+.toggle-row input {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: #d8d1c3;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.toggle-row input::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--tf-white);
+    transition: transform 0.16s ease;
+}
+
+.toggle-row input:checked {
+    background: var(--tf-black);
+}
+
+.toggle-row input:checked::after {
+    transform: translateX(18px);
 }
 
 .services-empty {
@@ -530,7 +668,14 @@ onMounted(async () => {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
+}
+
+.card-title-row p {
+    margin: 5px 0 0;
+    color: var(--tf-muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .staff-list {
@@ -539,23 +684,79 @@ onMounted(async () => {
 }
 
 .staff-item {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px;
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 88px;
+    padding: 14px;
+    border: 1px solid #eee8da;
     border-radius: 18px;
-    background: var(--tf-bg);
+    background: #fdfcf9;
+}
+
+.staff-item.inactive {
+    opacity: 0.68;
+}
+
+.staff-avatar {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.staff-item.inactive .staff-avatar {
+    background: #d8d1c3;
+    color: var(--tf-white);
+}
+
+.staff-main {
+    min-width: 0;
+}
+
+.staff-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .staff-item strong {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
 }
 
 .staff-item span {
     display: block;
-    margin-top: 4px;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.staff-status-dot {
+    display: block;
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #2fac66;
+}
+
+.staff-status-dot.inactive {
+    background: #d77568;
 }
 
 .staff-services {
@@ -566,11 +767,12 @@ onMounted(async () => {
 }
 
 .staff-services small {
-    padding: 6px 9px;
+    padding: 5px 9px;
     border-radius: 999px;
-    background: var(--tf-white);
-    border: 1px solid var(--tf-border);
+    background: #f0ece2;
+    border: 0;
     color: var(--tf-black);
+    font-size: 10px;
     font-weight: 800;
 }
 
@@ -580,28 +782,38 @@ onMounted(async () => {
     gap: 8px;
 }
 
-.staff-actions>small {
-    padding: 7px 10px;
+.status-pill {
+    padding: 5px 8px;
     border-radius: 999px;
     background: var(--tf-black);
-    color: var(--tf-white);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 9px;
     font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-.staff-actions>small.inactive {
+.status-pill.inactive {
     background: #fee2e2;
-    color: #991b1b;
+    color: #b42318;
 }
 
 .mini-button {
-    min-height: 34px;
-    padding: 0 12px;
+    min-height: 30px;
+    padding: 0 10px;
     border: 1px solid var(--tf-border);
     border-radius: 999px;
     background: var(--tf-white);
     color: var(--tf-black);
+    font-family: var(--tf-sans);
+    font-size: 12px;
     font-weight: 900;
     cursor: pointer;
+}
+
+.refresh-button {
+    flex-shrink: 0;
 }
 
 .mini-button.danger {
@@ -636,10 +848,24 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.floating-add {
+    display: none;
+}
+
 @media (max-width: 960px) {
+    .staff-page {
+        padding: 24px 0 96px;
+    }
+
+    .staff-page :deep(.container),
+    .container {
+        width: min(100% - 28px, 1180px);
+    }
+
     .staff-header {
         align-items: start;
         flex-direction: column;
+        gap: 14px;
     }
 
     .staff-grid,
@@ -647,12 +873,70 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
-    .staff-item {
-        flex-direction: column;
+    .form-card {
+        display: none;
+        order: 2;
+    }
+
+    .form-card.form-card-open {
+        display: block;
+    }
+
+    .form-close {
+        display: grid;
+        place-items: center;
+    }
+
+    .list-card {
+        order: 1;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .header-new-button {
+        display: none;
+    }
+
+    .floating-add {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--tf-accent);
+        color: var(--tf-black);
+        box-shadow: 0 18px 34px -16px rgba(11, 11, 15, 0.45);
+        font-size: 30px;
+        font-weight: 600;
+        cursor: pointer;
     }
 
     .staff-actions {
         flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 620px) {
+    .staff-header h1 {
+        font-size: 34px;
+    }
+
+    .staff-item {
+        grid-template-columns: 46px minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .staff-actions {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+        width: 100%;
     }
 }
 </style>

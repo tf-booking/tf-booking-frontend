@@ -3,16 +3,13 @@
         <section class="container">
             <div class="services-header">
                 <div>
-                    <p class="tf-eyebrow">Serviços</p>
-                    <h1>Gestão de serviços</h1>
-                    <p>
-                        Cria os serviços do negócio, define duração, preço e disponibilidade.
-                    </p>
+                    <p class="tf-eyebrow">{{ services.length }} serviços · {{ selectedBusiness?.name || 'Negócio' }}</p>
+                    <h1>Serviços</h1>
                 </div>
 
-                <NuxtLink to="/dashboard" class="btn btn-secondary">
-                    Voltar ao dashboard
-                </NuxtLink>
+                <button class="btn btn-accent header-new-button" type="button" @click="openCreateService">
+                    + Novo serviço
+                </button>
             </div>
 
             <div v-if="isLoadingBusinesses" class="card empty-card">
@@ -24,40 +21,45 @@
             </div>
 
             <div v-else class="services-grid">
-                <article class="card form-card">
-                    <h2>{{ editingService ? 'Editar serviço' : 'Criar serviço' }}</h2>
+                <article ref="formCardRef" class="card form-card" :class="{ 'form-card-open': isFormOpen || editingService }">
+                    <div class="form-card-head">
+                        <div>
+                            <p class="business-label">Negócio: <strong>{{ selectedBusiness.name }}</strong></p>
+                            <h2>{{ editingService ? 'Editar serviço' : 'Criar serviço' }}</h2>
+                        </div>
 
-                    <p class="business-label">
-                        Negócio: <strong>{{ selectedBusiness.name }}</strong>
-                    </p>
+                        <button class="form-close" type="button" aria-label="Fechar formulário" @click="closeForm">
+                            ×
+                        </button>
+                    </div>
 
                     <form class="form" @submit.prevent="saveService">
                         <div>
                             <label class="label">Nome do serviço</label>
-                            <input v-model="form.name" class="input" type="text" placeholder="Corte cabelo" />
+                            <input v-model="form.name" class="input" type="text" placeholder="Limpeza de pele" />
                         </div>
 
                         <div>
                             <label class="label">Descrição</label>
                             <textarea v-model="form.description" class="input textarea"
-                                placeholder="Descrição breve do serviço" />
+                                placeholder="Tratamento facial profundo com esfoliação e hidratação." />
                         </div>
 
                         <div class="two-columns">
                             <div>
-                                <label class="label">Duração em minutos</label>
+                                <label class="label">Duração (min)</label>
                                 <input v-model.number="form.duration_minutes" class="input" type="number" min="1"
-                                    placeholder="30" />
+                                    placeholder="60" />
                             </div>
 
                             <div>
-                                <label class="label">Preço</label>
+                                <label class="label">Preço (€)</label>
                                 <input v-model="form.price" class="input" type="number" step="0.01" min="0"
-                                    placeholder="15.00" />
+                                    placeholder="35.00" />
                             </div>
                         </div>
 
-                        <label class="checkbox-row">
+                        <label class="toggle-row">
                             <input v-model="form.is_active" type="checkbox" />
                             <span>Serviço ativo</span>
                         </label>
@@ -85,9 +87,12 @@
 
                 <article class="card list-card">
                     <div class="card-title-row">
-                        <h2>Serviços criados</h2>
+                        <div>
+                            <h2>Serviços criados</h2>
+                            <p>{{ activeServicesCount }} ativos · {{ inactiveServicesCount }} inativos</p>
+                        </div>
 
-                        <button class="btn btn-secondary" type="button" @click="loadServices">
+                        <button class="mini-button refresh-button" type="button" @click="loadServices">
                             Atualizar
                         </button>
                     </div>
@@ -101,16 +106,22 @@
                     </p>
 
                     <div v-else class="service-list">
-                        <div v-for="service in services" :key="service.uuid" class="service-item">
-                            <div>
-                                <strong>{{ service.name }}</strong>
-                                <span>
-                                    {{ service.duration_minutes }} min · {{ service.price }}€
+                        <div v-for="service in services" :key="service.uuid" class="service-item" :class="{ inactive: !service.is_active }">
+                            <span class="service-accent"></span>
+
+                            <div class="service-main">
+                                <div class="service-topline">
+                                    <strong>{{ service.name }}</strong>
+                                    <span class="service-price">{{ formatCurrency(service.price) }}</span>
+                                </div>
+
+                                <span class="service-meta">
+                                    {{ service.duration_minutes }} min · {{ service.description || 'Sem descrição' }}
                                 </span>
                             </div>
 
                             <div class="service-actions">
-                                <small :class="{ inactive: !service.is_active }">
+                                <small class="status-pill" :class="{ inactive: !service.is_active }">
                                     {{ service.is_active ? 'Ativo' : 'Inativo' }}
                                 </small>
 
@@ -126,6 +137,10 @@
                     </div>
                 </article>
             </div>
+
+            <button v-if="selectedBusiness" class="floating-add" type="button" aria-label="Novo serviço" @click="openCreateService">
+                +
+            </button>
         </section>
     </div>
 </template>
@@ -161,10 +176,12 @@ const { apiFetch } = useApi()
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
 const services = ref<Service[]>([])
+const formCardRef = ref<HTMLElement | null>(null)
 
 const isLoadingBusinesses = ref(false)
 const isLoadingServices = ref(false)
 const isSaving = ref(false)
+const isFormOpen = ref(false)
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -179,6 +196,33 @@ const form = reactive({
     is_active: true,
 })
 
+const activeServicesCount = computed(() => services.value.filter((service) => service.is_active).length)
+const inactiveServicesCount = computed(() => services.value.length - activeServicesCount.value)
+
+const formatCurrency = (value: string | number) => {
+    const amount = Number(value)
+
+    if (!Number.isFinite(amount)) {
+        return `${value}€`
+    }
+
+    return new Intl.NumberFormat('pt-PT', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    })
+        .format(amount)
+        .replace(/\s/g, '')
+}
+
+const focusForm = async () => {
+    await nextTick()
+
+    if (import.meta.client && formCardRef.value) {
+        formCardRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
+
 const resetMessages = () => {
     errorMessage.value = ''
     successMessage.value = ''
@@ -192,6 +236,19 @@ const resetForm = () => {
     form.duration_minutes = 30
     form.price = '0.00'
     form.is_active = true
+}
+
+const openCreateService = async () => {
+    resetMessages()
+    resetForm()
+    isFormOpen.value = true
+    await focusForm()
+}
+
+const closeForm = () => {
+    resetMessages()
+    resetForm()
+    isFormOpen.value = false
 }
 
 const loadBusinesses = async () => {
@@ -288,6 +345,7 @@ const saveService = async () => {
         }
 
         resetForm()
+        isFormOpen.value = false
         await loadServices()
     } catch (error: any) {
         console.error(error)
@@ -306,17 +364,21 @@ const editService = (service: Service) => {
     resetMessages()
 
     editingService.value = service
+    isFormOpen.value = true
 
     form.name = service.name
     form.description = service.description
     form.duration_minutes = service.duration_minutes
     form.price = service.price
     form.is_active = service.is_active
+
+    focusForm()
 }
 
 const cancelEdit = () => {
     resetMessages()
     resetForm()
+    isFormOpen.value = false
 }
 
 const deleteService = async (service: Service) => {
@@ -354,52 +416,83 @@ onMounted(async () => {
 
 <style scoped>
 .services-page {
-    padding: 56px 0 88px;
+    padding: 42px 0 96px;
 }
 
 .services-header {
     display: flex;
-    align-items: end;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 24px;
-    margin-bottom: 28px;
+    margin-bottom: 22px;
 }
 
 .services-header h1 {
     margin: 0;
-    font-size: clamp(42px, 6vw, 74px);
+    font-size: clamp(36px, 7vw, 56px);
     line-height: 0.92;
-    letter-spacing: -0.07em;
+    letter-spacing: -0.055em;
 }
 
-.services-header p:last-child {
-    margin: 16px 0 0;
-    color: var(--tf-muted);
-    font-size: 18px;
+.services-header :deep(.tf-eyebrow),
+.services-header .tf-eyebrow {
+    margin-bottom: 8px;
 }
 
 .services-grid {
     display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 18px;
+    grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+    gap: 16px;
     align-items: start;
 }
 
 .form-card,
 .list-card,
 .empty-card {
-    padding: 28px;
+    padding: 20px;
+    border-radius: 18px;
 }
 
-.form-card h2,
+.form-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.form-card h2 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.045em;
+}
+
+.form-close {
+    display: none;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: var(--tf-white);
+    color: var(--tf-black);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
+
 .list-card h2 {
     margin: 0;
-    font-size: 30px;
-    letter-spacing: -0.05em;
+    font-size: 22px;
+    letter-spacing: -0.04em;
 }
 
 .business-label {
-    margin: 10px 0 0;
+    margin: 0 0 8px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--tf-muted);
 }
 
@@ -410,7 +503,7 @@ onMounted(async () => {
 }
 
 .textarea {
-    min-height: 110px;
+    min-height: 104px;
     padding-top: 14px;
     resize: vertical;
 }
@@ -421,12 +514,45 @@ onMounted(async () => {
     gap: 14px;
 }
 
-.checkbox-row {
+.toggle-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 14px;
     font-weight: 800;
-    color: var(--tf-muted);
+    color: var(--tf-black);
+}
+
+.toggle-row input {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: #d8d1c3;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.toggle-row input::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--tf-white);
+    transition: transform 0.16s ease;
+}
+
+.toggle-row input:checked {
+    background: var(--tf-black);
+}
+
+.toggle-row input:checked::after {
+    transform: translateX(18px);
 }
 
 .form-actions {
@@ -440,32 +566,86 @@ onMounted(async () => {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
+}
+
+.card-title-row p {
+    margin: 5px 0 0;
+    color: var(--tf-muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .service-list {
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .service-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 4px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 72px;
+    padding: 12px 14px 12px 0;
+    border: 1px solid #eee8da;
+    border-radius: 16px;
+    background: #fdfcf9;
+    overflow: hidden;
+}
+
+.service-item.inactive {
+    opacity: 0.68;
+}
+
+.service-accent {
+    width: 4px;
+    align-self: stretch;
+    border-radius: 0 999px 999px 0;
+    background: var(--tf-accent);
+}
+
+.service-item.inactive .service-accent {
+    background: #d8d1c3;
+}
+
+.service-main {
+    min-width: 0;
+}
+
+.service-topline {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 16px;
-    border-radius: 18px;
-    background: var(--tf-bg);
+    gap: 12px;
 }
 
 .service-item strong {
     display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
 }
 
-.service-item span {
+.service-price {
+    flex-shrink: 0;
+    font-weight: 900;
+    color: var(--tf-black);
+}
+
+.service-meta {
     display: block;
-    margin-top: 4px;
+    max-width: 48ch;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .service-actions {
@@ -474,28 +654,38 @@ onMounted(async () => {
     gap: 8px;
 }
 
-.service-actions small {
-    padding: 7px 10px;
+.status-pill {
+    padding: 5px 8px;
     border-radius: 999px;
     background: var(--tf-black);
-    color: var(--tf-white);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 9px;
     font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-.service-actions small.inactive {
+.status-pill.inactive {
     background: #fee2e2;
-    color: #991b1b;
+    color: #b42318;
 }
 
 .mini-button {
-    min-height: 34px;
-    padding: 0 12px;
+    min-height: 30px;
+    padding: 0 10px;
     border: 1px solid var(--tf-border);
     border-radius: 999px;
     background: var(--tf-white);
     color: var(--tf-black);
+    font-family: var(--tf-sans);
+    font-size: 12px;
     font-weight: 900;
     cursor: pointer;
+}
+
+.refresh-button {
+    flex-shrink: 0;
 }
 
 .mini-button.danger {
@@ -530,10 +720,24 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.floating-add {
+    display: none;
+}
+
 @media (max-width: 960px) {
+    .services-page {
+        padding: 24px 0 96px;
+    }
+
+    .services-page :deep(.container),
+    .container {
+        width: min(100% - 28px, 1180px);
+    }
+
     .services-header {
         align-items: start;
         flex-direction: column;
+        gap: 14px;
     }
 
     .services-grid,
@@ -541,13 +745,75 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
-    .service-item {
-        align-items: flex-start;
-        flex-direction: column;
+    .form-card {
+        display: none;
+        order: 2;
+    }
+
+    .form-card.form-card-open {
+        display: block;
+    }
+
+    .form-close {
+        display: grid;
+        place-items: center;
+    }
+
+    .list-card {
+        order: 1;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .header-new-button {
+        display: none;
+    }
+
+    .floating-add {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--tf-accent);
+        color: var(--tf-black);
+        box-shadow: 0 18px 34px -16px rgba(11, 11, 15, 0.45);
+        font-size: 30px;
+        font-weight: 600;
+        cursor: pointer;
     }
 
     .service-actions {
         flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 620px) {
+    .services-header h1 {
+        font-size: 34px;
+    }
+
+    .service-item {
+        grid-template-columns: 4px minmax(0, 1fr);
+        align-items: start;
+        padding-right: 12px;
+    }
+
+    .service-actions {
+        grid-column: 2;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .service-meta {
+        white-space: normal;
     }
 }
 </style>

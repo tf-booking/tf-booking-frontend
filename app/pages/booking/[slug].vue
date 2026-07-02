@@ -500,11 +500,18 @@ const afternoonSlots = computed(() =>
 
 const firstName = computed(() => (customer.name.trim().split(' ')[0]) || 'Maria')
 
+const selectedSlotStillAvailable = computed(() =>
+    Boolean(
+        selectedSlotStartAt.value &&
+        availableSlots.value.some((slot) => slot.start_at === selectedSlotStartAt.value)
+    )
+)
+
 const canConfirm = computed(() =>
     Boolean(
         selectedService.value &&
         selectedStaff.value &&
-        selectedSlotStartAt.value &&
+        selectedSlotStillAvailable.value &&
         customer.name.trim() &&
         customer.phone.trim()
     )
@@ -563,6 +570,8 @@ const loadAvailableSlots = async () => {
         )
 
         availableSlots.value = response.slots
+            .filter((slot) => new Date(slot.start_at).getTime() > Date.now())
+            .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
     } catch (error: any) {
         console.error(error)
         availableSlots.value = []
@@ -574,6 +583,12 @@ const loadAvailableSlots = async () => {
 
 const confirm = async () => {
     if (!business.value || !selectedService.value || !selectedStaff.value || !selectedSlotStartAt.value) {
+        return
+    }
+
+    if (!selectedSlotStillAvailable.value) {
+        bookingError.value = 'Este horário já não está disponível. Escolhe outro horário.'
+        await loadAvailableSlots()
         return
     }
 
