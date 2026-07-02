@@ -360,6 +360,16 @@ const isLoadingBusiness = ref(true)
 const businessError = ref('')
 
 const step = ref(0)
+
+useHead(() => ({
+    htmlAttrs: {
+        class: step.value >= 4 ? 'booking-success-lock' : undefined,
+    },
+    bodyAttrs: {
+        class: step.value >= 4 ? 'booking-success-lock' : undefined,
+    },
+}))
+
 const selectedServiceUuid = ref('')
 const selectedStaffUuid = ref('')
 const selectedDay = ref('')
@@ -651,6 +661,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+:global(html.booking-success-lock),
+:global(body.booking-success-lock) {
+    height: 100%;
+    overflow: hidden;
+}
+
+:global(body.booking-success-lock #__nuxt) {
+    height: 100svh;
+    overflow: hidden;
+}
+
 .booking-viewport {
     min-height: 100svh;
     background: #fdfcf9;
@@ -1149,6 +1170,9 @@ onMounted(() => {
 /* ---- success ---- */
 .success {
     position: relative;
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
     background: var(--tf-black);
     color: #fff;
 }
@@ -1168,27 +1192,30 @@ onMounted(() => {
 .success-body {
     position: relative;
     flex: 1;
+    min-height: 0;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 40px 30px;
+    overflow: hidden;
+    padding: clamp(22px, 4svh, 40px) 24px;
 }
 
 .success-check {
     display: grid;
     place-items: center;
-    width: 82px;
-    height: 82px;
-    margin-bottom: 32px;
+    width: clamp(58px, 10svh, 82px);
+    height: clamp(58px, 10svh, 82px);
+    margin-bottom: clamp(14px, 3svh, 28px);
     border-radius: 50%;
     background: var(--tf-accent);
     color: var(--tf-black);
-    font-size: 40px;
+    font-size: clamp(28px, 5svh, 40px);
     font-weight: 900;
 }
 
 .success-eyebrow {
-    margin: 0 0 14px;
+    margin: 0 0 clamp(8px, 1.5svh, 14px);
     font-family: var(--tf-mono);
     font-size: 11px;
     font-weight: 600;
@@ -1199,7 +1226,7 @@ onMounted(() => {
 
 .success h2 {
     margin: 0;
-    font-size: 40px;
+    font-size: clamp(30px, 6svh, 40px);
     font-weight: 900;
     letter-spacing: 0;
     line-height: 0.95;
@@ -1207,15 +1234,15 @@ onMounted(() => {
 }
 
 .success-lede {
-    margin: 18px 0 30px;
+    margin: clamp(12px, 2svh, 18px) 0 clamp(16px, 3svh, 24px);
     color: #b7b3aa;
     font-size: 15px;
     line-height: 1.55;
 }
 
 .success-card {
-    padding: 20px;
-    margin-bottom: 26px;
+    padding: clamp(14px, 2.5svh, 20px);
+    margin-bottom: clamp(14px, 3svh, 22px);
     border-radius: 22px;
     background: #17171d;
 }
@@ -1224,7 +1251,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: clamp(10px, 2svh, 14px);
 }
 
 .qr {
@@ -1237,8 +1264,16 @@ onMounted(() => {
 .success-rows {
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: clamp(6px, 1.2svh, 9px);
     font-size: 14px;
+}
+
+.success .block-btn {
+    height: clamp(48px, 7svh, 56px);
+}
+
+.success .mb {
+    margin-bottom: 10px;
 }
 
 .success-rows div {
@@ -1254,6 +1289,75 @@ onMounted(() => {
 .success-rows .accent {
     color: var(--tf-accent);
     font-weight: 800;
+}
+
+@media (max-height: 720px) {
+    .success-body {
+        padding-top: 18px;
+        padding-bottom: 18px;
+    }
+
+    .success-check {
+        width: 52px;
+        height: 52px;
+        margin-bottom: 12px;
+        font-size: 26px;
+    }
+
+    .success-eyebrow {
+        margin-bottom: 7px;
+        font-size: 10px;
+    }
+
+    .success h2 {
+        font-size: 30px;
+    }
+
+    .success-lede {
+        margin: 10px 0 14px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .success-card {
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        border-radius: 18px;
+    }
+
+    .success-card-top {
+        margin-bottom: 8px;
+    }
+
+    .success-rows {
+        gap: 5px;
+        font-size: 13px;
+    }
+
+    .success .block-btn {
+        height: 46px;
+        font-size: 15px;
+    }
+}
+
+@media (max-height: 620px) {
+    .success-watermark {
+        display: none;
+    }
+
+    .success-check {
+        width: 46px;
+        height: 46px;
+        margin-bottom: 10px;
+    }
+
+    .success-lede {
+        display: none;
+    }
+
+    .success-card {
+        padding: 10px 12px;
+    }
 }
 
 .ghost {
@@ -1485,17 +1589,19 @@ onMounted(() => {
 
     .success {
         align-items: center;
+        height: calc(100svh - 64px);
+        min-height: calc(100svh - 64px);
     }
 
     .success-body {
         width: min(680px, 100%);
         max-width: none;
         margin: 0 auto;
-        padding: 72px 40px;
+        padding: clamp(42px, 7svh, 72px) 40px;
     }
 
     .success h2 {
-        font-size: 58px;
+        font-size: clamp(44px, 7svh, 58px);
         max-width: 9ch;
     }
 
