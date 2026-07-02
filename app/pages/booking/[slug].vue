@@ -1,50 +1,72 @@
 <template>
     <div class="booking-viewport">
         <div class="device">
+            <section v-if="isLoadingBusiness" class="screen state-screen">
+                <div class="state-mark">TF</div>
+                <p class="step-count">A carregar</p>
+                <h2>A preparar a página de marcações...</h2>
+            </section>
+
+            <section v-else-if="businessError || !business" class="screen state-screen">
+                <div class="state-mark state-mark-error">!</div>
+                <p class="step-count">Link indisponível</p>
+                <h2>Não encontrámos este negócio.</h2>
+                <p class="state-copy">{{ businessError || 'Confirma se o link está correto.' }}</p>
+            </section>
+
             <!-- ============ STEP 0 · LANDING ============ -->
-            <section v-if="step === 0" class="screen landing">
+            <section v-else-if="step === 0" class="screen landing">
                 <div class="hero">
                     <div class="hero-overlay"></div>
                     <div class="hero-brand">TF Booking</div>
                     <div class="hero-title">
-                        <h1>{{ businessName }}</h1>
+                        <h1>{{ business.name }}</h1>
                         <div class="hero-meta">
                             <span class="rating">★ 4.9</span>
                             <span>·</span>
-                            <span>Estética &amp; Cabelo</span>
-                            <span>·</span>
-                            <span>Porto</span>
+                            <span>{{ primaryCategory }}</span>
+                            <span v-if="business.city">·</span>
+                            <span v-if="business.city">{{ business.city }}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="landing-body">
                     <div class="chips">
-                        <span class="chip chip-dark">Cabelo</span>
-                        <span class="chip">Pele</span>
-                        <span class="chip">Unhas</span>
+                        <span
+                            v-for="chip in categoryChips"
+                            :key="chip"
+                            class="chip"
+                            :class="{ 'chip-dark': chip === categoryChips[0] }"
+                        >
+                            {{ chip }}
+                        </span>
                     </div>
 
                     <p class="landing-lede">
-                        Cuidamos de ti do início ao fim. Marca em segundos e recebe
-                        confirmação por WhatsApp.
+                        Escolhe o serviço, vê os horários disponíveis e confirma a marcação em segundos.
                     </p>
 
                     <div class="landing-stats">
                         <div class="stat">
-                            <strong>2.4k</strong>
+                            <strong>{{ customerCountLabel }}</strong>
                             <span>Clientes</span>
                         </div>
                         <div class="stat">
-                            <strong>12</strong>
+                            <strong>{{ business.service_count }}</strong>
                             <span>Serviços</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="screen-cta screen-cta--fade">
-                    <button class="btn btn-accent block-btn" type="button" @click="goTo(1)">
-                        Marcar agora →
+                    <button
+                        class="btn btn-accent block-btn"
+                        type="button"
+                        :disabled="bookableServices.length === 0"
+                        @click="goTo(1)"
+                    >
+                        {{ bookableServices.length === 0 ? 'Sem serviços disponíveis' : 'Marcar agora →' }}
                     </button>
                     <p class="powered">Powered by TF Creative</p>
                 </div>
@@ -64,15 +86,27 @@
                 </div>
 
                 <div class="screen-body service-list">
-                    <button v-for="service in services" :key="service.id" type="button" class="service-row"
-                        :class="{ selected: selectedServiceId === service.id }" @click="selectedServiceId = service.id">
+                    <button
+                        v-for="service in business.services"
+                        :key="service.uuid"
+                        type="button"
+                        class="service-row"
+                        :class="{
+                            selected: selectedServiceUuid === service.uuid,
+                            unavailable: service.staff_members.length === 0,
+                        }"
+                        :disabled="service.staff_members.length === 0"
+                        @click="selectService(service)"
+                    >
                         <div>
                             <div class="service-name">{{ service.name }}</div>
-                            <div class="service-meta">{{ service.duration }} min · com {{ service.staff }}</div>
+                            <div class="service-meta">
+                                {{ service.duration_minutes }} min · {{ serviceStaffLabel(service) }}
+                            </div>
                         </div>
                         <div class="service-price-col">
-                            <div class="service-price">{{ service.price }}€</div>
-                            <span v-if="selectedServiceId === service.id" class="check">✓</span>
+                            <div class="service-price">{{ formatPrice(service.price) }}</div>
+                            <span v-if="selectedServiceUuid === service.uuid" class="check">✓</span>
                         </div>
                     </button>
                 </div>
@@ -99,35 +133,68 @@
 
                 <div class="screen-body">
                     <div class="day-row">
-                        <button v-for="day in days" :key="day.iso" type="button" class="day"
-                            :class="{ selected: selectedDay === day.iso }" @click="selectedDay = day.iso">
+                        <button
+                            v-for="day in days"
+                            :key="day.iso"
+                            type="button"
+                            class="day"
+                            :class="{ selected: selectedDay === day.iso }"
+                            @click="selectedDay = day.iso"
+                        >
                             <span class="day-name">{{ day.weekday }}</span>
                             <span class="day-num">{{ day.num }}</span>
                         </button>
                     </div>
 
-                    <p class="slot-group-label">Manhã</p>
-                    <div class="slot-grid">
-                        <button v-for="slot in morningSlots" :key="slot.time" type="button" class="slot"
-                            :class="{ selected: selectedSlot === slot.time, unavailable: !slot.available }"
-                            :disabled="!slot.available" @click="selectedSlot = slot.time">
-                            {{ slot.time }}
-                        </button>
-                    </div>
+                    <p v-if="isLoadingSlots" class="slot-state">A procurar horários disponíveis...</p>
+                    <p v-else-if="slotsError" class="slot-state slot-state-error">{{ slotsError }}</p>
+                    <p v-else-if="availableSlots.length === 0" class="slot-state">
+                        Sem horários disponíveis para este dia.
+                    </p>
 
-                    <p class="slot-group-label">Tarde</p>
-                    <div class="slot-grid">
-                        <button v-for="slot in afternoonSlots" :key="slot.time" type="button" class="slot"
-                            :class="{ selected: selectedSlot === slot.time, unavailable: !slot.available }"
-                            :disabled="!slot.available" @click="selectedSlot = slot.time">
-                            {{ slot.time }}
-                        </button>
-                    </div>
+                    <template v-else>
+                        <template v-if="morningSlots.length">
+                            <p class="slot-group-label">Manhã</p>
+                            <div class="slot-grid">
+                                <button
+                                    v-for="slot in morningSlots"
+                                    :key="slot.start_at"
+                                    type="button"
+                                    class="slot"
+                                    :class="{ selected: selectedSlotStartAt === slot.start_at }"
+                                    @click="selectSlot(slot)"
+                                >
+                                    {{ slot.time }}
+                                </button>
+                            </div>
+                        </template>
+
+                        <template v-if="afternoonSlots.length">
+                            <p class="slot-group-label">Tarde</p>
+                            <div class="slot-grid">
+                                <button
+                                    v-for="slot in afternoonSlots"
+                                    :key="slot.start_at"
+                                    type="button"
+                                    class="slot"
+                                    :class="{ selected: selectedSlotStartAt === slot.start_at }"
+                                    @click="selectSlot(slot)"
+                                >
+                                    {{ slot.time }}
+                                </button>
+                            </div>
+                        </template>
+                    </template>
                 </div>
 
                 <div class="screen-cta">
-                    <button class="btn btn-accent block-btn" type="button" :disabled="!selectedSlot" @click="goTo(3)">
-                        Continuar → {{ selectedSlot }}
+                    <button
+                        class="btn btn-accent block-btn"
+                        type="button"
+                        :disabled="!selectedSlotStartAt"
+                        @click="goTo(3)"
+                    >
+                        Continuar<span v-if="selectedSlot"> → {{ selectedSlot }}</span>
                     </button>
                 </div>
             </section>
@@ -150,24 +217,34 @@
                     <input v-model="customer.name" class="input mb" type="text" placeholder="Maria Silva" />
 
                     <label class="label">Telemóvel</label>
-                    <input v-model="customer.phone" class="input" type="tel" placeholder="+351 912 345 678" />
+                    <input v-model="customer.phone" class="input mb" type="tel" placeholder="+351 912 345 678" />
+
+                    <label class="label">Email</label>
+                    <input v-model="customer.email" class="input" type="email" placeholder="maria@email.pt" />
 
                     <div class="summary-card">
                         <p class="summary-eyebrow">Resumo</p>
                         <div class="summary-top">
                             <span class="summary-service">{{ selectedService?.name }}</span>
-                            <span class="summary-price">{{ selectedService?.price }}€</span>
+                            <span class="summary-price">{{ selectedService ? formatPrice(selectedService.price) : '' }}</span>
                         </div>
                         <div class="summary-bottom">
                             <span>{{ selectedDayLabel }} · {{ selectedSlot }}</span>
-                            <span>{{ selectedService?.duration }} min · {{ selectedService?.staff }}</span>
+                            <span>{{ selectedService?.duration_minutes }} min · {{ selectedStaff?.name }}</span>
                         </div>
                     </div>
+
+                    <p v-if="bookingError" class="booking-error">{{ bookingError }}</p>
                 </div>
 
                 <div class="screen-cta">
-                    <button class="btn btn-accent block-btn" type="button" :disabled="!canConfirm" @click="confirm">
-                        Confirmar marcação
+                    <button
+                        class="btn btn-accent block-btn"
+                        type="button"
+                        :disabled="!canConfirm || isSubmitting"
+                        @click="confirm"
+                    >
+                        {{ isSubmitting ? 'A confirmar...' : 'Confirmar marcação' }}
                     </button>
                 </div>
             </section>
@@ -181,7 +258,7 @@
                     <p class="success-eyebrow">Marcação confirmada</p>
                     <h2>Até {{ selectedDayName }}, {{ firstName }}!</h2>
                     <p class="success-lede">
-                        Enviámos os detalhes por WhatsApp. Podes remarcar até 24h antes.
+                        A tua marcação ficou registada. Guarda os detalhes e contacta o espaço se precisares de alterar.
                     </p>
 
                     <div class="success-card">
@@ -191,13 +268,17 @@
                         </div>
                         <div class="success-rows">
                             <div><span>Data</span><span>{{ selectedDayLabel }} · {{ selectedSlot }}</span></div>
-                            <div><span>Local</span><span>{{ businessName }}, Porto</span></div>
-                            <div><span>Total</span><span class="accent">{{ selectedService?.price }}€</span></div>
+                            <div><span>Local</span><span>{{ business.name }}{{ business.city ? `, ${business.city}` : '' }}</span></div>
+                            <div><span>Total</span><span class="accent">{{ selectedService ? formatPrice(selectedService.price) : '' }}</span></div>
                         </div>
                     </div>
 
-                    <button class="btn btn-accent block-btn mb" type="button">Adicionar ao calendário</button>
-                    <button class="btn ghost block-btn" type="button" @click="reset">Ver a minha marcação</button>
+                    <button class="btn btn-accent block-btn mb" type="button" @click="reset">
+                        Fazer nova marcação
+                    </button>
+                    <NuxtLink class="btn ghost block-btn" :to="`/${business.slug}`">
+                        Ver página do negócio
+                    </NuxtLink>
                 </div>
             </section>
         </div>
@@ -207,9 +288,49 @@
 <script setup lang="ts">
 definePageMeta({
     layout: false,
+    alias: ['/:slug'],
 })
 
+type PublicStaffMember = {
+    uuid: string
+    name: string
+    bio: string
+    avatar_url: string
+}
+
+type PublicService = {
+    uuid: string
+    name: string
+    description: string
+    duration_minutes: number
+    price: string
+    staff_members: PublicStaffMember[]
+}
+
+type PublicBusiness = {
+    uuid: string
+    name: string
+    slug: string
+    email: string
+    phone: string
+    address: string
+    city: string
+    instagram_url: string
+    facebook_url: string
+    website_url: string
+    service_count: number
+    customer_count: number
+    services: PublicService[]
+}
+
+type AvailableSlot = {
+    time: string
+    start_at: string
+    end_at: string
+}
+
 const route = useRoute()
+const { apiFetch } = useApi()
 
 // Inline progress-dots component used by the wizard steps.
 const ProgressDots = defineComponent({
@@ -232,42 +353,111 @@ const ProgressDots = defineComponent({
     },
 })
 
-const businessName = computed(() => {
-    const slug = String(route.params.slug || 'estudio-marta')
-    return slug
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-})
+const slug = computed(() => String(route.params.slug || '').trim())
+
+const business = ref<PublicBusiness | null>(null)
+const isLoadingBusiness = ref(true)
+const businessError = ref('')
 
 const step = ref(0)
+const selectedServiceUuid = ref('')
+const selectedStaffUuid = ref('')
+const selectedDay = ref('')
+const availableSlots = ref<AvailableSlot[]>([])
+const selectedSlot = ref<string | null>(null)
+const selectedSlotStartAt = ref<string | null>(null)
+const isLoadingSlots = ref(false)
+const slotsError = ref('')
+const isSubmitting = ref(false)
+const bookingError = ref('')
 
-const goTo = (target: number) => {
+const customer = reactive({
+    name: '',
+    phone: '',
+    email: '',
+})
+
+const selectedService = computed(() =>
+    business.value?.services.find((service) => service.uuid === selectedServiceUuid.value) || null
+)
+
+const selectedStaff = computed(() =>
+    selectedService.value?.staff_members.find((staff) => staff.uuid === selectedStaffUuid.value) ||
+    selectedService.value?.staff_members[0] ||
+    null
+)
+
+const bookableServices = computed(() =>
+    business.value?.services.filter((service) => service.staff_members.length > 0) || []
+)
+
+const primaryCategory = computed(() => categoryChips.value[0] || 'Marcações')
+
+const categoryChips = computed(() => {
+    const names = business.value?.services.map((service) => service.name.split(' ')[0]).filter(Boolean) || []
+    const uniqueNames = Array.from(new Set(names)).slice(0, 3)
+    return uniqueNames.length ? uniqueNames : ['Serviços']
+})
+
+const customerCountLabel = computed(() => {
+    const count = business.value?.customer_count || 0
+
+    if (count >= 1000) {
+        return `${(count / 1000).toFixed(1).replace('.0', '')}k`
+    }
+
+    return String(count)
+})
+
+const goTo = async (target: number) => {
     step.value = target
+
+    if (target === 2) {
+        await loadAvailableSlots()
+    }
+
     if (import.meta.client) {
         window.scrollTo({ top: 0 })
     }
 }
 
-type Service = {
-    id: number
-    name: string
-    duration: number
-    staff: string
-    price: number
+const selectService = (service: PublicService) => {
+    selectedServiceUuid.value = service.uuid
+    selectedStaffUuid.value = service.staff_members[0]?.uuid || ''
+    selectedSlot.value = null
+    selectedSlotStartAt.value = null
+    slotsError.value = ''
 }
 
-const services: Service[] = [
-    { id: 1, name: 'Limpeza de pele', duration: 60, staff: 'Maria', price: 35 },
-    { id: 2, name: 'Corte + Barba', duration: 50, staff: 'Tó', price: 25 },
-    { id: 3, name: 'Manicure gel', duration: 45, staff: 'Ana', price: 28 },
-    { id: 4, name: 'Coloração', duration: 90, staff: 'Rita', price: 55 },
-]
+const serviceStaffLabel = (service: PublicService) => {
+    const firstStaff = service.staff_members[0]
 
-const selectedServiceId = ref<number | null>(1)
-const selectedService = computed(() =>
-    services.find((service) => service.id === selectedServiceId.value) || null
-)
+    if (!firstStaff) {
+        return 'sem profissional'
+    }
+
+    if (service.staff_members.length > 1) {
+        return `com ${firstStaff.name} +${service.staff_members.length - 1}`
+    }
+
+    return `com ${firstStaff.name}`
+}
+
+const formatPrice = (value: string | number) => {
+    const amount = Number(value)
+
+    if (Number.isNaN(amount)) {
+        return `${value}€`
+    }
+
+    return new Intl.NumberFormat('pt-PT', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    })
+        .format(amount)
+        .replace(/\s/g, '')
+}
 
 const weekdayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const weekdayLong = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
@@ -289,10 +479,8 @@ const days = computed(() => {
     })
 })
 
-const selectedDay = ref<string>('')
-
 const selectedDayData = computed(() =>
-    days.value.find((day) => day.iso === selectedDay.value) || days.value[1]
+    days.value.find((day) => day.iso === selectedDay.value) || days.value[0]
 )
 
 const selectedDayLabel = computed(() => {
@@ -302,77 +490,202 @@ const selectedDayLabel = computed(() => {
 
 const selectedDayName = computed(() => selectedDayData.value?.weekdayLong || '')
 
-const morningSlots = [
-    { time: '09:00', available: true },
-    { time: '09:30', available: false },
-    { time: '10:00', available: true },
-    { time: '11:00', available: true },
-    { time: '11:30', available: true },
-    { time: '12:00', available: false },
-]
+const morningSlots = computed(() =>
+    availableSlots.value.filter((slot) => Number(slot.time.slice(0, 2)) < 13)
+)
 
-const afternoonSlots = [
-    { time: '14:00', available: true },
-    { time: '15:00', available: true },
-    { time: '16:30', available: true },
-]
-
-const selectedSlot = ref<string | null>('15:00')
-
-const customer = reactive({
-    name: '',
-    phone: '',
-})
+const afternoonSlots = computed(() =>
+    availableSlots.value.filter((slot) => Number(slot.time.slice(0, 2)) >= 13)
+)
 
 const firstName = computed(() => (customer.name.trim().split(' ')[0]) || 'Maria')
 
 const canConfirm = computed(() =>
-    Boolean(selectedService.value && selectedSlot.value && customer.name.trim() && customer.phone.trim())
+    Boolean(
+        selectedService.value &&
+        selectedStaff.value &&
+        selectedSlotStartAt.value &&
+        customer.name.trim() &&
+        customer.phone.trim()
+    )
 )
 
-const confirm = () => {
-    // NOTE: when a public business/services endpoint exists, POST to
-    // /public/appointments/ here with the real service_uuid + staff_uuid.
-    goTo(4)
+const selectSlot = (slot: AvailableSlot) => {
+    selectedSlot.value = slot.time
+    selectedSlotStartAt.value = slot.start_at
+    bookingError.value = ''
 }
 
-const reset = () => {
-    selectedServiceId.value = 1
-    selectedSlot.value = '15:00'
+const loadPublicBusiness = async () => {
+    if (!slug.value) {
+        business.value = null
+        businessError.value = 'Link inválido.'
+        isLoadingBusiness.value = false
+        return
+    }
+
+    try {
+        isLoadingBusiness.value = true
+        businessError.value = ''
+
+        const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
+        business.value = response
+
+        const firstBookableService = response.services.find((service) => service.staff_members.length > 0)
+        selectedServiceUuid.value = firstBookableService?.uuid || ''
+        selectedStaffUuid.value = firstBookableService?.staff_members[0]?.uuid || ''
+        selectedSlot.value = null
+        selectedSlotStartAt.value = null
+        step.value = 0
+    } catch (error: any) {
+        console.error(error)
+        business.value = null
+        businessError.value = error?.data?.business || 'Não foi possível carregar esta página de marcações.'
+    } finally {
+        isLoadingBusiness.value = false
+    }
+}
+
+const loadAvailableSlots = async () => {
+    if (!business.value || !selectedService.value || !selectedStaff.value || !selectedDay.value) {
+        availableSlots.value = []
+        return
+    }
+
+    try {
+        isLoadingSlots.value = true
+        slotsError.value = ''
+        selectedSlot.value = null
+        selectedSlotStartAt.value = null
+
+        const response = await apiFetch<{ slots: AvailableSlot[] }>(
+            `/public/available-slots/?business=${encodeURIComponent(business.value.slug)}&service=${selectedService.value.uuid}&staff=${selectedStaff.value.uuid}&date=${selectedDay.value}`
+        )
+
+        availableSlots.value = response.slots
+    } catch (error: any) {
+        console.error(error)
+        availableSlots.value = []
+        slotsError.value = error?.data?.date || error?.data?.service || error?.data?.staff || 'Não foi possível carregar horários.'
+    } finally {
+        isLoadingSlots.value = false
+    }
+}
+
+const confirm = async () => {
+    if (!business.value || !selectedService.value || !selectedStaff.value || !selectedSlotStartAt.value) {
+        return
+    }
+
+    try {
+        isSubmitting.value = true
+        bookingError.value = ''
+
+        await apiFetch('/public/appointments/', {
+            method: 'POST',
+            body: {
+                business_slug: business.value.slug,
+                service_uuid: selectedService.value.uuid,
+                staff_uuid: selectedStaff.value.uuid,
+                start_at: selectedSlotStartAt.value,
+                customer_name: customer.name,
+                customer_phone: customer.phone,
+                customer_email: customer.email,
+                source: 'public_page',
+            },
+        })
+
+        goTo(4)
+    } catch (error: any) {
+        console.error(error)
+        const data = error?.data
+        bookingError.value =
+            data?.start_at ||
+            data?.customer_phone ||
+            data?.non_field_errors?.[0] ||
+            'Não foi possível confirmar a marcação. Escolhe outro horário ou tenta novamente.'
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+const reset = async () => {
+    const firstBookableService = bookableServices.value[0]
+    selectedServiceUuid.value = firstBookableService?.uuid || ''
+    selectedStaffUuid.value = firstBookableService?.staff_members[0]?.uuid || ''
+    selectedSlot.value = null
+    selectedSlotStartAt.value = null
+    availableSlots.value = []
     customer.name = ''
     customer.phone = ''
-    goTo(0)
+    customer.email = ''
+    bookingError.value = ''
+    await goTo(0)
 }
+
+watch([selectedDay, selectedServiceUuid, selectedStaffUuid], () => {
+    if (step.value === 2) {
+        loadAvailableSlots()
+    }
+})
 
 onMounted(() => {
     selectedDay.value = days.value[1]?.iso || days.value[0]?.iso || ''
+    loadPublicBusiness()
 })
 </script>
 
 <style scoped>
 .booking-viewport {
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 32px 16px;
-    background:
-        radial-gradient(1200px 600px at 50% -10%, #f4f1ea 0%, var(--tf-canvas) 60%);
+    min-height: 100svh;
+    background: #fdfcf9;
 }
 
 .device {
-    width: min(420px, 100%);
-    min-height: 780px;
-    border-radius: 40px;
-    overflow: hidden;
+    width: 100%;
+    min-height: 100svh;
     background: #fdfcf9;
-    box-shadow: 0 50px 110px -40px rgba(15, 15, 20, 0.55);
-    border: 1px solid var(--tf-border);
 }
 
 .screen {
     display: flex;
     flex-direction: column;
-    min-height: 780px;
+    min-height: 100svh;
+}
+
+.state-screen {
+    justify-content: center;
+    padding: 34px;
+}
+
+.state-mark {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin-bottom: 28px;
+    border-radius: 50%;
+    background: var(--tf-accent);
+    color: var(--tf-black);
+    font-weight: 900;
+    font-size: 20px;
+}
+
+.state-mark-error {
+    background: var(--tf-danger-bg);
+    color: var(--tf-danger-fg);
+}
+
+.state-screen h2 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 0.98;
+}
+
+.state-copy {
+    margin: 18px 0 0;
+    color: var(--tf-muted);
+    line-height: 1.5;
 }
 
 /* ---- landing hero ---- */
@@ -413,7 +726,7 @@ onMounted(() => {
     margin: 0;
     font-size: 38px;
     font-weight: 900;
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
     line-height: 0.92;
 }
 
@@ -480,7 +793,7 @@ onMounted(() => {
     display: block;
     font-size: 26px;
     font-weight: 900;
-    letter-spacing: -0.04em;
+    letter-spacing: 0;
 }
 
 .stat span {
@@ -558,12 +871,13 @@ onMounted(() => {
     margin: 0;
     font-size: 32px;
     font-weight: 900;
-    letter-spacing: -0.045em;
+    letter-spacing: 0;
 }
 
 .screen-body {
     flex: 1;
     padding: 0 24px;
+    padding-bottom: 18px;
 }
 
 /* ---- service list ---- */
@@ -593,6 +907,10 @@ onMounted(() => {
     color: #fff;
 }
 
+.service-row.unavailable {
+    opacity: 0.55;
+}
+
 .service-name {
     font-weight: 800;
     font-size: 16px;
@@ -615,7 +933,7 @@ onMounted(() => {
 .service-price {
     font-weight: 900;
     font-size: 20px;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
 }
 
 .service-row.selected .service-price {
@@ -677,6 +995,20 @@ onMounted(() => {
     font-weight: 900;
 }
 
+.slot-state {
+    margin: 18px 0 0;
+    padding: 18px;
+    border-radius: 16px;
+    background: #f4f1ea;
+    color: var(--tf-muted);
+    font-weight: 800;
+}
+
+.slot-state-error {
+    background: var(--tf-danger-bg);
+    color: var(--tf-danger-fg);
+}
+
 .slot-group-label {
     margin: 0 0 14px;
     font-family: var(--tf-mono);
@@ -709,12 +1041,6 @@ onMounted(() => {
     border-color: var(--tf-black);
 }
 
-.slot.unavailable {
-    color: #c5c0b4;
-    text-decoration: line-through;
-    cursor: not-allowed;
-}
-
 /* ---- data ---- */
 .mb {
     margin-bottom: 16px;
@@ -741,6 +1067,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 12px;
 }
 
@@ -758,19 +1085,34 @@ onMounted(() => {
 .summary-bottom {
     display: flex;
     justify-content: space-between;
+    gap: 16px;
     padding-top: 14px;
     border-top: 1px solid #26262d;
     font-size: 14px;
     color: #b7b3aa;
 }
 
+.booking-error {
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--tf-danger-bg);
+    color: var(--tf-danger-fg);
+    font-weight: 800;
+}
+
 /* ---- CTA footer ---- */
 .screen-cta {
+    position: sticky;
+    bottom: 0;
     padding: 16px 24px 26px;
+    background: #fdfcf9;
+    border-top: 1px solid rgba(230, 225, 213, 0.75);
 }
 
 .screen-cta--fade {
-    background: linear-gradient(to top, #fdfcf9 70%, transparent);
+    background: linear-gradient(to top, #fdfcf9 82%, rgba(253, 252, 249, 0));
+    border-top: 0;
 }
 
 .block-btn {
@@ -802,7 +1144,7 @@ onMounted(() => {
     right: -30px;
     font-size: 200px;
     font-weight: 900;
-    letter-spacing: -0.09em;
+    letter-spacing: 0;
     line-height: 0.8;
     color: rgba(255, 255, 255, 0.04);
     pointer-events: none;
@@ -844,7 +1186,7 @@ onMounted(() => {
     margin: 0;
     font-size: 40px;
     font-weight: 900;
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
     line-height: 0.95;
     text-transform: capitalize;
 }
@@ -887,6 +1229,7 @@ onMounted(() => {
 .success-rows div {
     display: flex;
     justify-content: space-between;
+    gap: 16px;
 }
 
 .success-rows span:first-child {
@@ -907,5 +1250,49 @@ onMounted(() => {
 
 .ghost:hover {
     box-shadow: none;
+}
+
+@media (min-width: 760px) {
+    .hero-title,
+    .hero-brand,
+    .landing-body,
+    .step-head,
+    .step-intro,
+    .screen-body,
+    .screen-cta,
+    .success-body,
+    .state-screen {
+        max-width: 560px;
+        margin-right: auto;
+        margin-left: auto;
+        width: 100%;
+    }
+
+    .hero {
+        height: 380px;
+    }
+}
+
+@media (max-width: 420px) {
+    .hero {
+        height: 320px;
+    }
+
+    .hero-title h1 {
+        font-size: 34px;
+    }
+
+    .step-intro h2 {
+        font-size: 30px;
+    }
+
+    .day-row,
+    .slot-grid {
+        gap: 8px;
+    }
+
+    .slot {
+        font-size: 14px;
+    }
 }
 </style>

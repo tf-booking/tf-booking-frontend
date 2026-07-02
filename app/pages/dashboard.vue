@@ -18,6 +18,27 @@
                 </div>
             </div>
 
+            <article v-if="primaryBusiness" class="booking-link-card">
+                <div>
+                    <p class="link-eyebrow">Link público</p>
+                    <h2>{{ primaryBusiness.business_name }}</h2>
+                    <NuxtLink :to="publicBusinessPath" target="_blank">
+                        {{ publicBusinessUrl }}
+                    </NuxtLink>
+                </div>
+
+                <div class="link-actions">
+                    <button class="btn btn-secondary" type="button" @click="copyPublicLink">
+                        Copiar link
+                    </button>
+                    <NuxtLink class="btn btn-accent" :to="publicBusinessPath" target="_blank">
+                        Abrir página
+                    </NuxtLink>
+                </div>
+            </article>
+
+            <p v-if="copyMessage" class="copy-message">{{ copyMessage }}</p>
+
             <!-- KPIs -->
             <div class="kpi-grid">
                 <article class="kpi kpi-dark">
@@ -150,6 +171,27 @@ type Service = {
     is_active: boolean
 }
 
+type BusinessMembership = {
+    id: number
+    business_uuid: string
+    business_name: string
+    business_slug: string
+    role: string
+    is_active: boolean
+    created_at: string
+}
+
+type MeResponse = {
+    id: number
+    username: string
+    email: string
+    first_name: string
+    last_name: string
+    is_staff: boolean
+    is_superuser: boolean
+    businesses: BusinessMembership[]
+}
+
 type AppointmentPreview = {
     time: string
     service: string
@@ -163,8 +205,11 @@ type AppointmentPreview = {
 const { apiFetch } = useApi()
 
 const services = ref<Service[]>([])
+const businesses = ref<BusinessMembership[]>([])
 const isLoadingServices = ref(false)
 const apiError = ref('')
+const publicOrigin = ref('')
+const copyMessage = ref('')
 
 const todayLabel = computed(() => {
     const label = new Intl.DateTimeFormat('pt-PT', {
@@ -212,6 +257,47 @@ const origins = [
     { label: 'Direto', value: 12, color: '#c5c0b4' },
 ]
 
+const primaryBusiness = computed(() => businesses.value[0] || null)
+
+const publicBusinessPath = computed(() =>
+    primaryBusiness.value ? `/${primaryBusiness.value.business_slug}` : '/'
+)
+
+const publicBusinessUrl = computed(() => {
+    if (!primaryBusiness.value) {
+        return ''
+    }
+
+    if (!publicOrigin.value) {
+        return publicBusinessPath.value
+    }
+
+    return `${publicOrigin.value}${publicBusinessPath.value}`
+})
+
+const loadMe = async () => {
+    try {
+        const response = await apiFetch<MeResponse>('/me/')
+        businesses.value = response.businesses
+    } catch (error) {
+        console.error('Erro ao carregar negÃ³cios do utilizador:', error)
+    }
+}
+
+const copyPublicLink = async () => {
+    if (!publicBusinessUrl.value) {
+        return
+    }
+
+    if (!import.meta.client || !navigator.clipboard) {
+        copyMessage.value = `Link: ${publicBusinessUrl.value}`
+        return
+    }
+
+    await navigator.clipboard.writeText(publicBusinessUrl.value)
+    copyMessage.value = 'Link público copiado.'
+}
+
 const loadServices = async () => {
     try {
         isLoadingServices.value = true
@@ -234,6 +320,8 @@ const loadServices = async () => {
 }
 
 onMounted(() => {
+    publicOrigin.value = window.location.origin
+    loadMe()
     loadServices()
 })
 </script>
@@ -292,6 +380,57 @@ onMounted(() => {
     height: 14px;
     border-radius: 50%;
     border: 2px solid #c5c0b4;
+}
+
+.booking-link-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+    padding: 20px 22px;
+    border: 1px solid var(--tf-border);
+    border-radius: 22px;
+    background: #fff;
+}
+
+.booking-link-card h2 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.03em;
+}
+
+.booking-link-card a:not(.btn) {
+    display: block;
+    margin-top: 6px;
+    color: var(--tf-muted);
+    font-size: 14px;
+    font-weight: 700;
+    word-break: break-all;
+}
+
+.link-eyebrow {
+    margin: 0 0 6px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.link-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.copy-message {
+    margin: -4px 0 16px;
+    color: #166534;
+    font-size: 13px;
+    font-weight: 800;
 }
 
 /* KPIs */
@@ -594,6 +733,16 @@ onMounted(() => {
     }
 
     .header-actions {
+        width: 100%;
+    }
+
+    .booking-link-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .link-actions {
+        flex-wrap: wrap;
         width: 100%;
     }
 

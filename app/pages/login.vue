@@ -1,13 +1,10 @@
 <template>
     <div class="page login-page">
-        <div class="login-shell card">
-            <!-- brand panel -->
+        <div class="login-shell">
             <aside class="brand-panel">
-                <div class="brand-watermark">booking</div>
-
                 <div class="brand-logo">
                     <span class="brand-mark">TF</span>
-                    Booking
+                    <span>Booking</span>
                 </div>
 
                 <div class="brand-copy">
@@ -16,7 +13,7 @@
                     <h2>Gere as tuas marcações num só sítio.</h2>
 
                     <p class="brand-lede">
-                        Agenda, serviços, equipa e a origem de cada cliente —
+                        Agenda, serviços, equipa e a origem de cada cliente -
                         Instagram, Google ou WhatsApp.
                     </p>
                 </div>
@@ -25,58 +22,77 @@
                     <span class="pulse-dot"></span>
                     Powered by TF Creative
                 </div>
+
+                <div class="brand-watermark">booking</div>
             </aside>
 
-            <!-- form panel -->
-            <div class="form-panel">
-                <h1>Entrar</h1>
+            <section class="form-panel">
+                <div class="form-content">
+                    <h1>Entrar</h1>
 
-                <p class="form-lede">Acede ao painel do teu negócio.</p>
+                    <p class="form-lede">Acede ao painel do teu negócio.</p>
 
-                <form class="form" @submit.prevent="handleLogin">
-                    <div>
-                        <label class="label">Utilizador</label>
-                        <input v-model="form.username" class="input" type="text" placeholder="admin"
-                            autocomplete="username" />
-                    </div>
-
-                    <div>
-                        <div class="password-label-row">
-                            <label class="label">Palavra-passe</label>
-                            <button type="button" class="link-muted" @click="showPassword = !showPassword">
-                                {{ showPassword ? 'ocultar' : 'mostrar' }}
-                            </button>
+                    <form class="form" @submit.prevent="handleLogin">
+                        <div>
+                            <label class="label">Email</label>
+                            <input
+                                v-model="form.username"
+                                class="input"
+                                type="text"
+                                inputmode="email"
+                                placeholder="geral@estudio.pt"
+                                autocomplete="username"
+                            />
                         </div>
 
-                        <input v-model="form.password" class="input" :type="showPassword ? 'text' : 'password'"
-                            placeholder="••••••••••" autocomplete="current-password" />
+                        <div>
+                            <label class="label">Palavra-passe</label>
+
+                            <div class="password-field">
+                                <input
+                                    v-model="form.password"
+                                    class="input password-input"
+                                    :type="showPassword ? 'text' : 'password'"
+                                    placeholder="••••••••••"
+                                    autocomplete="current-password"
+                                />
+
+                                <button type="button" class="password-toggle" @click="showPassword = !showPassword">
+                                    {{ showPassword ? 'ocultar' : 'mostrar' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="forgot-row">Esqueceste-te?</div>
+
+                        <p v-if="errorMessage" class="error-message">
+                            {{ errorMessage }}
+                        </p>
+
+                        <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
+                            {{ isLoading ? 'A entrar...' : 'Entrar no dashboard →' }}
+                        </button>
+
+                        <button class="btn btn-secondary google-btn" type="button" disabled>
+                            <span class="google-mark">G</span>
+                            Continuar com Google
+                        </button>
+                    </form>
+
+                    <div class="form-footer">
+                        Novo por aqui? <strong>Criar conta do negócio</strong>
                     </div>
-
-                    <div class="forgot-row">Esqueceste-te?</div>
-
-                    <p v-if="errorMessage" class="error-message">
-                        {{ errorMessage }}
-                    </p>
-
-                    <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
-                        {{ isLoading ? 'A entrar...' : 'Entrar no dashboard →' }}
-                    </button>
-
-                    <button class="btn btn-secondary google-btn" type="button" disabled>
-                        <span class="google-mark">G</span>
-                        Continuar com Google
-                    </button>
-                </form>
-
-                <div class="form-footer">
-                    Novo por aqui? <strong>Criar conta do negócio</strong>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+    layout: false,
+})
+
 type MeResponse = {
     id: number
     username: string
@@ -112,7 +128,7 @@ const handleLogin = async () => {
     errorMessage.value = ''
 
     if (!form.username || !form.password) {
-        errorMessage.value = 'Preenche o utilizador e a palavra-passe.'
+        errorMessage.value = 'Preenche o email e a palavra-passe.'
         return
     }
 
@@ -143,117 +159,123 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-page {
-    display: grid;
-    place-items: center;
-    padding: 48px 20px 72px;
+    min-height: 100svh;
+    background: #f7f6f2;
 }
 
 .login-shell {
     display: grid;
-    grid-template-columns: 0.92fr 1.08fr;
-    width: min(1080px, 100%);
-    overflow: hidden;
-    border-radius: 28px;
+    grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+    min-height: 100svh;
+    width: 100%;
 }
 
-/* ---- brand panel ---- */
 .brand-panel {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 44px;
-    padding: 48px 46px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 48px;
+    min-height: 100svh;
+    padding: clamp(36px, 5vw, 72px);
     background: var(--tf-black);
     color: var(--tf-white);
     overflow: hidden;
 }
 
-.brand-watermark {
-    position: absolute;
-    bottom: -30px;
-    left: -8px;
-    font-size: 200px;
-    font-weight: 900;
-    letter-spacing: -0.09em;
-    line-height: 0.8;
-    color: rgba(255, 255, 255, 0.045);
-    pointer-events: none;
-}
-
 .brand-logo {
     position: relative;
-    display: flex;
+    z-index: 1;
+    display: inline-flex;
     align-items: center;
-    gap: 11px;
+    gap: 14px;
+    width: fit-content;
+    font-size: 20px;
     font-weight: 900;
-    font-size: 19px;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
 }
 
 .brand-mark {
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     background: var(--tf-accent);
     color: var(--tf-black);
     font-size: 14px;
+    font-weight: 900;
 }
 
 .brand-copy {
     position: relative;
+    z-index: 1;
+    align-self: center;
+    max-width: 620px;
 }
 
 .brand-eyebrow {
-    margin: 0 0 22px;
+    margin: 0 0 26px;
     font-family: var(--tf-mono);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.24em;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
     text-transform: uppercase;
     color: var(--tf-accent);
 }
 
 .brand-copy h2 {
     margin: 0;
-    font-size: clamp(38px, 4.4vw, 52px);
+    max-width: 10ch;
+    font-size: clamp(52px, 6.2vw, 92px);
     font-weight: 900;
-    letter-spacing: -0.055em;
+    letter-spacing: 0;
     line-height: 0.94;
 }
 
 .brand-lede {
-    max-width: 34ch;
-    margin: 24px 0 0;
-    color: #b7b3aa;
-    font-size: 16px;
-    line-height: 1.6;
+    max-width: 33ch;
+    margin: 34px 0 0;
+    color: #a9a49a;
+    font-size: clamp(17px, 1.35vw, 21px);
+    line-height: 1.55;
 }
 
 .brand-footer {
     position: relative;
-    display: flex;
+    z-index: 1;
+    display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
+    width: fit-content;
     font-family: var(--tf-mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
     text-transform: uppercase;
-    color: #77736a;
+    color: #858078;
+}
+
+.brand-watermark {
+    position: absolute;
+    right: -0.18em;
+    bottom: -0.24em;
+    color: rgba(255, 255, 255, 0.045);
+    font-size: clamp(180px, 28vw, 430px);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.8;
+    pointer-events: none;
 }
 
 .pulse-dot {
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--tf-accent);
     animation: tfPulse 2.4s ease-in-out infinite;
 }
 
 @keyframes tfPulse {
-
     0%,
     100% {
         transform: scale(1);
@@ -266,84 +288,116 @@ const handleLogin = async () => {
     }
 }
 
-/* ---- form panel ---- */
 .form-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 60px 68px;
-    background: #fdfcf9;
+    display: grid;
+    place-items: center;
+    min-height: 100svh;
+    padding: clamp(36px, 6vw, 88px);
+    background: #fffefa;
+}
+
+.form-content {
+    width: min(100%, 560px);
 }
 
 .form-panel h1 {
-    margin: 0 0 8px;
-    font-size: 34px;
+    margin: 0 0 12px;
+    font-size: clamp(44px, 4.2vw, 64px);
     font-weight: 900;
-    letter-spacing: -0.04em;
+    letter-spacing: 0;
+    line-height: 1;
 }
 
 .form-lede {
-    margin: 0 0 32px;
-    color: #6b6b60;
-    font-size: 15px;
+    margin: 0 0 46px;
+    color: #7e7a71;
+    font-size: 18px;
+    line-height: 1.45;
 }
 
 .form {
     display: grid;
-    gap: 20px;
+    gap: 24px;
 }
 
-.password-label-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.login-page :deep(.label) {
+    margin-bottom: 12px;
+    color: #7d786e;
+    font-size: 12px;
+    letter-spacing: 0;
 }
 
-.link-muted {
+.login-page :deep(.input) {
+    min-height: 62px;
+    padding: 0 22px;
+    border-color: #ded8cc;
+    border-radius: 16px;
+    background: #fffefa;
+    font-size: 16px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-input {
+    padding-right: 104px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 22px;
+    transform: translateY(-50%);
     border: 0;
-    background: none;
-    padding: 0 0 9px;
+    background: transparent;
+    padding: 0;
+    color: #9b9489;
     font-family: var(--tf-mono);
-    font-size: 11px;
-    color: #9a958a;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
     cursor: pointer;
 }
 
 .forgot-row {
-    margin-top: -6px;
+    margin-top: -10px;
     text-align: right;
-    font-size: 13px;
-    font-weight: 600;
-    color: #6b6b60;
+    color: #767166;
+    font-size: 14px;
+    font-weight: 800;
 }
 
-.submit-btn {
-    height: 54px;
-    font-size: 16px;
+.submit-btn,
+.google-btn {
+    min-height: 64px;
+    width: 100%;
+    font-size: 17px;
+    letter-spacing: 0;
 }
 
 .google-btn {
-    height: 54px;
+    background: #fffefa;
 }
 
 .google-mark {
     display: grid;
     place-items: center;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: var(--tf-black);
     color: var(--tf-accent);
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 900;
 }
 
 .form-footer {
-    margin-top: 34px;
-    padding-top: 26px;
-    border-top: 1px solid #eae5d9;
-    font-size: 14px;
-    color: #6b6b60;
+    margin-top: 44px;
+    padding-top: 30px;
+    border-top: 1px solid #e7e0d4;
+    color: #7a756b;
+    font-size: 16px;
 }
 
 .form-footer strong {
@@ -352,29 +406,76 @@ const handleLogin = async () => {
 
 .error-message {
     margin: 0;
-    padding: 12px 14px;
+    padding: 14px 16px;
     border-radius: 12px;
     background: var(--tf-danger-bg);
     color: var(--tf-danger-fg);
-    font-weight: 700;
+    font-weight: 800;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
     .login-shell {
         grid-template-columns: 1fr;
     }
 
     .brand-panel {
-        padding: 40px 34px;
-        gap: 30px;
+        min-height: 48svh;
+        padding: 34px 28px 38px;
     }
 
-    .brand-watermark {
-        font-size: 140px;
+    .brand-copy {
+        align-self: end;
+    }
+
+    .brand-copy h2 {
+        max-width: 11ch;
+        font-size: clamp(42px, 11vw, 64px);
+    }
+
+    .brand-lede {
+        margin-top: 22px;
+        font-size: 16px;
     }
 
     .form-panel {
-        padding: 40px 30px;
+        min-height: auto;
+        place-items: start center;
+        padding: 42px 24px 54px;
+    }
+}
+
+@media (max-width: 520px) {
+    .brand-panel {
+        gap: 34px;
+        min-height: 430px;
+    }
+
+    .brand-logo {
+        font-size: 18px;
+    }
+
+    .brand-mark {
+        width: 42px;
+        height: 42px;
+    }
+
+    .brand-footer {
+        font-size: 11px;
+    }
+
+    .form-panel h1 {
+        font-size: 42px;
+    }
+
+    .form-lede {
+        margin-bottom: 34px;
+        font-size: 16px;
+    }
+
+    .submit-btn,
+    .google-btn {
+        min-height: 58px;
+        font-size: 15px;
     }
 }
 </style>

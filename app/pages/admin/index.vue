@@ -122,14 +122,26 @@
 
                     <div v-else class="business-list">
                         <div v-for="business in businesses" :key="business.uuid" class="business-item">
-                            <div>
+                            <div class="business-main">
                                 <strong>{{ business.name }}</strong>
-                                <span>/booking/{{ business.slug }}</span>
+                                <NuxtLink :to="publicBookingPath(business)" target="_blank">
+                                    {{ publicBookingUrl(business) }}
+                                </NuxtLink>
                             </div>
 
-                            <small :class="{ inactive: !business.is_active }">
-                                {{ business.is_active ? 'Ativo' : 'Inativo' }}
-                            </small>
+                            <div class="business-actions">
+                                <button class="mini-action" type="button" @click="copyBusinessLink(business)">
+                                    Copiar
+                                </button>
+
+                                <NuxtLink class="mini-action" :to="publicBookingPath(business)" target="_blank">
+                                    Abrir
+                                </NuxtLink>
+
+                                <small :class="{ inactive: !business.is_active }">
+                                    {{ business.is_active ? 'Ativo' : 'Inativo' }}
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -163,6 +175,7 @@ const isLoadingBusinesses = ref(false)
 const isCreating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const publicOrigin = ref('')
 
 const form = reactive({
     business_name: '',
@@ -195,6 +208,26 @@ const loadBusinesses = async () => {
     } finally {
         isLoadingBusinesses.value = false
     }
+}
+
+const publicBookingPath = (business: Business) => `/${business.slug}`
+
+const publicBookingUrl = (business: Business) => {
+    if (!publicOrigin.value) {
+        return publicBookingPath(business)
+    }
+
+    return `${publicOrigin.value}${publicBookingPath(business)}`
+}
+
+const copyBusinessLink = async (business: Business) => {
+    if (!import.meta.client || !navigator.clipboard) {
+        successMessage.value = `Link: ${publicBookingUrl(business)}`
+        return
+    }
+
+    await navigator.clipboard.writeText(publicBookingUrl(business))
+    successMessage.value = `Link público de ${business.name} copiado.`
 }
 
 const resetForm = () => {
@@ -249,6 +282,7 @@ const createBusinessWithOwner = async () => {
 }
 
 onMounted(() => {
+    publicOrigin.value = window.location.origin
     loadBusinesses()
 })
 </script>
@@ -347,14 +381,43 @@ onMounted(() => {
     background: var(--tf-bg);
 }
 
-.business-item strong {
+.business-main {
+    min-width: 0;
+}
+
+.business-main strong {
     display: block;
 }
 
-.business-item span {
+.business-main a {
     display: block;
     margin-top: 4px;
     color: var(--tf-muted);
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.business-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mini-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 11px;
+    border: 1px solid var(--tf-border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--tf-black);
+    font-family: var(--tf-sans);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
 }
 
 .business-item small {
@@ -412,6 +475,10 @@ button:disabled {
     .business-item {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .business-actions {
+        flex-wrap: wrap;
     }
 }
 </style>

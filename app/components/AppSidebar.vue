@@ -1,34 +1,56 @@
 <template>
     <aside class="sidebar">
-        <NuxtLink to="/dashboard" class="s-brand">
-            <span class="s-mark">TF</span>
-            Booking
-        </NuxtLink>
-
-        <div class="s-menu-label">Menu</div>
-
-        <nav class="s-nav">
-            <NuxtLink v-for="item in items" :key="item.to" :to="item.to" class="s-link"
-                :class="{ active: isActive(item.to) }">
-                <span class="s-dot"></span>
-                {{ item.label }}
+        <div class="s-topbar">
+            <NuxtLink to="/dashboard" class="s-brand" @click="closeMobileMenu">
+                <span class="s-mark">TF</span>
+                Booking
             </NuxtLink>
 
-            <span v-for="soon in comingSoon" :key="soon" class="s-link s-link-soon" :title="`${soon} · em breve`">
-                <span class="s-dot"></span>
-                {{ soon }}
-            </span>
-        </nav>
+            <button
+                class="s-menu-toggle"
+                type="button"
+                :aria-expanded="isMobileMenuOpen"
+                aria-label="Abrir menu"
+                @click="toggleMobileMenu"
+            >
+                ...
+            </button>
+        </div>
 
-        <div class="s-user">
-            <span class="s-avatar">M</span>
+        <div class="s-panel" :class="{ open: isMobileMenuOpen }">
+            <div class="s-menu-label">Menu</div>
 
-            <div class="s-user-info">
-                <div class="s-user-name">Estúdio Marta</div>
-                <div class="s-user-plan">Plano Pro</div>
+            <nav class="s-nav">
+                <NuxtLink
+                    v-for="item in items"
+                    :key="item.to"
+                    :to="item.to"
+                    class="s-link"
+                    :class="{ active: isActive(item.to) }"
+                    @click="closeMobileMenu"
+                >
+                    <span class="s-dot"></span>
+                    {{ item.label }}
+                </NuxtLink>
+
+                <span v-for="soon in comingSoon" :key="soon" class="s-link s-link-soon" :title="`${soon} · em breve`">
+                    <span class="s-dot"></span>
+                    {{ soon }}
+                </span>
+            </nav>
+
+            <div class="s-user">
+                <span class="s-avatar">M</span>
+
+                <div class="s-user-info">
+                    <div class="s-user-name">Estudio Marta</div>
+                    <div class="s-user-plan">Plano Pro</div>
+                </div>
+
+                <button class="s-logout" type="button" title="Sair" @click="handleLogout">
+                    Sair
+                </button>
             </div>
-
-            <button class="s-logout" type="button" title="Sair" @click="handleLogout">⎋</button>
         </div>
     </aside>
 </template>
@@ -37,10 +59,12 @@
 const route = useRoute()
 const { logout } = useAuth()
 
+const isMobileMenuOpen = ref(false)
+
 const items = [
     { label: 'Painel', to: '/dashboard' },
     { label: 'Agenda', to: '/schedule' },
-    { label: 'Serviços', to: '/services' },
+    { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
 ]
 
@@ -48,9 +72,25 @@ const comingSoon = ['Clientes', 'Marketing']
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
+const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false
+}
+
+const toggleMobileMenu = () => {
+    isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
 const handleLogout = () => {
+    closeMobileMenu()
     logout()
 }
+
+watch(
+    () => route.path,
+    () => {
+        closeMobileMenu()
+    }
+)
 </script>
 
 <style scoped>
@@ -68,14 +108,22 @@ const handleLogout = () => {
     overflow-y: auto;
 }
 
+.s-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .s-brand {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
     padding: 0 8px 26px;
     font-weight: 900;
     font-size: 17px;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
 }
 
 .s-mark {
@@ -83,10 +131,22 @@ const handleLogout = () => {
     place-items: center;
     width: 34px;
     height: 34px;
+    flex-shrink: 0;
     border-radius: 50%;
     background: var(--tf-accent);
     color: var(--tf-black);
     font-size: 12px;
+}
+
+.s-menu-toggle {
+    display: none;
+}
+
+.s-panel {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
 }
 
 .s-menu-label {
@@ -194,14 +254,16 @@ const handleLogout = () => {
 
 .s-logout {
     margin-left: auto;
-    width: 30px;
-    height: 30px;
+    min-height: 30px;
     flex-shrink: 0;
     border: 0;
-    border-radius: 9px;
+    border-radius: 999px;
     background: #2a2a32;
     color: #b7b3aa;
-    font-size: 15px;
+    padding: 0 12px;
+    font-family: var(--tf-sans);
+    font-size: 12px;
+    font-weight: 800;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 }
@@ -211,56 +273,73 @@ const handleLogout = () => {
     color: var(--tf-black);
 }
 
-/* ---- mobile: collapse to a top bar ---- */
 @media (max-width: 900px) {
     .sidebar {
         position: sticky;
         top: 0;
-        z-index: 50;
-        flex-direction: row;
-        align-items: center;
-        gap: 12px;
+        z-index: 80;
         width: 100%;
         height: auto;
-        padding: 12px 16px;
+        min-height: 62px;
+        padding: 10px 14px;
+        overflow: visible;
     }
 
     .s-brand {
         padding: 0;
+        font-size: 16px;
+    }
+
+    .s-menu-toggle {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border: 1px solid #2f2f37;
+        border-radius: 50%;
+        background: #17171d;
+        color: var(--tf-accent);
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .s-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 12px;
+        left: 12px;
+        display: none;
+        max-height: calc(100svh - 84px);
+        padding: 14px;
+        border: 1px solid #24242b;
+        border-radius: 20px;
+        background: var(--tf-black);
+        box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.8);
+        overflow-y: auto;
+    }
+
+    .s-panel.open {
+        display: flex;
     }
 
     .s-menu-label {
-        display: none;
+        padding: 0 4px 12px;
     }
 
     .s-nav {
-        flex: 1;
-        flex-direction: row;
-        gap: 6px;
-        overflow-x: auto;
+        gap: 7px;
     }
 
     .s-link {
-        padding: 8px 12px;
-        white-space: nowrap;
-    }
-
-    .s-link .s-dot {
-        display: none;
-    }
-
-    .s-link-soon {
-        display: none;
+        min-height: 46px;
+        padding: 0 14px;
+        font-size: 15px;
     }
 
     .s-user {
-        margin-top: 0;
-        padding: 8px;
-        background: transparent;
-    }
-
-    .s-user-info {
-        display: none;
+        margin-top: 14px;
     }
 }
 </style>
