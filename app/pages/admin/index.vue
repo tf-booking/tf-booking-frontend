@@ -1,0 +1,417 @@
+<template>
+    <div class="page admin-page">
+        <section class="container">
+            <div class="admin-header">
+                <div>
+                    <p class="tf-eyebrow">Admin TF Creative</p>
+                    <h1>Gestão da plataforma</h1>
+                    <p>
+                        Cria negócios, owners e gere os clientes da plataforma.
+                    </p>
+                </div>
+
+                <button class="btn btn-secondary" type="button" @click="logout">
+                    Sair
+                </button>
+            </div>
+
+            <div class="admin-grid">
+                <article class="card form-card">
+                    <h2>Criar negócio + owner</h2>
+
+                    <form class="form" @submit.prevent="createBusinessWithOwner">
+                        <div class="form-section">
+                            <h3>Dados do negócio</h3>
+
+                            <div>
+                                <label class="label">Nome do negócio</label>
+                                <input v-model="form.business_name" class="input" type="text"
+                                    placeholder="Clínica Demo" />
+                            </div>
+
+                            <div>
+                                <label class="label">Slug</label>
+                                <input v-model="form.business_slug" class="input" type="text"
+                                    placeholder="clinica-demo" />
+                            </div>
+
+                            <div>
+                                <label class="label">Email do negócio</label>
+                                <input v-model="form.business_email" class="input" type="email"
+                                    placeholder="geral@clinicademo.pt" />
+                            </div>
+
+                            <div>
+                                <label class="label">Telefone</label>
+                                <input v-model="form.business_phone" class="input" type="text"
+                                    placeholder="910000000" />
+                            </div>
+
+                            <div>
+                                <label class="label">Cidade</label>
+                                <input v-model="form.business_city" class="input" type="text" placeholder="Porto" />
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Owner do negócio</h3>
+
+                            <div>
+                                <label class="label">Username</label>
+                                <input v-model="form.owner_username" class="input" type="text"
+                                    placeholder="clinicademo" />
+                            </div>
+
+                            <div>
+                                <label class="label">Email do owner</label>
+                                <input v-model="form.owner_email" class="input" type="email"
+                                    placeholder="owner@clinicademo.pt" />
+                            </div>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Primeiro nome</label>
+                                    <input v-model="form.owner_first_name" class="input" type="text"
+                                        placeholder="Catarina" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Último nome</label>
+                                    <input v-model="form.owner_last_name" class="input" type="text"
+                                        placeholder="Silva" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Password inicial</label>
+                                <input v-model="form.owner_password" class="input" type="password"
+                                    placeholder="••••••••" />
+                            </div>
+                        </div>
+
+                        <p v-if="errorMessage" class="error-message">
+                            {{ errorMessage }}
+                        </p>
+
+                        <p v-if="successMessage" class="success-message">
+                            {{ successMessage }}
+                        </p>
+
+                        <button class="btn btn-accent" type="submit" :disabled="isCreating">
+                            {{ isCreating ? 'A criar...' : 'Criar negócio' }}
+                        </button>
+                    </form>
+                </article>
+
+                <article class="card list-card">
+                    <div class="card-title-row">
+                        <h2>Negócios</h2>
+
+                        <button class="btn btn-secondary" type="button" @click="loadBusinesses">
+                            Atualizar
+                        </button>
+                    </div>
+
+                    <p v-if="isLoadingBusinesses" class="muted-text">
+                        A carregar negócios...
+                    </p>
+
+                    <p v-else-if="businesses.length === 0" class="muted-text">
+                        Ainda não existem negócios.
+                    </p>
+
+                    <div v-else class="business-list">
+                        <div v-for="business in businesses" :key="business.uuid" class="business-item">
+                            <div>
+                                <strong>{{ business.name }}</strong>
+                                <span>/booking/{{ business.slug }}</span>
+                            </div>
+
+                            <small :class="{ inactive: !business.is_active }">
+                                {{ business.is_active ? 'Ativo' : 'Inativo' }}
+                            </small>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </div>
+</template>
+
+<script setup lang="ts">
+
+definePageMeta({
+    middleware: 'admin' as any,
+})
+
+type Business = {
+    id: number
+    uuid: string
+    name: string
+    slug: string
+    email: string
+    phone: string
+    city: string
+    is_active: boolean
+}
+
+const { logout } = useAuth()
+const { apiFetch } = useApi()
+
+const businesses = ref<Business[]>([])
+const isLoadingBusinesses = ref(false)
+const isCreating = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+
+const form = reactive({
+    business_name: '',
+    business_slug: '',
+    business_email: '',
+    business_phone: '',
+    business_city: '',
+    owner_username: '',
+    owner_email: '',
+    owner_first_name: '',
+    owner_last_name: '',
+    owner_password: '',
+})
+
+const loadBusinesses = async () => {
+    try {
+        isLoadingBusinesses.value = true
+
+        const response = await apiFetch<{
+            count: number
+            next: string | null
+            previous: string | null
+            results: Business[]
+        }>('/businesses/')
+
+        businesses.value = response.results
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível carregar os negócios.'
+    } finally {
+        isLoadingBusinesses.value = false
+    }
+}
+
+const resetForm = () => {
+    form.business_name = ''
+    form.business_slug = ''
+    form.business_email = ''
+    form.business_phone = ''
+    form.business_city = ''
+    form.owner_username = ''
+    form.owner_email = ''
+    form.owner_first_name = ''
+    form.owner_last_name = ''
+    form.owner_password = ''
+}
+
+const createBusinessWithOwner = async () => {
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    if (!form.business_name || !form.owner_username || !form.owner_email || !form.owner_password) {
+        errorMessage.value = 'Preenche pelo menos o nome do negócio, username, email e password do owner.'
+        return
+    }
+
+    try {
+        isCreating.value = true
+
+        await apiFetch('/admin/businesses/create-with-owner/', {
+            method: 'POST',
+            body: {
+                ...form,
+            },
+        })
+
+        successMessage.value = 'Negócio e owner criados com sucesso.'
+
+        resetForm()
+        await loadBusinesses()
+    } catch (error: any) {
+        console.error(error)
+
+        const data = error?.data
+
+        if (data) {
+            errorMessage.value = JSON.stringify(data)
+        } else {
+            errorMessage.value = 'Erro ao criar negócio.'
+        }
+    } finally {
+        isCreating.value = false
+    }
+}
+
+onMounted(() => {
+    loadBusinesses()
+})
+</script>
+
+<style scoped>
+.admin-page {
+    padding: 56px 0 88px;
+}
+
+.admin-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.admin-header h1 {
+    margin: 0;
+    font-size: clamp(42px, 6vw, 74px);
+    line-height: 0.92;
+    letter-spacing: -0.07em;
+}
+
+.admin-header p:last-child {
+    margin: 16px 0 0;
+    color: var(--tf-muted);
+    font-size: 18px;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.form-card,
+.list-card {
+    padding: 28px;
+}
+
+.form-card h2,
+.list-card h2 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: -0.05em;
+}
+
+.form {
+    display: grid;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.form-section {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--tf-bg);
+}
+
+.form-section h3 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.04em;
+}
+
+.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.business-list {
+    display: grid;
+    gap: 12px;
+}
+
+.business-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--tf-bg);
+}
+
+.business-item strong {
+    display: block;
+}
+
+.business-item span {
+    display: block;
+    margin-top: 4px;
+    color: var(--tf-muted);
+}
+
+.business-item small {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-white);
+    font-weight: 900;
+}
+
+.business-item small.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.muted-text {
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.error-message {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 700;
+}
+
+.success-message {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 700;
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+@media (max-width: 960px) {
+    .admin-header {
+        align-items: start;
+        flex-direction: column;
+    }
+
+    .admin-grid,
+    .two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .business-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+</style>

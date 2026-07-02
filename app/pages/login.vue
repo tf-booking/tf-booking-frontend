@@ -35,9 +35,27 @@
 </template>
 
 <script setup lang="ts">
-import { useAuth } from '~/composables/useAuth'
+type MeResponse = {
+    id: number
+    username: string
+    email: string
+    first_name: string
+    last_name: string
+    is_staff: boolean
+    is_superuser: boolean
+    businesses: {
+        id: number
+        business_uuid: string
+        business_name: string
+        business_slug: string
+        role: string
+        is_active: boolean
+        created_at: string
+    }[]
+}
 
 const { login } = useAuth()
+const { apiFetch } = useApi()
 
 const form = reactive({
     username: '',
@@ -63,8 +81,16 @@ const handleLogin = async () => {
             password: form.password,
         })
 
+        const me = await apiFetch<MeResponse>('/me/')
+
+        if (me.is_superuser || me.is_staff) {
+            await navigateTo('/admin')
+            return
+        }
+
         await navigateTo('/dashboard')
     } catch (error) {
+        console.error(error)
         errorMessage.value = 'Credenciais inválidas ou erro ao entrar.'
     } finally {
         isLoading.value = false

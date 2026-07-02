@@ -15,9 +15,23 @@
                         Sair
                     </button>
 
-                    <button class="btn btn-accent" type="button">
-                        Nova marcação
-                    </button>
+                    <div class="header-actions">
+                        <NuxtLink to="/schedule" class="btn btn-secondary">
+                            Horários
+                        </NuxtLink>
+                        
+                        <NuxtLink to="/services" class="btn btn-secondary">
+                            Serviços
+                        </NuxtLink>
+
+                        <NuxtLink to="/staff" class="btn btn-secondary">
+                            Colaboradores
+                        </NuxtLink>
+
+                        <button class="btn btn-accent" type="button">
+                            Nova marcação
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -86,7 +100,7 @@
 
             <article class="card services-test-card">
                 <div class="card-title-row">
-                    <h2>Teste API — Serviços</h2>
+                    <h2>Serviços</h2>
 
                     <button class="btn btn-secondary" type="button" @click="loadServices">
                         Atualizar
