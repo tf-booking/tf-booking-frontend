@@ -67,7 +67,7 @@
                             <div v-else class="services-check-list">
                                 <label v-for="service in services" :key="service.id" class="service-check">
                                     <input v-model="form.services" type="checkbox" :value="service.id" />
-                                    <span>{{ service.name }}</span>
+                                    <span class="service-check-name">{{ service.name }}</span>
                                 </label>
                             </div>
                         </div>
@@ -119,42 +119,187 @@
                     </p>
 
                     <div v-else class="staff-list">
-                        <div v-for="staff in staffMembers" :key="staff.uuid" class="staff-item" :class="{ inactive: !staff.is_active }">
-                            <div class="staff-avatar">
-                                {{ staffInitials(staff.name) }}
-                            </div>
-
-                            <div class="staff-main">
-                                <div class="staff-topline">
-                                    <strong>{{ staff.name }}</strong>
-                                    <span class="staff-status-dot" :class="{ inactive: !staff.is_active }"></span>
+                        <template v-for="staff in staffMembers" :key="staff.uuid">
+                            <div class="staff-item" :class="{ inactive: !staff.is_active, expanded: expandedStaffId === staff.id }">
+                                <div class="staff-avatar">
+                                    {{ staffInitials(staff.name) }}
                                 </div>
 
-                                <span>
-                                    {{ staff.phone || staff.email || 'Sem contacto' }}
-                                </span>
+                                <div class="staff-main">
+                                    <div class="staff-topline">
+                                        <strong>{{ staff.name }}</strong>
+                                        <span class="staff-status-dot" :class="{ inactive: !staff.is_active }"></span>
+                                    </div>
 
-                                <div class="staff-services">
-                                    <small v-for="serviceName in staff.services_names" :key="serviceName">
-                                        {{ serviceName }}
+                                    <span>
+                                        {{ staff.phone || staff.email || 'Sem contacto' }}
+                                    </span>
+
+                                    <div class="staff-services">
+                                        <small v-for="serviceName in staff.services_names" :key="serviceName">
+                                            {{ serviceName }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="staff-actions">
+                                    <small class="status-pill" :class="{ inactive: !staff.is_active }">
+                                        {{ staff.is_active ? 'Ativo' : 'Inativo' }}
                                     </small>
+
+                                    <button class="mini-button" type="button"
+                                        :class="{ active: expandedStaffId === staff.id }"
+                                        @click="toggleStaffSchedule(staff)">
+                                        Horário
+                                    </button>
+
+                                    <button class="mini-button" type="button" @click="editStaff(staff)">
+                                        Editar
+                                    </button>
+
+                                    <button class="mini-button danger" type="button" @click="deleteStaff(staff)">
+                                        Apagar
+                                    </button>
                                 </div>
                             </div>
 
-                            <div class="staff-actions">
-                                <small class="status-pill" :class="{ inactive: !staff.is_active }">
-                                    {{ staff.is_active ? 'Ativo' : 'Inativo' }}
-                                </small>
+                            <div v-if="expandedStaffId === staff.id" class="staff-schedule-panel">
+                                <p v-if="isLoadingStaffSchedule" class="muted-text">A carregar horário...</p>
 
-                                <button class="mini-button" type="button" @click="editStaff(staff)">
-                                    Editar
-                                </button>
+                                <div v-else class="schedule-panel-columns">
+                                    <div class="schedule-panel-col">
+                                        <h3>Horário de trabalho</h3>
 
-                                <button class="mini-button danger" type="button" @click="deleteStaff(staff)">
-                                    Apagar
-                                </button>
+                                        <div class="working-hours-list">
+                                            <p v-if="!workingHoursByStaff[staff.id]?.length" class="muted-text">
+                                                Sem horários definidos.
+                                            </p>
+
+                                            <div v-for="hour in workingHoursByStaff[staff.id]" :key="hour.id"
+                                                class="working-hour-row" :class="{ inactive: !hour.is_active }">
+                                                <span class="wh-day">{{ hour.weekday_label }}</span>
+                                                <span class="wh-time">{{ hour.start_time.slice(0, 5) }} - {{ hour.end_time.slice(0, 5) }}</span>
+                                                <span class="wh-status" :class="{ active: hour.is_active, inactive: !hour.is_active }">
+                                                    {{ hour.is_active ? 'Ativo' : 'Inativo' }}
+                                                </span>
+
+                                                <div class="wh-actions">
+                                                    <button class="mini-button" type="button" @click="editWorkingHour(hour)">
+                                                        Editar
+                                                    </button>
+
+                                                    <button class="mini-button danger" type="button"
+                                                        @click="deleteWorkingHour(staff.id, hour)">
+                                                        Apagar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="panel-subcard">
+                                            <p class="panel-subcard-title">
+                                                {{ editingWorkingHour ? 'Editar horário' : 'Novo horário' }}
+                                            </p>
+
+                                            <form class="panel-form" @submit.prevent="saveWorkingHour(staff.id)">
+                                                <div class="two-columns">
+                                                    <div>
+                                                        <label class="label">Dia da semana</label>
+
+                                                        <select v-model.number="workingHourForm.weekday" class="input">
+                                                            <option v-for="day in weekdays" :key="day.value" :value="day.value">
+                                                                {{ day.label }}
+                                                            </option>
+                                                        </select>
+                                                    </div>
+
+                                                    <label class="toggle-row inline-toggle">
+                                                        <input v-model="workingHourForm.is_active" type="checkbox" />
+                                                        <span>{{ workingHourForm.is_active ? 'Ativo' : 'Inativo' }}</span>
+                                                    </label>
+                                                </div>
+
+                                                <div class="two-columns">
+                                                    <div>
+                                                        <label class="label">Hora início</label>
+                                                        <input v-model="workingHourForm.start_time" class="input" type="time" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="label">Hora fim</label>
+                                                        <input v-model="workingHourForm.end_time" class="input" type="time" />
+                                                    </div>
+                                                </div>
+
+                                                <div class="form-actions">
+                                                    <button class="btn btn-accent" type="submit" :disabled="isSavingWorkingHour">
+                                                        {{ isSavingWorkingHour ? 'A guardar...' : editingWorkingHour ? 'Guardar alterações' : 'Adicionar horário' }}
+                                                    </button>
+
+                                                    <button v-if="editingWorkingHour" class="btn btn-secondary" type="button"
+                                                        @click="cancelWorkingHourEdit">
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div class="schedule-panel-col">
+                                        <h3>Bloquear dias</h3>
+                                        <p class="panel-hint">
+                                            Férias, folgas ou outros períodos em que o colaborador fica indisponível o dia inteiro.
+                                        </p>
+
+                                        <div class="day-blocks-list">
+                                            <p v-if="!blocksByStaff[staff.id]?.length" class="muted-text">
+                                                Sem dias bloqueados.
+                                            </p>
+
+                                            <div v-for="block in blocksByStaff[staff.id]" :key="block.uuid" class="day-block-row">
+                                                <span class="db-range">{{ formatBlockRange(block) }}</span>
+                                                <span class="db-reason">{{ block.reason || 'Bloqueado' }}</span>
+
+                                                <button class="mini-button danger" type="button"
+                                                    @click="deleteDayBlock(staff.id, block)">
+                                                    Apagar
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="panel-subcard">
+                                            <p class="panel-subcard-title">Novo bloqueio</p>
+
+                                            <form class="panel-form" @submit.prevent="saveDayBlock(staff.id)">
+                                                <div class="two-columns">
+                                                    <div>
+                                                        <label class="label">De</label>
+                                                        <input v-model="dayBlockForm.start_date" class="input" type="date" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="label">Até</label>
+                                                        <input v-model="dayBlockForm.end_date" class="input" type="date" />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label class="label">Motivo</label>
+                                                    <input v-model="dayBlockForm.reason" class="input" type="text"
+                                                        placeholder="Férias" />
+                                                </div>
+
+                                                <div class="form-actions">
+                                                    <button class="btn btn-accent" type="submit" :disabled="isSavingDayBlock">
+                                                        {{ isSavingDayBlock ? 'A bloquear...' : 'Bloquear dias' }}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </template>
                     </div>
                 </article>
             </div>
@@ -208,6 +353,30 @@ type StaffMember = {
     is_active: boolean
 }
 
+type WorkingHour = {
+    id: number
+    staff_member: number
+    staff_member_name: string
+    business_name: string
+    weekday: number
+    weekday_label: string
+    start_time: string
+    end_time: string
+    is_active: boolean
+}
+
+type StaffBlock = {
+    id: number
+    uuid: string
+    staff_member: number
+    staff_member_name: string
+    business_name: string
+    start_at: string
+    end_at: string
+    reason: string
+    created_at: string
+}
+
 const { apiFetch } = useApi()
 
 const businesses = ref<Business[]>([])
@@ -237,6 +406,39 @@ const form = reactive({
     is_active: true,
 })
 
+const weekdays = [
+    { value: 0, label: 'Segunda-feira' },
+    { value: 1, label: 'Terça-feira' },
+    { value: 2, label: 'Quarta-feira' },
+    { value: 3, label: 'Quinta-feira' },
+    { value: 4, label: 'Sexta-feira' },
+    { value: 5, label: 'Sábado' },
+    { value: 6, label: 'Domingo' },
+]
+
+const expandedStaffId = ref<number | null>(null)
+const isLoadingStaffSchedule = ref(false)
+const isSavingWorkingHour = ref(false)
+const isSavingDayBlock = ref(false)
+
+const workingHoursByStaff = reactive<Record<number, WorkingHour[]>>({})
+const blocksByStaff = reactive<Record<number, StaffBlock[]>>({})
+
+const editingWorkingHour = ref<WorkingHour | null>(null)
+
+const workingHourForm = reactive({
+    weekday: 0,
+    start_time: '09:00',
+    end_time: '18:00',
+    is_active: true,
+})
+
+const dayBlockForm = reactive({
+    start_date: '',
+    end_date: '',
+    reason: '',
+})
+
 const activeStaffCount = computed(() => staffMembers.value.filter((staff) => staff.is_active).length)
 const inactiveStaffCount = computed(() => staffMembers.value.length - activeStaffCount.value)
 
@@ -252,6 +454,235 @@ const staffInitials = (name: string) => {
         .map((word) => word.charAt(0))
         .join('')
         .toUpperCase()
+}
+
+const formatDateInput = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+const formatBlockRange = (block: StaffBlock) => {
+    const formatter = new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' })
+
+    return `${formatter.format(new Date(block.start_at))} — ${formatter.format(new Date(block.end_at))}`
+}
+
+const resetWorkingHourForm = () => {
+    editingWorkingHour.value = null
+
+    workingHourForm.weekday = 0
+    workingHourForm.start_time = '09:00'
+    workingHourForm.end_time = '18:00'
+    workingHourForm.is_active = true
+}
+
+const resetDayBlockForm = () => {
+    const today = formatDateInput(new Date())
+
+    dayBlockForm.start_date = today
+    dayBlockForm.end_date = today
+    dayBlockForm.reason = ''
+}
+
+const loadStaffSchedule = async (staffId: number) => {
+    try {
+        isLoadingStaffSchedule.value = true
+
+        const [workingHoursResponse, blocksResponse] = await Promise.all([
+            apiFetch<{ results: WorkingHour[] }>(`/working-hours/?staff=${staffId}`),
+            apiFetch<{ results: StaffBlock[] }>(`/staff-blocks/?staff=${staffId}`),
+        ])
+
+        workingHoursByStaff[staffId] = workingHoursResponse.results
+        blocksByStaff[staffId] = blocksResponse.results
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível carregar o horário do colaborador.'
+    } finally {
+        isLoadingStaffSchedule.value = false
+    }
+}
+
+const toggleStaffSchedule = async (staff: StaffMember) => {
+    resetMessages()
+
+    if (expandedStaffId.value === staff.id) {
+        expandedStaffId.value = null
+        return
+    }
+
+    expandedStaffId.value = staff.id
+    resetWorkingHourForm()
+    resetDayBlockForm()
+    await loadStaffSchedule(staff.id)
+}
+
+const timeToMinutes = (value: string) => {
+    const [hours, minutes] = value.slice(0, 5).split(':').map(Number)
+
+    return hours * 60 + minutes
+}
+
+const hasOverlappingWorkingHour = (staffId: number) => {
+    const newStart = timeToMinutes(workingHourForm.start_time)
+    const newEnd = timeToMinutes(workingHourForm.end_time)
+
+    return (workingHoursByStaff[staffId] || []).some((hour) => {
+        if (hour.weekday !== workingHourForm.weekday) {
+            return false
+        }
+
+        if (editingWorkingHour.value?.id === hour.id) {
+            return false
+        }
+
+        const existingStart = timeToMinutes(hour.start_time)
+        const existingEnd = timeToMinutes(hour.end_time)
+
+        return newStart < existingEnd && newEnd > existingStart
+    })
+}
+
+const saveWorkingHour = async (staffId: number) => {
+    resetMessages()
+
+    if (!workingHourForm.start_time || !workingHourForm.end_time) {
+        errorMessage.value = 'Preenche a hora de início e fim.'
+        return
+    }
+
+    if (workingHourForm.end_time <= workingHourForm.start_time) {
+        errorMessage.value = 'A hora de fim tem de ser superior à hora de início.'
+        return
+    }
+
+    if (hasOverlappingWorkingHour(staffId)) {
+        errorMessage.value = 'Já existe um horário para este dia que se sobrepõe a este período.'
+        return
+    }
+
+    try {
+        isSavingWorkingHour.value = true
+
+        const payload = {
+            staff_member: staffId,
+            weekday: workingHourForm.weekday,
+            start_time: workingHourForm.start_time,
+            end_time: workingHourForm.end_time,
+            is_active: workingHourForm.is_active,
+        }
+
+        if (editingWorkingHour.value) {
+            await apiFetch(`/working-hours/${editingWorkingHour.value.id}/`, {
+                method: 'PUT',
+                body: payload,
+            })
+
+            successMessage.value = 'Horário atualizado com sucesso.'
+        } else {
+            await apiFetch('/working-hours/', {
+                method: 'POST',
+                body: payload,
+            })
+
+            successMessage.value = 'Horário criado com sucesso.'
+        }
+
+        resetWorkingHourForm()
+        await loadStaffSchedule(staffId)
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar horário.'
+    } finally {
+        isSavingWorkingHour.value = false
+    }
+}
+
+const editWorkingHour = (hour: WorkingHour) => {
+    editingWorkingHour.value = hour
+
+    workingHourForm.weekday = hour.weekday
+    workingHourForm.start_time = hour.start_time.slice(0, 5)
+    workingHourForm.end_time = hour.end_time.slice(0, 5)
+    workingHourForm.is_active = hour.is_active
+}
+
+const cancelWorkingHourEdit = () => {
+    resetMessages()
+    resetWorkingHourForm()
+}
+
+const deleteWorkingHour = async (staffId: number, hour: WorkingHour) => {
+    try {
+        await apiFetch(`/working-hours/${hour.id}/`, {
+            method: 'DELETE',
+        })
+
+        successMessage.value = 'Horário apagado com sucesso.'
+
+        if (editingWorkingHour.value?.id === hour.id) {
+            resetWorkingHourForm()
+        }
+
+        await loadStaffSchedule(staffId)
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível apagar o horário.'
+    }
+}
+
+const saveDayBlock = async (staffId: number) => {
+    resetMessages()
+
+    if (!dayBlockForm.start_date || !dayBlockForm.end_date) {
+        errorMessage.value = 'Preenche a data de início e fim.'
+        return
+    }
+
+    if (dayBlockForm.end_date < dayBlockForm.start_date) {
+        errorMessage.value = 'A data de fim tem de ser igual ou posterior à data de início.'
+        return
+    }
+
+    try {
+        isSavingDayBlock.value = true
+
+        await apiFetch('/staff-blocks/', {
+            method: 'POST',
+            body: {
+                staff_member: staffId,
+                start_at: `${dayBlockForm.start_date}T00:00:00`,
+                end_at: `${dayBlockForm.end_date}T23:59:59`,
+                reason: dayBlockForm.reason || 'Bloqueado',
+            },
+        })
+
+        successMessage.value = 'Dias bloqueados com sucesso.'
+        resetDayBlockForm()
+        await loadStaffSchedule(staffId)
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao bloquear dias.'
+    } finally {
+        isSavingDayBlock.value = false
+    }
+}
+
+const deleteDayBlock = async (staffId: number, block: StaffBlock) => {
+    try {
+        await apiFetch(`/staff-blocks/${block.uuid}/`, {
+            method: 'DELETE',
+        })
+
+        successMessage.value = 'Bloqueio apagado com sucesso.'
+        await loadStaffSchedule(staffId)
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível apagar o bloqueio.'
+    }
 }
 
 const focusForm = async () => {
@@ -470,6 +901,10 @@ const deleteStaff = async (staff: StaffMember) => {
             resetForm()
         }
 
+        if (expandedStaffId.value === staff.id) {
+            expandedStaffId.value = null
+        }
+
         await loadStaff()
     } catch (error) {
         console.error(error)
@@ -579,8 +1014,16 @@ onMounted(async () => {
 
 .two-columns {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
+}
+
+.two-columns > div {
+    min-width: 0;
+}
+
+.two-columns .input {
+    min-width: 0;
 }
 
 .services-check-list {
@@ -592,20 +1035,64 @@ onMounted(async () => {
 .service-check {
     display: flex;
     align-items: center;
-    gap: 7px;
-    min-height: 32px;
-    padding: 0 10px;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px 0 8px;
+    border: 1.5px solid var(--tf-border);
     border-radius: 999px;
-    background: #f0ece2;
-    font-size: 12px;
+    background: var(--tf-white);
+    font-size: 13px;
     font-weight: 800;
     color: var(--tf-black);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.service-check:hover {
+    border-color: var(--tf-black);
+}
+
+.service-check:has(input:checked) {
+    border-color: var(--tf-black);
+    background: #f6f2e9;
 }
 
 .service-check input {
-    width: 14px;
-    height: 14px;
-    accent-color: var(--tf-black);
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--tf-border);
+    border-radius: 50%;
+    background: var(--tf-white);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.service-check input::after {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+.service-check input:checked {
+    border-color: var(--tf-black);
+    background: var(--tf-accent);
+}
+
+.service-check input:checked::after {
+    background: var(--tf-black);
+}
+
+.service-check-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .toggle-row {
@@ -697,6 +1184,11 @@ onMounted(async () => {
 
 .staff-item.inactive {
     opacity: 0.68;
+}
+
+.staff-item.expanded {
+    border-radius: 18px 18px 0 0;
+    border-bottom: 0;
 }
 
 .staff-avatar {
@@ -818,6 +1310,187 @@ onMounted(async () => {
 
 .mini-button.danger {
     color: #991b1b;
+}
+
+.mini-button.active {
+    background: var(--tf-black);
+    color: var(--tf-white);
+    border-color: var(--tf-black);
+}
+
+.staff-schedule-panel {
+    margin: -2px 0 4px;
+    padding: 18px;
+    border: 1px solid #eee8da;
+    border-top: 0;
+    border-radius: 0 0 18px 18px;
+    background: #fbfaf5;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.schedule-panel-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 100%;
+}
+
+.schedule-panel-col {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #eee8da;
+    border-radius: 16px;
+    background: var(--tf-white);
+}
+
+.schedule-panel-col h3 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    letter-spacing: -0.03em;
+}
+
+.panel-hint {
+    margin: -6px 0 12px;
+    color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.panel-subcard {
+    padding: 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 14px;
+    background: var(--tf-bg);
+}
+
+.panel-subcard-title {
+    margin: 0 0 14px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.working-hours-list,
+.day-blocks-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.working-hour-row,
+.day-block-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 8px;
+    column-gap: 10px;
+    max-width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #eee8da;
+    border-radius: 12px;
+    background: var(--tf-white);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.working-hour-row.inactive {
+    opacity: 0.6;
+}
+
+.wh-day {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wh-time {
+    flex: 0 0 auto;
+    color: var(--tf-muted);
+    font-family: var(--tf-mono);
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.wh-status {
+    flex: 0 0 auto;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-family: var(--tf-mono);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.wh-status.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.wh-status.inactive {
+    background: #fee2e2;
+    color: #b42318;
+}
+
+.wh-actions {
+    display: flex;
+    flex: 1 0 auto;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.db-range {
+    flex: 0 0 auto;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    color: var(--tf-muted);
+    white-space: nowrap;
+}
+
+.db-reason {
+    flex: 1 1 120px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.day-block-row .mini-button {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.panel-form {
+    display: grid;
+    gap: 12px;
+}
+
+.inline-toggle {
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.inline-toggle input {
+    width: 36px;
+    height: 20px;
+}
+
+.inline-toggle input::after {
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+}
+
+.inline-toggle input:checked::after {
+    transform: translateX(16px);
 }
 
 .muted-text {

@@ -6,7 +6,7 @@
                     <p class="tf-eyebrow">Agenda</p>
                     <h1>Agenda do negócio</h1>
                     <p class="schedule-header-copy">
-                        Gere horários de trabalho, bloqueios e marcações numa agenda visual.
+                        Gere marcações e bloqueios numa agenda visual.
                     </p>
                 </div>
 
@@ -75,81 +75,15 @@
                                 </button>
                             </div>
 
-                            <button class="btn btn-accent cal-new" type="button" @click="selectedTool = 'appointment'">
+                            <button class="btn btn-accent cal-new" type="button" @click="openNewAppointmentModal">
                                 + Marcação
                             </button>
                         </div>
                     </div>
 
-                    <div class="cal-subbar">
-                        <div class="tool-buttons">
-                            <button class="tool-button" :class="{ active: selectedTool === 'working' }" type="button"
-                                @click="selectedTool = 'working'">
-                                Horário
-                            </button>
-
-                            <button class="tool-button" :class="{ active: selectedTool === 'block' }" type="button"
-                                @click="selectedTool = 'block'">
-                                Bloqueio
-                            </button>
-
-                            <button class="tool-button" :class="{ active: selectedTool === 'appointment' }" type="button"
-                                @click="selectedTool = 'appointment'">
-                                Marcação
-                            </button>
-                        </div>
-
-                        <div class="legend">
-                            <span><span class="dot dot-working"></span>Horário</span>
-                            <span><span class="dot dot-block"></span>Bloqueio</span>
-                            <span><span class="dot dot-appointment"></span>Marcação</span>
-                        </div>
-                    </div>
-
                     <p class="cal-hint">
-                        Arrasta na agenda para selecionar um período e escolhe uma ação.
+                        A área verde-clara mostra o horário de trabalho do colaborador. Clica ou arrasta na agenda para criar uma marcação ou bloqueio.
                     </p>
-
-                    <ClientOnly>
-                        <FullCalendar ref="calendarRef" :options="calendarOptions" />
-                    </ClientOnly>
-                </div>
-
-                    <div v-if="selectedRange" class="card selected-range-card">
-                        <div>
-                            <p class="tf-eyebrow">Período selecionado</p>
-
-                            <h2>
-                                {{ formatDateTime(selectedRange.start) }}
-                                -
-                                {{ formatDateTime(selectedRange.end) }}
-                            </h2>
-
-                            <p>
-                                Escolhe o que queres fazer com este período.
-                            </p>
-                        </div>
-
-                        <div class="selected-range-actions">
-                            <button class="btn btn-accent" type="button" :disabled="isSavingWorkingHour"
-                                @click="saveSelectedRangeAsWorkingHour">
-                                Guardar como horário
-                            </button>
-
-                            <button class="btn btn-secondary" type="button" :disabled="isSavingBlock"
-                                @click="saveSelectedRangeAsBlock">
-                                Guardar como bloqueio
-                            </button>
-
-                            <button class="btn btn-secondary" type="button" @click="prepareSelectedRangeAsAppointment">
-                                Preparar marcação
-                            </button>
-
-                            <button class="btn btn-danger" type="button" @click="clearSelectedRange">
-                                Limpar
-                            </button>
-                        </div>
-                    </div>
 
                     <p v-if="errorMessage" class="error-message">
                         {{ errorMessage }}
@@ -159,191 +93,241 @@
                         {{ successMessage }}
                     </p>
 
-                    <div class="forms-grid">
-                        <article class="card form-card">
-                            <h2>{{ editingWorkingHour ? 'Editar horário de trabalho' : 'Horário de trabalho' }}</h2>
+                    <ClientOnly>
+                        <FullCalendar ref="calendarRef" :options="calendarOptions" />
+                    </ClientOnly>
+                </div>
+            </div>
+        </section>
 
-                            <form class="form" @submit.prevent="saveWorkingHour">
-                                <div>
-                                    <label class="label">Dia da semana</label>
+        <Teleport to="body">
+            <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
+                <div class="modal-card">
+                    <button class="modal-close" type="button" aria-label="Fechar" @click="closeModal">×</button>
 
-                                    <select v-model.number="workingHourForm.weekday" class="input">
-                                        <option v-for="day in weekdays" :key="day.value" :value="day.value">
-                                            {{ day.label }}
-                                        </option>
-                                    </select>
-                                </div>
+                    <div v-if="modalStep === 'choice'" class="modal-choice">
+                        <p class="tf-eyebrow">Novo período</p>
+                        <h2>O que queres criar?</h2>
+                        <p class="modal-range-label">{{ modalRangeLabel }}</p>
 
-                                <div class="two-columns">
-                                    <div>
-                                        <label class="label">Hora início</label>
-                                        <input v-model="workingHourForm.start_time" class="input" type="time" />
-                                    </div>
+                        <div class="modal-choice-actions">
+                            <button class="btn btn-accent" type="button" @click="goToAppointmentForm">
+                                Marcação
+                            </button>
 
-                                    <div>
-                                        <label class="label">Hora fim</label>
-                                        <input v-model="workingHourForm.end_time" class="input" type="time" />
-                                    </div>
-                                </div>
+                            <button class="btn btn-secondary" type="button" @click="goToBlockForm">
+                                Bloqueio
+                            </button>
+                        </div>
+                    </div>
 
-                                <label class="checkbox-row">
-                                    <input v-model="workingHourForm.is_active" type="checkbox" />
-                                    <span>Horário ativo</span>
-                                </label>
+                    <div v-else-if="modalStep === 'appointment-form'" class="modal-form">
+                        <p class="tf-eyebrow">Marcação</p>
+                        <h2>Nova marcação</h2>
 
-                                <div class="form-actions">
-                                    <button class="btn btn-accent" type="submit" :disabled="isSavingWorkingHour">
-                                        {{ isSavingWorkingHour ? 'A guardar...' : editingWorkingHour ? 'Guardar alterações' : 'Guardar horário' }}
-                                    </button>
+                        <form @submit.prevent="saveAppointment">
+                            <div>
+                                <label class="label">Serviço</label>
 
-                                    <button v-if="editingWorkingHour" class="btn btn-secondary" type="button"
-                                        @click="cancelWorkingHourEdit">
-                                        Cancelar
-                                    </button>
+                                <select v-model="appointmentForm.service_uuid" class="input">
+                                    <option value="" disabled>
+                                        Escolhe um serviço
+                                    </option>
 
-                                    <button v-if="editingWorkingHour" class="btn btn-danger" type="button"
-                                        @click="deleteWorkingHour(editingWorkingHour)">
-                                        Apagar
-                                    </button>
-                                </div>
-                            </form>
-                        </article>
-
-                        <article class="card form-card">
-                            <h2>{{ editingBlock ? 'Editar bloqueio' : 'Bloqueio' }}</h2>
-
-                            <form class="form" @submit.prevent="saveBlock">
-                                <div class="two-columns">
-                                    <div>
-                                        <label class="label">Data início</label>
-                                        <input v-model="blockForm.start_date" class="input" type="date" />
-                                    </div>
-
-                                    <div>
-                                        <label class="label">Hora início</label>
-                                        <input v-model="blockForm.start_time" class="input" type="time" />
-                                    </div>
-                                </div>
-
-                                <div class="two-columns">
-                                    <div>
-                                        <label class="label">Data fim</label>
-                                        <input v-model="blockForm.end_date" class="input" type="date" />
-                                    </div>
-
-                                    <div>
-                                        <label class="label">Hora fim</label>
-                                        <input v-model="blockForm.end_time" class="input" type="time" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="label">Motivo</label>
-                                    <input v-model="blockForm.reason" class="input" type="text"
-                                        placeholder="Férias, consulta, pausa, reunião..." />
-                                </div>
-
-                                <div class="form-actions">
-                                    <button class="btn btn-accent" type="submit" :disabled="isSavingBlock">
-                                        {{ isSavingBlock ? 'A guardar...' : editingBlock ? 'Guardar alterações' :
-                                        'Guardar bloqueio' }}
-                                    </button>
-
-                                    <button v-if="editingBlock" class="btn btn-secondary" type="button"
-                                        @click="cancelBlockEdit">
-                                        Cancelar
-                                    </button>
-
-                                    <button v-if="editingBlock" class="btn btn-danger" type="button"
-                                        @click="deleteBlock(editingBlock)">
-                                        Apagar
-                                    </button>
-                                </div>
-                            </form>
-                        </article>
-
-                        <article class="card form-card">
-                            <h2>Marcação manual</h2>
-
-                            <form class="form" @submit.prevent="saveAppointment">
-                                <div>
-                                    <label class="label">Serviço</label>
-
-                                    <select v-model="appointmentForm.service_uuid" class="input">
-                                        <option value="" disabled>
-                                            Escolhe um serviço
-                                        </option>
-
-                                        <option v-for="service in services" :key="service.uuid" :value="service.uuid">
-                                            {{ service.name }} — {{ service.duration_minutes }} min
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div class="two-columns">
-                                    <div>
-                                        <label class="label">Data</label>
-                                        <input v-model="appointmentForm.start_date" class="input" type="date" />
-                                    </div>
-
-                                    <div>
-                                        <label class="label">Hora</label>
-                                        <input v-model="appointmentForm.start_time" class="input" type="time" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="label">Nome do cliente</label>
-                                    <input v-model="appointmentForm.customer_name" class="input" type="text"
-                                        placeholder="Maria Silva" />
-                                </div>
-
-                                <div class="two-columns">
-                                    <div>
-                                        <label class="label">Telefone</label>
-                                        <input v-model="appointmentForm.customer_phone" class="input" type="text"
-                                            placeholder="910000000" />
-                                    </div>
-
-                                    <div>
-                                        <label class="label">Email</label>
-                                        <input v-model="appointmentForm.customer_email" class="input" type="email"
-                                            placeholder="cliente@email.pt" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="label">Notas</label>
-                                    <input v-model="appointmentForm.notes" class="input" type="text"
-                                        placeholder="Observações internas..." />
-                                </div>
-
-                                <div class="form-actions">
-                                    <button class="btn btn-accent" type="submit" :disabled="isSavingAppointment">
-                                        {{ isSavingAppointment ? 'A marcar...' : 'Criar marcação' }}
-                                    </button>
-                                </div>
-                            </form>
-                        </article>
-
-                        <article v-if="selectedAppointment" class="card form-card">
-                            <h2>Marcação selecionada</h2>
-
-                            <div class="appointment-detail">
-                                <strong>{{ selectedAppointment.service_name }}</strong>
-                                <span>{{ selectedAppointment.customer_name }}</span>
-                                <span>{{ selectedAppointment.customer_phone || 'Sem telefone' }}</span>
-                                <span>
-                                    {{ formatDateTime(selectedAppointment.start_at) }}
-                                    -
-                                    {{ formatDateTime(selectedAppointment.end_at) }}
-                                </span>
-                                <small>{{ selectedAppointment.status }}</small>
+                                    <option v-for="service in services" :key="service.uuid" :value="service.uuid">
+                                        {{ service.name }} — {{ service.duration_minutes }} min
+                                    </option>
+                                </select>
                             </div>
-                        </article>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Data</label>
+                                    <input v-model="appointmentForm.start_date" class="input" type="date" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Hora</label>
+                                    <input v-model="appointmentForm.start_time" class="input" type="time" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Nome do cliente</label>
+                                <input v-model="appointmentForm.customer_name" class="input" type="text"
+                                    placeholder="Maria Silva" />
+                            </div>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Telefone</label>
+                                    <input v-model="appointmentForm.customer_phone" class="input" type="text"
+                                        placeholder="910000000" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Email</label>
+                                    <input v-model="appointmentForm.customer_email" class="input" type="email"
+                                        placeholder="cliente@email.pt" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Notas</label>
+                                <input v-model="appointmentForm.notes" class="input" type="text"
+                                    placeholder="Observações internas..." />
+                            </div>
+
+                            <div>
+                                <label class="label">Repetir</label>
+
+                                <select v-model="appointmentForm.repeat" class="input">
+                                    <option value="none">Não repete</option>
+                                    <option value="weekly">Todas as semanas</option>
+                                    <option value="biweekly">De 2 em 2 semanas</option>
+                                    <option value="monthly">Todos os meses</option>
+                                    <option value="yearly">Todos os anos</option>
+                                </select>
+                            </div>
+
+                            <div v-if="appointmentForm.repeat !== 'none'">
+                                <label class="label">Repetir até</label>
+                                <input v-model="appointmentForm.repeat_until" class="input" type="date" />
+                            </div>
+
+                            <div class="form-actions">
+                                <button class="btn btn-accent" type="submit" :disabled="isSavingAppointment">
+                                    {{ isSavingAppointment ? 'A marcar...' : 'Criar marcação' }}
+                                </button>
+
+                                <button class="btn btn-secondary" type="button" @click="modalStep = 'choice'">
+                                    Voltar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div v-else-if="modalStep === 'block-form'" class="modal-form">
+                        <p class="tf-eyebrow">Bloqueio</p>
+                        <h2>{{ editingBlock ? 'Editar bloqueio' : 'Novo bloqueio' }}</h2>
+
+                        <form @submit.prevent="saveBlock">
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Data início</label>
+                                    <input v-model="blockForm.start_date" class="input" type="date" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Hora início</label>
+                                    <input v-model="blockForm.start_time" class="input" type="time" />
+                                </div>
+                            </div>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Data fim</label>
+                                    <input v-model="blockForm.end_date" class="input" type="date" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Hora fim</label>
+                                    <input v-model="blockForm.end_time" class="input" type="time" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Motivo</label>
+                                <input v-model="blockForm.reason" class="input" type="text"
+                                    placeholder="Férias, consulta, pausa, reunião..." />
+                            </div>
+
+                            <template v-if="!editingBlock">
+                                <div>
+                                    <label class="label">Repetir</label>
+
+                                    <select v-model="blockForm.repeat" class="input">
+                                        <option value="none">Não repete</option>
+                                        <option value="weekly">Todas as semanas</option>
+                                        <option value="biweekly">De 2 em 2 semanas</option>
+                                        <option value="monthly">Todos os meses</option>
+                                        <option value="yearly">Todos os anos</option>
+                                    </select>
+                                </div>
+
+                                <div v-if="blockForm.repeat !== 'none'">
+                                    <label class="label">Repetir até</label>
+                                    <input v-model="blockForm.repeat_until" class="input" type="date" />
+                                </div>
+                            </template>
+
+                            <div class="form-actions">
+                                <button class="btn btn-accent" type="submit" :disabled="isSavingBlock">
+                                    {{ isSavingBlock ? 'A guardar...' : editingBlock ? 'Guardar alterações' : 'Criar bloqueio' }}
+                                </button>
+
+                                <button class="btn btn-secondary" type="button" @click="cancelBlockFormStep">
+                                    Voltar
+                                </button>
+
+                                <button v-if="editingBlock" class="btn btn-danger" type="button"
+                                    @click="deleteBlockFromModal">
+                                    Apagar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div v-else-if="modalStep === 'appointment-detail' && modalAppointment" class="modal-detail">
+                        <p class="tf-eyebrow">Marcação</p>
+                        <h2>{{ modalAppointment.service_name || 'Marcação' }}</h2>
+
+                        <div class="appointment-detail">
+                            <span>{{ modalAppointment.customer_name }}</span>
+                            <span>{{ modalAppointment.customer_phone || 'Sem telefone' }}</span>
+                            <span>
+                                {{ formatDateTime(modalAppointment.start_at) }}
+                                -
+                                {{ formatDateTime(modalAppointment.end_at) }}
+                            </span>
+                            <small v-if="modalAppointment.status !== 'confirmed'">
+                                {{ appointmentStatusLabels[modalAppointment.status] || modalAppointment.status }}
+                            </small>
+                            <p v-if="modalAppointment.notes" class="modal-notes">{{ modalAppointment.notes }}</p>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-danger" type="button" @click="deleteAppointmentFromModal">
+                                Apagar marcação
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-else-if="modalStep === 'block-detail' && modalBlock" class="modal-detail">
+                        <p class="tf-eyebrow">Bloqueio</p>
+                        <h2>{{ modalBlock.reason || 'Bloqueado' }}</h2>
+
+                        <div class="appointment-detail">
+                            <span>
+                                {{ formatDateTime(modalBlock.start_at) }}
+                                -
+                                {{ formatDateTime(modalBlock.end_at) }}
+                            </span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" type="button" @click="editBlockFromDetail">
+                                Editar
+                            </button>
+
+                            <button class="btn btn-danger" type="button" @click="deleteBlockFromModal">
+                                Apagar bloqueio
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -444,6 +428,8 @@ type Appointment = {
     notes: string
 }
 
+type RecurrenceFrequency = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+
 type SelectedRange = {
     start: string
     end: string
@@ -451,8 +437,14 @@ type SelectedRange = {
     startTime: string
     endDate: string
     endTime: string
-    weekday: number
 }
+
+type ModalStep =
+    | 'choice'
+    | 'appointment-form'
+    | 'block-form'
+    | 'appointment-detail'
+    | 'block-detail'
 
 type GoogleCalendarStatus = {
     is_configured: boolean
@@ -466,9 +458,11 @@ const { apiFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
 
+const isMobileViewport = import.meta.client && window.innerWidth < 720
+
 const calendarRef = ref<any>(null)
 const calendarTitle = ref('')
-const currentView = ref('timeGridWeek')
+const currentView = ref(isMobileViewport ? 'timeGridDay' : 'timeGridWeek')
 
 const getCalendarApi = () => calendarRef.value?.getApi?.()
 const calPrev = () => getCalendarApi()?.prev()
@@ -486,15 +480,22 @@ const setCalendarView = (view: string) => {
     getCalendarApi()?.changeView(view)
 }
 
-const weekdays = [
-    { value: 0, label: 'Segunda-feira' },
-    { value: 1, label: 'Terça-feira' },
-    { value: 2, label: 'Quarta-feira' },
-    { value: 3, label: 'Quinta-feira' },
-    { value: 4, label: 'Sexta-feira' },
-    { value: 5, label: 'Sábado' },
-    { value: 6, label: 'Domingo' },
+const monthNamesPt = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
+
+const weekdayAbbrPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+const appointmentStatusLabels: Record<string, string> = {
+    pending: 'Pendente',
+    confirmed: 'Confirmada',
+    cancelled: 'Cancelada',
+    completed: 'Concluída',
+    no_show: 'Não apareceu',
+}
+
+const MAX_RECURRENCE_OCCURRENCES = 52
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -507,9 +508,11 @@ const workingHours = ref<WorkingHour[]>([])
 const blocks = ref<StaffBlock[]>([])
 const appointments = ref<Appointment[]>([])
 
-const selectedTool = ref<'working' | 'block' | 'appointment'>('working')
-const selectedAppointment = ref<Appointment | null>(null)
-const selectedRange = ref<SelectedRange | null>(null)
+const modalStep = ref<ModalStep>('choice')
+const isModalOpen = ref(false)
+const modalRange = ref<SelectedRange | null>(null)
+const modalAppointment = ref<Appointment | null>(null)
+const modalBlock = ref<StaffBlock | null>(null)
 
 const visibleRange = reactive({
     start: '',
@@ -518,7 +521,6 @@ const visibleRange = reactive({
 
 const isLoadingBusinesses = ref(false)
 const isLoadingStaff = ref(false)
-const isSavingWorkingHour = ref(false)
 const isSavingBlock = ref(false)
 const isSavingAppointment = ref(false)
 const isLoadingGoogleCalendarStatus = ref(false)
@@ -535,15 +537,7 @@ const googleCalendarStatus = reactive<GoogleCalendarStatus>({
     connected_at: null,
 })
 
-const editingWorkingHour = ref<WorkingHour | null>(null)
 const editingBlock = ref<StaffBlock | null>(null)
-
-const workingHourForm = reactive({
-    weekday: 0,
-    start_time: '09:00',
-    end_time: '18:00',
-    is_active: true,
-})
 
 const blockForm = reactive({
     start_date: '',
@@ -551,6 +545,8 @@ const blockForm = reactive({
     end_date: '',
     end_time: '10:00',
     reason: '',
+    repeat: 'none' as RecurrenceFrequency,
+    repeat_until: '',
 })
 
 const appointmentForm = reactive({
@@ -561,6 +557,8 @@ const appointmentForm = reactive({
     customer_phone: '',
     customer_email: '',
     notes: '',
+    repeat: 'none' as RecurrenceFrequency,
+    repeat_until: '',
 })
 
 const selectedStaff = computed(() => {
@@ -617,19 +615,45 @@ const isGoogleCalendarButtonDisabled = computed(() => {
     )
 })
 
+const nextAppointmentId = computed(() => {
+    const now = Date.now()
+    let candidate: Appointment | null = null
+
+    for (const appointment of appointments.value) {
+        if (appointment.status !== 'confirmed' && appointment.status !== 'pending') {
+            continue
+        }
+
+        if (new Date(appointment.start_at).getTime() < now) {
+            continue
+        }
+
+        if (!candidate || new Date(appointment.start_at).getTime() < new Date(candidate.start_at).getTime()) {
+            candidate = appointment
+        }
+    }
+
+    return candidate?.id ?? null
+})
+
+const modalRangeLabel = computed(() => {
+    if (!modalRange.value) {
+        return ''
+    }
+
+    return formatRangeLabel(modalRange.value.start, modalRange.value.end)
+})
+
 const calendarEvents = computed<EventInput[]>(() => {
-    const workingEvents: EventInput[] = workingHours.value.map((hour) => ({
+    const workingHourEvents: EventInput[] = workingHours.value.map((hour) => ({
         id: `working-${hour.id}`,
-        title: 'Trabalha',
         daysOfWeek: [toFullCalendarWeekday(hour.weekday)],
         startTime: normalizeTime(hour.start_time),
         endTime: normalizeTime(hour.end_time),
-        backgroundColor: hour.is_active ? '#eaf6c0' : '#efeade',
-        borderColor: hour.is_active ? '#c2e800' : '#c5c0b4',
-        textColor: '#3c4a0a',
+        display: 'background',
+        backgroundColor: 'rgba(194, 232, 0, 0.16)',
         extendedProps: {
             type: 'working-hour',
-            source: hour,
         },
     }))
 
@@ -644,29 +668,91 @@ const calendarEvents = computed<EventInput[]>(() => {
         extendedProps: {
             type: 'block',
             source: block,
+            subtitle: '',
         },
     }))
 
-    const appointmentEvents: EventInput[] = appointments.value.map((appointment) => ({
-        id: `appointment-${appointment.uuid}`,
-        title: `${appointment.service_name || 'Marcação'} · ${appointment.customer_name || 'Cliente'}`,
-        start: appointment.start_at,
-        end: appointment.end_at,
-        backgroundColor: '#0b0b0f',
-        borderColor: '#0b0b0f',
-        textColor: '#ffffff',
-        extendedProps: {
-            type: 'appointment',
-            source: appointment,
-        },
-    }))
+    const appointmentEvents: EventInput[] = appointments.value.map((appointment) => {
+        const isNext = appointment.id === nextAppointmentId.value
+        const isPending = appointment.status === 'pending'
+        const isInactive = appointment.status === 'cancelled' || appointment.status === 'no_show'
+
+        let backgroundColor = '#0b0b0f'
+        let borderColor = '#0b0b0f'
+        let textColor = '#ffffff'
+
+        if (isInactive) {
+            backgroundColor = '#f0ece2'
+            borderColor = '#d8d1c3'
+            textColor = '#8a857a'
+        } else if (isNext) {
+            backgroundColor = '#d7ff3e'
+            borderColor = '#c2e800'
+            textColor = '#0b0b0f'
+        } else if (isPending) {
+            backgroundColor = '#ffffff'
+            borderColor = '#0b0b0f'
+            textColor = '#0b0b0f'
+        }
+
+        return {
+            id: `appointment-${appointment.uuid}`,
+            title: appointment.service_name || 'Marcação',
+            start: appointment.start_at,
+            end: appointment.end_at,
+            backgroundColor,
+            borderColor,
+            textColor,
+            extendedProps: {
+                type: 'appointment',
+                source: appointment,
+                subtitle: appointment.customer_name || 'Cliente',
+            },
+        }
+    })
 
     return [
-        ...workingEvents,
+        ...workingHourEvents,
         ...blockEvents,
         ...appointmentEvents,
     ]
 })
+
+const renderEventContent = (arg: any) => {
+    const wrapper = document.createElement('div')
+    wrapper.className = 'tf-event'
+
+    const titleEl = document.createElement('strong')
+    titleEl.textContent = arg.event.title
+    wrapper.appendChild(titleEl)
+
+    const subtitle = arg.event.extendedProps?.subtitle
+    if (subtitle) {
+        const subtitleEl = document.createElement('span')
+        subtitleEl.textContent = subtitle
+        wrapper.appendChild(subtitleEl)
+    }
+
+    return { domNodes: [wrapper] }
+}
+
+const renderDayHeader = (arg: any) => {
+    const wrapper = document.createElement('div')
+    wrapper.className = arg.isToday ? 'tf-day-header is-today' : 'tf-day-header'
+
+    const dow = document.createElement('span')
+    dow.className = 'tf-day-header-dow'
+    dow.textContent = weekdayAbbrPt[arg.date.getDay()] ?? ''
+
+    const num = document.createElement('span')
+    num.className = 'tf-day-header-num'
+    num.textContent = String(arg.date.getDate())
+
+    wrapper.appendChild(dow)
+    wrapper.appendChild(num)
+
+    return { domNodes: [wrapper] }
+}
 
 const calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [
@@ -674,23 +760,30 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         timeGridPlugin,
         interactionPlugin,
     ],
-    initialView: 'timeGridWeek',
+    initialView: currentView.value,
     locale: ptLocale,
     firstDay: 1,
     selectable: true,
     selectMirror: true,
-    unselectAuto: false,
     allDaySlot: false,
     nowIndicator: true,
     height: 'auto',
     slotMinTime: '07:00:00',
     slotMaxTime: '22:00:00',
-    slotDuration: '00:15:00',
+    slotDuration: '01:00:00',
+    snapDuration: '00:15:00',
+    slotLabelFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    },
     headerToolbar: false,
     events: calendarEvents.value,
+    eventContent: renderEventContent,
     select: handleCalendarSelect,
     eventClick: handleEventClick,
     datesSet: handleDatesSet,
+    ...(currentView.value !== 'dayGridMonth' ? { dayHeaderContent: renderDayHeader } : {}),
 }))
 
 const resetMessages = () => {
@@ -698,18 +791,12 @@ const resetMessages = () => {
     successMessage.value = ''
 }
 
-const normalizeTime = (value: string) => {
-    return value.length === 5 ? `${value}:00` : value
-}
-
 const toFullCalendarWeekday = (backendWeekday: number) => {
     return backendWeekday === 6 ? 0 : backendWeekday + 1
 }
 
-const toBackendWeekday = (date: Date) => {
-    const jsDay = date.getDay()
-
-    return jsDay === 0 ? 6 : jsDay - 1
+const normalizeTime = (value: string) => {
+    return value.length === 5 ? `${value}:00` : value
 }
 
 const formatDateInput = (date: Date) => {
@@ -746,6 +833,24 @@ const formatDateTime = (value: string) => {
     }).format(new Date(value))
 }
 
+const formatRangeLabel = (startIso: string, endIso: string) => {
+    const start = new Date(startIso)
+    const end = new Date(endIso)
+
+    const dateFormatter = new Intl.DateTimeFormat('pt-PT', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'long',
+    })
+
+    const timeFormatter = new Intl.DateTimeFormat('pt-PT', {
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+
+    return `${dateFormatter.format(start)} · ${timeFormatter.format(start)} – ${timeFormatter.format(end)}`
+}
+
 const splitDateTime = (value: string) => {
     const date = new Date(value)
 
@@ -753,15 +858,6 @@ const splitDateTime = (value: string) => {
         date: formatDateInput(date),
         time: formatTimeInput(date),
     }
-}
-
-const resetWorkingHourForm = () => {
-    editingWorkingHour.value = null
-
-    workingHourForm.weekday = 0
-    workingHourForm.start_time = '09:00'
-    workingHourForm.end_time = '18:00'
-    workingHourForm.is_active = true
 }
 
 const resetBlockForm = () => {
@@ -774,6 +870,8 @@ const resetBlockForm = () => {
     blockForm.end_date = today
     blockForm.end_time = '10:00'
     blockForm.reason = ''
+    blockForm.repeat = 'none'
+    blockForm.repeat_until = ''
 }
 
 const resetAppointmentForm = () => {
@@ -786,34 +884,136 @@ const resetAppointmentForm = () => {
     appointmentForm.customer_phone = ''
     appointmentForm.customer_email = ''
     appointmentForm.notes = ''
+    appointmentForm.repeat = 'none'
+    appointmentForm.repeat_until = ''
 }
 
-const fillFormsFromSelectedRange = () => {
-    if (!selectedRange.value) {
+const fillFormsFromModalRange = () => {
+    if (!modalRange.value) {
         return
     }
 
-    workingHourForm.weekday = selectedRange.value.weekday
-    workingHourForm.start_time = selectedRange.value.startTime
-    workingHourForm.end_time = selectedRange.value.endTime
-    workingHourForm.is_active = true
+    appointmentForm.start_date = modalRange.value.startDate
+    appointmentForm.start_time = modalRange.value.startTime
 
-    blockForm.start_date = selectedRange.value.startDate
-    blockForm.start_time = selectedRange.value.startTime
-    blockForm.end_date = selectedRange.value.endDate
-    blockForm.end_time = selectedRange.value.endTime
-
-    appointmentForm.start_date = selectedRange.value.startDate
-    appointmentForm.start_time = selectedRange.value.startTime
+    blockForm.start_date = modalRange.value.startDate
+    blockForm.start_time = modalRange.value.startTime
+    blockForm.end_date = modalRange.value.endDate
+    blockForm.end_time = modalRange.value.endTime
 }
 
-const clearSelectedRange = () => {
-    selectedRange.value = null
+const shiftDateByFrequency = (date: Date, frequency: RecurrenceFrequency) => {
+    const next = new Date(date)
+
+    if (frequency === 'weekly') {
+        next.setDate(next.getDate() + 7)
+    } else if (frequency === 'biweekly') {
+        next.setDate(next.getDate() + 14)
+    } else if (frequency === 'monthly') {
+        next.setMonth(next.getMonth() + 1)
+    } else if (frequency === 'yearly') {
+        next.setFullYear(next.getFullYear() + 1)
+    }
+
+    return next
+}
+
+const buildOccurrences = (
+    startDate: string,
+    endDate: string,
+    frequency: RecurrenceFrequency,
+    untilDate: string,
+) => {
+    if (frequency === 'none' || !startDate) {
+        return { occurrences: [{ startDate, endDate }], capped: false }
+    }
+
+    const spanDays = Math.round(
+        (new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime())
+        / 86400000
+    )
+
+    const until = untilDate ? new Date(`${untilDate}T23:59:59`) : null
+    const occurrences: { startDate: string; endDate: string }[] = []
+    let cursor = new Date(`${startDate}T00:00:00`)
+    let capped = false
+
+    while (!until || cursor.getTime() <= until.getTime()) {
+        if (occurrences.length >= MAX_RECURRENCE_OCCURRENCES) {
+            capped = true
+            break
+        }
+
+        const cursorEnd = new Date(cursor)
+        cursorEnd.setDate(cursorEnd.getDate() + spanDays)
+
+        occurrences.push({
+            startDate: formatDateInput(cursor),
+            endDate: formatDateInput(cursorEnd),
+        })
+
+        cursor = shiftDateByFrequency(cursor, frequency)
+    }
+
+    return { occurrences, capped }
+}
+
+const closeModal = () => {
+    isModalOpen.value = false
+    modalStep.value = 'choice'
+    modalRange.value = null
+    modalAppointment.value = null
+    modalBlock.value = null
+    editingBlock.value = null
+    getCalendarApi()?.unselect()
+}
+
+const openNewAppointmentModal = () => {
     resetMessages()
+
+    if (!selectedStaffId.value) {
+        errorMessage.value = 'Seleciona primeiro um colaborador.'
+        return
+    }
+
+    modalRange.value = null
+    resetAppointmentForm()
+    modalStep.value = 'appointment-form'
+    isModalOpen.value = true
+}
+
+const goToAppointmentForm = () => {
+    modalStep.value = 'appointment-form'
+}
+
+const goToBlockForm = () => {
+    if (!blockForm.reason) {
+        blockForm.reason = 'Bloqueado'
+    }
+
+    modalStep.value = 'block-form'
+}
+
+const cancelBlockFormStep = () => {
+    if (editingBlock.value) {
+        modalStep.value = 'block-detail'
+        return
+    }
+
+    modalStep.value = 'choice'
+}
+
+const editBlockFromDetail = () => {
+    if (!modalBlock.value) {
+        return
+    }
+
+    editBlock(modalBlock.value)
+    modalStep.value = 'block-form'
 }
 
 const handleDatesSet = async (info: DatesSetArg) => {
-    calendarTitle.value = info.view.title
+    calendarTitle.value = computeCalendarTitle(info)
     currentView.value = info.view.type
 
     const endDate = new Date(info.end)
@@ -825,117 +1025,72 @@ const handleDatesSet = async (info: DatesSetArg) => {
     await loadAppointments()
 }
 
+const computeCalendarTitle = (info: DatesSetArg) => {
+    if (info.view.type === 'dayGridMonth') {
+        return info.view.title
+    }
+
+    const start = info.view.currentStart
+    const end = new Date(info.view.currentEnd)
+    end.setDate(end.getDate() - 1)
+
+    const startMonthName = monthNamesPt[start.getMonth()] ?? ''
+    const endMonthName = monthNamesPt[end.getMonth()] ?? ''
+
+    if (info.view.type === 'timeGridDay') {
+        return `${start.getDate()} de ${startMonthName}`
+    }
+
+    if (start.getMonth() === end.getMonth()) {
+        return startMonthName
+    }
+
+    return `${startMonthName} — ${endMonthName}`
+}
+
 const handleCalendarSelect = (selection: DateSelectArg) => {
     resetMessages()
 
     if (!selectedStaffId.value) {
         errorMessage.value = 'Seleciona primeiro um colaborador.'
+        getCalendarApi()?.unselect()
         return
     }
 
-    const startDate = formatDateInput(selection.start)
-    const endDate = formatDateInput(selection.end)
-    const startTime = formatTimeInput(selection.start)
-    const endTime = formatTimeInput(selection.end)
-
-    selectedRange.value = {
+    modalRange.value = {
         start: selection.start.toISOString(),
         end: selection.end.toISOString(),
-        startDate,
-        startTime,
-        endDate,
-        endTime,
-        weekday: toBackendWeekday(selection.start),
+        startDate: formatDateInput(selection.start),
+        startTime: formatTimeInput(selection.start),
+        endDate: formatDateInput(selection.end),
+        endTime: formatTimeInput(selection.end),
     }
 
-    editingWorkingHour.value = null
-    editingBlock.value = null
-    selectedAppointment.value = null
+    resetAppointmentForm()
+    resetBlockForm()
+    fillFormsFromModalRange()
 
-    fillFormsFromSelectedRange()
-
-    if (selectedTool.value === 'working') {
-        successMessage.value = 'Período selecionado. Podes guardar como horário de trabalho.'
-        return
-    }
-
-    if (selectedTool.value === 'block') {
-        blockForm.reason = blockForm.reason || 'Bloqueado'
-        successMessage.value = 'Período selecionado. Podes guardar como bloqueio.'
-        return
-    }
-
-    successMessage.value = 'Período selecionado. Preenche os dados do cliente para criar marcação.'
+    modalStep.value = 'choice'
+    isModalOpen.value = true
 }
 
 const handleEventClick = (info: EventClickArg) => {
     resetMessages()
-    selectedRange.value = null
 
     const type = info.event.extendedProps.type
 
-    if (type === 'working-hour') {
-        selectedTool.value = 'working'
-        editWorkingHour(info.event.extendedProps.source as WorkingHour)
-        return
-    }
-
     if (type === 'block') {
-        selectedTool.value = 'block'
-        editBlock(info.event.extendedProps.source as StaffBlock)
+        modalBlock.value = info.event.extendedProps.source as StaffBlock
+        modalStep.value = 'block-detail'
+        isModalOpen.value = true
         return
     }
 
     if (type === 'appointment') {
-        selectedAppointment.value = info.event.extendedProps.source as Appointment
+        modalAppointment.value = info.event.extendedProps.source as Appointment
+        modalStep.value = 'appointment-detail'
+        isModalOpen.value = true
     }
-}
-
-const saveSelectedRangeAsWorkingHour = async () => {
-    if (!selectedRange.value) {
-        errorMessage.value = 'Seleciona primeiro um período na agenda.'
-        return
-    }
-
-    if (selectedRange.value.startDate !== selectedRange.value.endDate) {
-        errorMessage.value = 'Para horário de trabalho, seleciona apenas um dia.'
-        return
-    }
-
-    selectedTool.value = 'working'
-    fillFormsFromSelectedRange()
-
-    await saveWorkingHour()
-    selectedRange.value = null
-}
-
-const saveSelectedRangeAsBlock = async () => {
-    if (!selectedRange.value) {
-        errorMessage.value = 'Seleciona primeiro um período na agenda.'
-        return
-    }
-
-    selectedTool.value = 'block'
-    fillFormsFromSelectedRange()
-
-    if (!blockForm.reason) {
-        blockForm.reason = 'Bloqueado'
-    }
-
-    await saveBlock()
-    selectedRange.value = null
-}
-
-const prepareSelectedRangeAsAppointment = () => {
-    if (!selectedRange.value) {
-        errorMessage.value = 'Seleciona primeiro um período na agenda.'
-        return
-    }
-
-    selectedTool.value = 'appointment'
-    fillFormsFromSelectedRange()
-
-    successMessage.value = 'Agora preenche o serviço e dados do cliente em "Marcação manual".'
 }
 
 const loadBusinesses = async () => {
@@ -1105,12 +1260,12 @@ const loadWorkingHours = async () => {
             next: string | null
             previous: string | null
             results: WorkingHour[]
-        }>(`/working-hours/?staff=${selectedStaffId.value}`)
+        }>(`/working-hours/?staff=${selectedStaffId.value}&is_active=true`)
 
         workingHours.value = response.results
     } catch (error) {
         console.error(error)
-        errorMessage.value = 'Não foi possível carregar os horários.'
+        errorMessage.value = 'Não foi possível carregar o horário de trabalho.'
     }
 }
 
@@ -1164,108 +1319,12 @@ const loadAppointments = async () => {
 
 const handleStaffChange = async () => {
     resetMessages()
-    resetWorkingHourForm()
     resetBlockForm()
-    selectedRange.value = null
-    selectedAppointment.value = null
+    closeModal()
 
     await loadWorkingHours()
     await loadBlocks()
     await loadAppointments()
-}
-
-const saveWorkingHour = async () => {
-    resetMessages()
-
-    if (!selectedStaffId.value) {
-        errorMessage.value = 'Seleciona um colaborador.'
-        return
-    }
-
-    if (!workingHourForm.start_time || !workingHourForm.end_time) {
-        errorMessage.value = 'Preenche a hora de início e fim.'
-        return
-    }
-
-    if (workingHourForm.end_time <= workingHourForm.start_time) {
-        errorMessage.value = 'A hora de fim tem de ser superior à hora de início.'
-        return
-    }
-
-    try {
-        isSavingWorkingHour.value = true
-
-        const payload = {
-            staff_member: selectedStaffId.value,
-            weekday: workingHourForm.weekday,
-            start_time: workingHourForm.start_time,
-            end_time: workingHourForm.end_time,
-            is_active: workingHourForm.is_active,
-        }
-
-        if (editingWorkingHour.value) {
-            await apiFetch(`/working-hours/${editingWorkingHour.value.id}/`, {
-                method: 'PUT',
-                body: payload,
-            })
-
-            successMessage.value = 'Horário atualizado com sucesso.'
-        } else {
-            await apiFetch('/working-hours/', {
-                method: 'POST',
-                body: payload,
-            })
-
-            successMessage.value = 'Horário criado com sucesso.'
-        }
-
-        resetWorkingHourForm()
-        await loadWorkingHours()
-    } catch (error: any) {
-        console.error(error)
-        errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar horário.'
-    } finally {
-        isSavingWorkingHour.value = false
-    }
-}
-
-const editWorkingHour = (hour: WorkingHour) => {
-    editingWorkingHour.value = hour
-
-    workingHourForm.weekday = hour.weekday
-    workingHourForm.start_time = hour.start_time.slice(0, 5)
-    workingHourForm.end_time = hour.end_time.slice(0, 5)
-    workingHourForm.is_active = hour.is_active
-}
-
-const cancelWorkingHourEdit = () => {
-    resetMessages()
-    resetWorkingHourForm()
-}
-
-const deleteWorkingHour = async (hour: WorkingHour) => {
-    const confirmed = window.confirm('Tens a certeza que queres apagar este horário?')
-
-    if (!confirmed) {
-        return
-    }
-
-    try {
-        await apiFetch(`/working-hours/${hour.id}/`, {
-            method: 'DELETE',
-        })
-
-        successMessage.value = 'Horário apagado com sucesso.'
-
-        if (editingWorkingHour.value?.id === hour.id) {
-            resetWorkingHourForm()
-        }
-
-        await loadWorkingHours()
-    } catch (error) {
-        console.error(error)
-        errorMessage.value = 'Não foi possível apagar o horário.'
-    }
 }
 
 const saveBlock = async () => {
@@ -1289,38 +1348,92 @@ const saveBlock = async () => {
         return
     }
 
-    try {
-        isSavingBlock.value = true
+    if (editingBlock.value) {
+        try {
+            isSavingBlock.value = true
 
-        const payload = {
-            staff_member: selectedStaffId.value,
-            start_at: startAt,
-            end_at: endAt,
-            reason: blockForm.reason,
-        }
-
-        if (editingBlock.value) {
             await apiFetch(`/staff-blocks/${editingBlock.value.uuid}/`, {
                 method: 'PUT',
-                body: payload,
+                body: {
+                    staff_member: selectedStaffId.value,
+                    start_at: startAt,
+                    end_at: endAt,
+                    reason: blockForm.reason,
+                },
             })
 
             successMessage.value = 'Bloqueio atualizado com sucesso.'
-        } else {
-            await apiFetch('/staff-blocks/', {
-                method: 'POST',
-                body: payload,
-            })
-
-            successMessage.value = 'Bloqueio criado com sucesso.'
+            resetBlockForm()
+            closeModal()
+            await loadBlocks()
+            await loadAppointments()
+        } catch (error: any) {
+            console.error(error)
+            errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar bloqueio.'
+        } finally {
+            isSavingBlock.value = false
         }
 
-        resetBlockForm()
-        await loadBlocks()
-        await loadAppointments()
-    } catch (error: any) {
-        console.error(error)
-        errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar bloqueio.'
+        return
+    }
+
+    if (blockForm.repeat !== 'none' && !blockForm.repeat_until) {
+        errorMessage.value = 'Escolhe até quando o bloqueio se repete.'
+        return
+    }
+
+    const { occurrences, capped } = buildOccurrences(
+        blockForm.start_date,
+        blockForm.end_date,
+        blockForm.repeat,
+        blockForm.repeat_until,
+    )
+
+    try {
+        isSavingBlock.value = true
+
+        let successCount = 0
+        let failCount = 0
+
+        for (const occurrence of occurrences) {
+            try {
+                await apiFetch('/staff-blocks/', {
+                    method: 'POST',
+                    body: {
+                        staff_member: selectedStaffId.value,
+                        start_at: toDateTimePayload(occurrence.startDate, blockForm.start_time),
+                        end_at: toDateTimePayload(occurrence.endDate, blockForm.end_time),
+                        reason: blockForm.reason,
+                    },
+                })
+
+                successCount += 1
+            } catch (error) {
+                console.error(error)
+                failCount += 1
+            }
+        }
+
+        if (successCount && !failCount) {
+            successMessage.value = successCount > 1
+                ? `${successCount} bloqueios criados com sucesso.`
+                : 'Bloqueio criado com sucesso.'
+        } else if (successCount && failCount) {
+            successMessage.value = `${successCount} bloqueios criados, ${failCount} falharam.`
+        } else {
+            errorMessage.value = 'Não foi possível criar o bloqueio.'
+        }
+
+        if (capped && successCount) {
+            successMessage.value = `${successMessage.value} Limite de ${MAX_RECURRENCE_OCCURRENCES} ocorrências atingido.`
+        }
+
+        if (successCount) {
+            resetBlockForm()
+            closeModal()
+            await loadBlocks()
+            await loadAppointments()
+        }
     } finally {
         isSavingBlock.value = false
     }
@@ -1337,17 +1450,14 @@ const editBlock = (block: StaffBlock) => {
     blockForm.end_date = end.date
     blockForm.end_time = end.time
     blockForm.reason = block.reason || ''
+    blockForm.repeat = 'none'
+    blockForm.repeat_until = ''
 }
 
-const cancelBlockEdit = () => {
-    resetMessages()
-    resetBlockForm()
-}
+const deleteBlockFromModal = async () => {
+    const block = modalBlock.value || editingBlock.value
 
-const deleteBlock = async (block: StaffBlock) => {
-    const confirmed = window.confirm('Tens a certeza que queres apagar este bloqueio?')
-
-    if (!confirmed) {
+    if (!block) {
         return
     }
 
@@ -1357,11 +1467,7 @@ const deleteBlock = async (block: StaffBlock) => {
         })
 
         successMessage.value = 'Bloqueio apagado com sucesso.'
-
-        if (editingBlock.value?.uuid === block.uuid) {
-            resetBlockForm()
-        }
-
+        closeModal()
         await loadBlocks()
         await loadAppointments()
     } catch (error) {
@@ -1393,34 +1499,88 @@ const saveAppointment = async () => {
         return
     }
 
+    if (appointmentForm.repeat !== 'none' && !appointmentForm.repeat_until) {
+        errorMessage.value = 'Escolhe até quando a marcação se repete.'
+        return
+    }
+
+    const { occurrences, capped } = buildOccurrences(
+        appointmentForm.start_date,
+        appointmentForm.start_date,
+        appointmentForm.repeat,
+        appointmentForm.repeat_until,
+    )
+
     try {
         isSavingAppointment.value = true
 
-        await apiFetch('/public/appointments/', {
-            method: 'POST',
-            body: {
-                business_slug: selectedBusiness.value.slug,
-                service_uuid: appointmentForm.service_uuid,
-                staff_uuid: selectedStaff.value.uuid,
-                start_at: toDateTimePayload(appointmentForm.start_date, appointmentForm.start_time),
-                customer_name: appointmentForm.customer_name,
-                customer_phone: appointmentForm.customer_phone,
-                customer_email: appointmentForm.customer_email,
-                notes: appointmentForm.notes,
-                source: 'manual',
-            },
-        })
+        let successCount = 0
+        let failCount = 0
 
-        successMessage.value = 'Marcação criada com sucesso.'
+        for (const occurrence of occurrences) {
+            try {
+                await apiFetch('/public/appointments/', {
+                    method: 'POST',
+                    body: {
+                        business_slug: selectedBusiness.value.slug,
+                        service_uuid: appointmentForm.service_uuid,
+                        staff_uuid: selectedStaff.value.uuid,
+                        start_at: toDateTimePayload(occurrence.startDate, appointmentForm.start_time),
+                        customer_name: appointmentForm.customer_name,
+                        customer_phone: appointmentForm.customer_phone,
+                        customer_email: appointmentForm.customer_email,
+                        notes: appointmentForm.notes,
+                        source: 'manual',
+                    },
+                })
 
-        selectedRange.value = null
-        resetAppointmentForm()
-        await loadAppointments()
-    } catch (error: any) {
-        console.error(error)
-        errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao criar marcação.'
+                successCount += 1
+            } catch (error) {
+                console.error(error)
+                failCount += 1
+            }
+        }
+
+        if (successCount && !failCount) {
+            successMessage.value = successCount > 1
+                ? `${successCount} marcações criadas com sucesso.`
+                : 'Marcação criada com sucesso.'
+        } else if (successCount && failCount) {
+            successMessage.value = `${successCount} marcações criadas, ${failCount} não foram criadas (horário indisponível).`
+        } else {
+            errorMessage.value = 'Não foi possível criar a marcação. Verifica a disponibilidade do horário.'
+        }
+
+        if (capped && successCount) {
+            successMessage.value = `${successMessage.value} Limite de ${MAX_RECURRENCE_OCCURRENCES} ocorrências atingido.`
+        }
+
+        if (successCount) {
+            resetAppointmentForm()
+            closeModal()
+            await loadAppointments()
+        }
     } finally {
         isSavingAppointment.value = false
+    }
+}
+
+const deleteAppointmentFromModal = async () => {
+    if (!modalAppointment.value) {
+        return
+    }
+
+    try {
+        await apiFetch(`/appointments/${modalAppointment.value.uuid}/`, {
+            method: 'DELETE',
+        })
+
+        successMessage.value = 'Marcação apagada com sucesso.'
+        closeModal()
+        await loadAppointments()
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível apagar a marcação.'
     }
 }
 
@@ -1471,6 +1631,10 @@ onMounted(async () => {
     font-size: 18px;
 }
 
+.schedule-header-copy a {
+    text-decoration: underline;
+}
+
 .integration-stack {
     display: grid;
     gap: 8px;
@@ -1500,17 +1664,8 @@ onMounted(async () => {
 }
 
 .calendar-card,
-.form-card,
-.empty-card,
-.selected-range-card {
+.empty-card {
     padding: 24px;
-}
-
-.form-card h2,
-.selected-range-card h2 {
-    margin: 0;
-    font-size: 26px;
-    letter-spacing: -0.05em;
 }
 
 /* ---- calendar toolbar (design) ---- */
@@ -1619,173 +1774,18 @@ onMounted(async () => {
     height: 44px;
 }
 
-/* ---- calendar sub-bar (tools + legend) ---- */
-.cal-subbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    padding-bottom: 14px;
-    margin-bottom: 6px;
-    border-bottom: 1px solid var(--tf-border);
-}
-
 .cal-hint {
     margin: 0 0 14px;
     color: var(--tf-muted);
     font-size: 13px;
 }
 
-.selected-range-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    border: 2px solid var(--tf-black);
-}
-
-.selected-range-card p {
-    margin: 8px 0 0;
-    color: var(--tf-muted);
-    font-weight: 700;
-}
-
-.selected-range-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.tool-buttons {
-    display: flex;
-    gap: 6px;
-}
-
-.tool-button {
-    padding: 8px 16px;
-    border: 1px solid var(--tf-border);
-    border-radius: 999px;
-    background: #fff;
-    color: var(--tf-black);
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.tool-button.active {
-    background: var(--tf-black);
-    color: #fff;
-    border-color: var(--tf-black);
-}
-
-.legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    color: var(--tf-muted);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.legend>span {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    display: inline-block;
-}
-
-.dot-working {
-    background: #c2e800;
-}
-
-.dot-block {
-    background: #ef4444;
-}
-
-.dot-appointment {
-    background: #0b0b0f;
-}
-
 .calendar-card {
     overflow: hidden;
 }
 
-.forms-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-}
-
-.form {
-    display: grid;
-    gap: 18px;
-    margin-top: 20px;
-}
-
-.two-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-}
-
-.checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 800;
-    color: var(--tf-muted);
-}
-
-.form-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.btn-danger {
-    min-height: 46px;
-    padding: 0 18px;
-    border: 1px solid #fecaca;
-    border-radius: 999px;
-    background: #fee2e2;
-    color: #991b1b;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-.appointment-detail {
-    display: grid;
-    gap: 8px;
-    margin-top: 18px;
-}
-
-.appointment-detail strong {
-    font-size: 18px;
-}
-
-.appointment-detail span {
-    color: var(--tf-muted);
-}
-
-.appointment-detail small {
-    width: fit-content;
-    padding: 7px 10px;
-    border-radius: 999px;
-    background: var(--tf-black);
-    color: var(--tf-white);
-    font-weight: 900;
-}
-
 .error-message {
-    margin: 0;
+    margin: 0 0 14px;
     padding: 12px 14px;
     border-radius: 12px;
     background: #fee2e2;
@@ -1794,7 +1794,7 @@ onMounted(async () => {
 }
 
 .success-message {
-    margin: 0;
+    margin: 0 0 14px;
     padding: 12px 14px;
     border-radius: 12px;
     background: #dcfce7;
@@ -1809,11 +1809,6 @@ button:disabled {
 
 .calendar-card :deep(.fc) {
     font-family: inherit;
-}
-
-.calendar-card :deep(.fc-toolbar-title) {
-    font-size: 24px;
-    letter-spacing: -0.04em;
 }
 
 .calendar-card :deep(.fc-button) {
@@ -1832,24 +1827,85 @@ button:disabled {
 
 .calendar-card :deep(.fc-event) {
     border-radius: 10px;
-    padding: 3px 6px;
+    padding: 4px 7px;
     font-weight: 700;
     font-size: 11px;
     cursor: pointer;
 }
 
+.calendar-card :deep(.tf-event) {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+}
+
+.calendar-card :deep(.tf-event strong) {
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-card :deep(.tf-event span) {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .calendar-card :deep(.fc-timegrid-slot) {
-    height: 42px;
+    height: 64px;
+}
+
+.calendar-card :deep(.fc-bg-event) {
+    opacity: 1;
 }
 
 .calendar-card :deep(.fc-col-header-cell) {
-    padding: 10px 0;
+    padding: 6px 0;
+}
+
+.calendar-card :deep(.tf-day-header) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    margin: 0 auto;
+    border-radius: 14px;
+}
+
+.calendar-card :deep(.tf-day-header-dow) {
     font-family: var(--tf-mono);
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--tf-muted);
+}
+
+.calendar-card :deep(.tf-day-header-num) {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--tf-black);
+}
+
+.calendar-card :deep(.tf-day-header.is-today) {
+    background: var(--tf-black);
+}
+
+.calendar-card :deep(.tf-day-header.is-today .tf-day-header-dow) {
+    color: var(--tf-accent);
+}
+
+.calendar-card :deep(.tf-day-header.is-today .tf-day-header-num) {
+    color: #fff;
 }
 
 .calendar-card :deep(.fc-day-today) {
@@ -1875,23 +1931,131 @@ button:disabled {
 .calendar-card :deep(.fc-theme-standard td),
 .calendar-card :deep(.fc-theme-standard th),
 .calendar-card :deep(.fc-scrollgrid) {
-    border-color: #f0ebdf;
+    border-color: #e2dcc7;
 }
 
-@media (max-width: 1100px) {
+/* ---- modal ---- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(11, 11, 15, 0.55);
+}
 
-    .forms-grid {
-        grid-template-columns: 1fr;
-    }
+.modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 32px;
+    border-radius: 24px;
+    background: var(--tf-white);
+    box-shadow: 0 40px 90px -30px rgba(11, 11, 15, 0.5);
+}
 
-    .selected-range-card {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+.modal-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: var(--tf-white);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
 
-    .selected-range-actions {
-        justify-content: flex-start;
-    }
+.modal-card h2 {
+    margin: 4px 0 0;
+    font-size: 26px;
+    letter-spacing: -0.045em;
+}
+
+.modal-range-label {
+    margin: 10px 0 22px;
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.modal-choice-actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.modal-choice-actions .btn {
+    width: 100%;
+}
+
+.modal-form form {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.modal-detail .appointment-detail {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.modal-detail .appointment-detail span {
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.modal-detail .appointment-detail small {
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-white);
+    font-weight: 900;
+}
+
+.modal-notes {
+    margin: 4px 0 0;
+    color: var(--tf-ink);
+}
+
+.two-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+}
+
+.two-columns > div {
+    min-width: 0;
+}
+
+.two-columns .input {
+    min-width: 0;
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.btn-danger {
+    min-height: 46px;
+    padding: 0 18px;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 900;
+    cursor: pointer;
 }
 
 @media (max-width: 720px) {
@@ -1915,9 +2079,8 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
-    .calendar-card :deep(.fc-header-toolbar) {
-        flex-direction: column;
-        gap: 12px;
+    .modal-card {
+        padding: 24px;
     }
 }
 </style>

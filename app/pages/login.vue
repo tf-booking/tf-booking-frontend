@@ -393,67 +393,104 @@ const handleLogin = async () => {
 }
 
 @media (max-width: 900px) {
+    .login-page {
+        height: 100svh;
+        overflow: hidden;
+    }
+
     .login-shell {
         grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100svh;
     }
 
     .brand-panel {
-        min-height: 48svh;
-        padding: 34px 28px 38px;
+        min-height: 0;
+        max-height: 36svh;
+        padding: 22px 26px 18px;
+        gap: 16px;
     }
 
     .brand-copy {
-        align-self: end;
+        align-self: center;
     }
 
     .brand-copy h2 {
-        max-width: 11ch;
-        font-size: clamp(42px, 11vw, 64px);
+        max-width: 16ch;
+        font-size: clamp(26px, 7vw, 38px);
+        line-height: 1.05;
     }
 
     .brand-lede {
-        margin-top: 22px;
-        font-size: 16px;
+        margin-top: 14px;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .brand-footer {
+        display: none;
     }
 
     .form-panel {
-        min-height: auto;
+        min-height: 0;
+        height: 100%;
+        overflow-y: auto;
         place-items: start center;
-        padding: 42px 24px 54px;
+        padding: 28px 24px 32px;
     }
 }
 
 @media (max-width: 520px) {
     .brand-panel {
-        gap: 34px;
-        min-height: 430px;
+        max-height: 32svh;
+        padding: 18px 20px 16px;
+        gap: 10px;
     }
 
     .brand-logo {
-        font-size: 18px;
-    }
-
-    .brand-mark {
-        width: 42px;
-        height: 42px;
-    }
-
-    .brand-footer {
-        font-size: 11px;
-    }
-
-    .form-panel h1 {
-        font-size: 42px;
-    }
-
-    .form-lede {
-        margin-bottom: 34px;
         font-size: 16px;
     }
 
-    .submit-btn {
-        min-height: 58px;
+    .brand-mark {
+        width: 38px;
+        height: 38px;
+    }
+
+    .brand-copy h2 {
+        font-size: clamp(22px, 8vw, 30px);
+    }
+
+    .brand-lede {
+        margin-top: 10px;
+        font-size: 13px;
+    }
+
+    .form-panel {
+        padding: 22px 20px 28px;
+    }
+
+    .form-panel h1 {
+        margin-bottom: 8px;
+        font-size: 38px;
+    }
+
+    .form-lede {
+        margin-bottom: 26px;
         font-size: 15px;
+    }
+
+    .form {
+        gap: 18px;
+    }
+
+    .submit-btn {
+        min-height: 56px;
+        font-size: 15px;
+    }
+
+    .form-footer {
+        margin-top: 28px;
+        padding-top: 20px;
     }
 }
 </style>
