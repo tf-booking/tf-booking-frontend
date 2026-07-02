@@ -147,6 +147,22 @@
                                         {{ staff.is_active ? 'Ativo' : 'Inativo' }}
                                     </small>
 
+                                    <small class="status-pill access-pill" :class="`access-${staff.access_status}`">
+                                        {{ accessStatusLabels[staff.access_status] }}
+                                    </small>
+
+                                    <button
+                                        v-if="staff.access_status !== 'active'"
+                                        class="mini-button"
+                                        type="button"
+                                        :disabled="invitingStaffId === staff.id"
+                                        @click="inviteStaff(staff)"
+                                    >
+                                        {{ invitingStaffId === staff.id
+                                            ? 'A enviar...'
+                                            : staff.access_status === 'pending' ? 'Reenviar convite' : 'Convidar' }}
+                                    </button>
+
                                     <button class="mini-button" type="button"
                                         :class="{ active: expandedStaffId === staff.id }"
                                         @click="toggleStaffSchedule(staff)">
@@ -313,7 +329,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-    middleware: 'auth',
+    middleware: ['auth', 'owner-or-manager'],
     layout: 'backoffice',
 })
 
@@ -337,6 +353,8 @@ type Service = {
     is_active: boolean
 }
 
+type AccessStatus = 'none' | 'pending' | 'active'
+
 type StaffMember = {
     id: number
     uuid: string
@@ -351,6 +369,7 @@ type StaffMember = {
     bio: string
     avatar_url: string
     is_active: boolean
+    access_status: AccessStatus
 }
 
 type WorkingHour = {
@@ -396,6 +415,13 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const editingStaff = ref<StaffMember | null>(null)
+const invitingStaffId = ref<number | null>(null)
+
+const accessStatusLabels: Record<AccessStatus, string> = {
+    none: 'Sem acesso',
+    pending: 'Convite enviado',
+    active: 'Acesso ativo',
+}
 
 const form = reactive({
     name: '',
@@ -817,7 +843,6 @@ const saveStaff = async () => {
 
         const payload = {
             business: selectedBusiness.value.id,
-            user: null,
             services: form.services,
             name: form.name,
             email: form.email,
@@ -856,6 +881,31 @@ const saveStaff = async () => {
         }
     } finally {
         isSaving.value = false
+    }
+}
+
+const inviteStaff = async (staff: StaffMember) => {
+    resetMessages()
+
+    if (!staff.email) {
+        errorMessage.value = 'Define o email do colaborador antes de o convidar.'
+        return
+    }
+
+    try {
+        invitingStaffId.value = staff.id
+
+        await apiFetch(`/staff/${staff.id}/invite/`, {
+            method: 'POST',
+        })
+
+        successMessage.value = `Convite enviado para ${staff.email}.`
+        await loadStaff()
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data?.detail || 'Não foi possível enviar o convite.'
+    } finally {
+        invitingStaffId.value = null
     }
 }
 
@@ -1289,6 +1339,21 @@ onMounted(async () => {
 .status-pill.inactive {
     background: #fee2e2;
     color: #b42318;
+}
+
+.access-pill.access-none {
+    background: #f0ece2;
+    color: #8a857a;
+}
+
+.access-pill.access-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.access-pill.access-active {
+    background: #dcfce7;
+    color: #166534;
 }
 
 .mini-button {

@@ -4,13 +4,13 @@
             <div class="schedule-header">
                 <div>
                     <p class="tf-eyebrow">Agenda</p>
-                    <h1>Agenda do negócio</h1>
+                    <h1>{{ isStaffOnly ? 'A minha agenda' : 'Agenda do negócio' }}</h1>
                     <p class="schedule-header-copy">
-                        Gere marcações e bloqueios numa agenda visual.
+                        {{ isStaffOnly ? 'Gere as tuas marcações numa agenda visual.' : 'Gere marcações e bloqueios numa agenda visual.' }}
                     </p>
                 </div>
 
-                <div class="schedule-header-actions">
+                <div v-if="!isStaffOnly" class="schedule-header-actions">
                     <div class="integration-stack">
                         <button
                             class="btn btn-secondary btn-google-calendar"
@@ -60,7 +60,12 @@
                         </div>
 
                         <div class="cal-toolbar-right">
-                            <select v-model.number="selectedStaffId" class="cal-staff" @change="handleStaffChange">
+                            <select
+                                v-if="!isStaffOnly"
+                                v-model.number="selectedStaffId"
+                                class="cal-staff"
+                                @change="handleStaffChange"
+                            >
                                 <option :value="null" disabled>Colaborador</option>
 
                                 <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
@@ -297,10 +302,77 @@
                         </div>
 
                         <div class="form-actions">
+                            <button class="btn btn-secondary" type="button" @click="editAppointmentFromDetail">
+                                Editar
+                            </button>
+
                             <button class="btn btn-danger" type="button" @click="deleteAppointmentFromModal">
                                 Apagar marcação
                             </button>
                         </div>
+                    </div>
+
+                    <div v-else-if="modalStep === 'appointment-edit' && modalAppointment" class="modal-form">
+                        <p class="tf-eyebrow">Marcação</p>
+                        <h2>Editar marcação</h2>
+
+                        <form @submit.prevent="saveAppointmentEdit">
+                            <div>
+                                <label class="label">Estado</label>
+
+                                <select v-model="appointmentEditForm.status" class="input">
+                                    <option v-for="option in appointmentStatusOptions" :key="option.value" :value="option.value">
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Data início</label>
+                                    <input v-model="appointmentEditForm.start_date" class="input" type="date" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Hora início</label>
+                                    <input v-model="appointmentEditForm.start_time" class="input" type="time" />
+                                </div>
+                            </div>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">Data fim</label>
+                                    <input v-model="appointmentEditForm.end_date" class="input" type="date" />
+                                </div>
+
+                                <div>
+                                    <label class="label">Hora fim</label>
+                                    <input v-model="appointmentEditForm.end_time" class="input" type="time" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Notas</label>
+                                <input v-model="appointmentEditForm.notes" class="input" type="text"
+                                    placeholder="Observações internas..." />
+                            </div>
+
+                            <div v-if="appointmentEditForm.status === 'cancelled'">
+                                <label class="label">Motivo do cancelamento</label>
+                                <input v-model="appointmentEditForm.cancellation_reason" class="input" type="text"
+                                    placeholder="Motivo do cancelamento..." />
+                            </div>
+
+                            <div class="form-actions">
+                                <button class="btn btn-accent" type="submit" :disabled="isSavingAppointmentEdit">
+                                    {{ isSavingAppointmentEdit ? 'A guardar...' : 'Guardar alterações' }}
+                                </button>
+
+                                <button class="btn btn-secondary" type="button" @click="modalStep = 'appointment-detail'">
+                                    Voltar
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                     <div v-else-if="modalStep === 'block-detail' && modalBlock" class="modal-detail">
@@ -426,6 +498,7 @@ type Appointment = {
     status: string
     source: string
     notes: string
+    cancellation_reason: string
 }
 
 type RecurrenceFrequency = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
@@ -444,6 +517,7 @@ type ModalStep =
     | 'appointment-form'
     | 'block-form'
     | 'appointment-detail'
+    | 'appointment-edit'
     | 'block-detail'
 
 type GoogleCalendarStatus = {
@@ -457,6 +531,7 @@ type GoogleCalendarStatus = {
 const { apiFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
+const { businesses: membershipBusinesses, loadCurrentBusiness } = useCurrentBusiness()
 
 const isMobileViewport = import.meta.client && window.innerWidth < 720
 
@@ -523,6 +598,7 @@ const isLoadingBusinesses = ref(false)
 const isLoadingStaff = ref(false)
 const isSavingBlock = ref(false)
 const isSavingAppointment = ref(false)
+const isSavingAppointmentEdit = ref(false)
 const isLoadingGoogleCalendarStatus = ref(false)
 const isConnectingGoogleCalendar = ref(false)
 
@@ -561,12 +637,40 @@ const appointmentForm = reactive({
     repeat_until: '',
 })
 
+const appointmentEditForm = reactive({
+    status: '',
+    start_date: '',
+    start_time: '',
+    end_date: '',
+    end_time: '',
+    notes: '',
+    cancellation_reason: '',
+})
+
 const selectedStaff = computed(() => {
     if (!selectedStaffId.value) {
         return null
     }
 
     return staffMembers.value.find((staff) => staff.id === selectedStaffId.value) || null
+})
+
+const currentRole = computed(() => {
+    if (!selectedBusiness.value) {
+        return null
+    }
+
+    const membership = membershipBusinesses.value.find(
+        (business) => business.business_uuid === selectedBusiness.value?.uuid
+    )
+
+    return membership?.role || null
+})
+
+const isStaffOnly = computed(() => currentRole.value === 'staff')
+
+const appointmentStatusOptions = computed(() => {
+    return Object.entries(appointmentStatusLabels).map(([value, label]) => ({ value, label }))
 })
 
 const googleCalendarButtonLabel = computed(() => {
@@ -1565,6 +1669,76 @@ const saveAppointment = async () => {
     }
 }
 
+const editAppointmentFromDetail = () => {
+    if (!modalAppointment.value) {
+        return
+    }
+
+    const start = splitDateTime(modalAppointment.value.start_at)
+    const end = splitDateTime(modalAppointment.value.end_at)
+
+    appointmentEditForm.status = modalAppointment.value.status
+    appointmentEditForm.start_date = start.date
+    appointmentEditForm.start_time = start.time
+    appointmentEditForm.end_date = end.date
+    appointmentEditForm.end_time = end.time
+    appointmentEditForm.notes = modalAppointment.value.notes || ''
+    appointmentEditForm.cancellation_reason = modalAppointment.value.cancellation_reason || ''
+
+    modalStep.value = 'appointment-edit'
+}
+
+const saveAppointmentEdit = async () => {
+    resetMessages()
+
+    if (!modalAppointment.value) {
+        return
+    }
+
+    if (
+        !appointmentEditForm.start_date
+        || !appointmentEditForm.start_time
+        || !appointmentEditForm.end_date
+        || !appointmentEditForm.end_time
+    ) {
+        errorMessage.value = 'Preenche a data e hora de início e fim.'
+        return
+    }
+
+    const startAt = toDateTimePayload(appointmentEditForm.start_date, appointmentEditForm.start_time)
+    const endAt = toDateTimePayload(appointmentEditForm.end_date, appointmentEditForm.end_time)
+
+    if (new Date(endAt) <= new Date(startAt)) {
+        errorMessage.value = 'O fim da marcação tem de ser depois do início.'
+        return
+    }
+
+    try {
+        isSavingAppointmentEdit.value = true
+
+        await apiFetch(`/appointments/${modalAppointment.value.uuid}/`, {
+            method: 'PATCH',
+            body: {
+                status: appointmentEditForm.status,
+                start_at: startAt,
+                end_at: endAt,
+                notes: appointmentEditForm.notes,
+                cancellation_reason: appointmentEditForm.cancellation_reason,
+            },
+        })
+
+        successMessage.value = 'Marcação atualizada com sucesso.'
+        closeModal()
+        await loadAppointments()
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data?.detail
+            || (error?.data ? JSON.stringify(error.data) : 'Não foi possível guardar a marcação.')
+    } finally {
+        isSavingAppointmentEdit.value = false
+    }
+}
+
 const deleteAppointmentFromModal = async () => {
     if (!modalAppointment.value) {
         return
@@ -1588,6 +1762,7 @@ onMounted(async () => {
     resetBlockForm()
     resetAppointmentForm()
 
+    await loadCurrentBusiness()
     await loadBusinesses()
     await loadGoogleCalendarStatus()
     await loadServices()

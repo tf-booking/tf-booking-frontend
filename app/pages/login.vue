@@ -143,6 +143,15 @@ const handleLogin = async () => {
             return
         }
 
+        const hasOwnerOrManagerMembership = me.businesses.some(
+            (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
+        )
+
+        if (!hasOwnerOrManagerMembership) {
+            await navigateTo('/schedule')
+            return
+        }
+
         await navigateTo('/dashboard')
     } catch (error) {
         console.error(error)

@@ -71,14 +71,22 @@ const roleLabels: Record<string, string> = {
     staff: 'Colaborador',
 }
 
-const items = [
+const ownerOrManagerItems = [
     { label: 'Painel', to: '/dashboard' },
     { label: 'Agenda', to: '/schedule' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
 ]
 
-const comingSoon = ['Clientes', 'Marketing']
+const staffItems = [
+    { label: 'A minha agenda', to: '/schedule' },
+]
+
+const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')
+
+const items = computed(() => isStaffOnly.value ? staffItems : ownerOrManagerItems)
+
+const comingSoon = computed(() => isStaffOnly.value ? [] : ['Clientes', 'Marketing'])
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
