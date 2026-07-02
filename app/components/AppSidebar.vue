@@ -7,6 +7,7 @@
             </NuxtLink>
 
             <button
+                ref="mobileMenuToggle"
                 class="s-menu-toggle"
                 type="button"
                 :aria-expanded="isMobileMenuOpen"
@@ -17,7 +18,7 @@
             </button>
         </div>
 
-        <div class="s-panel" :class="{ open: isMobileMenuOpen }">
+        <div ref="mobileMenuPanel" class="s-panel" :class="{ open: isMobileMenuOpen }">
             <div class="s-menu-label">Menu</div>
 
             <nav class="s-nav">
@@ -40,11 +41,11 @@
             </nav>
 
             <div class="s-user">
-                <span class="s-avatar">M</span>
+                <span class="s-avatar">{{ businessInitials }}</span>
 
                 <div class="s-user-info">
-                    <div class="s-user-name">Estudio Marta</div>
-                    <div class="s-user-plan">Plano Pro</div>
+                    <div class="s-user-name">{{ businessName }}</div>
+                    <div class="s-user-plan">{{ businessRoleLabel }}</div>
                 </div>
 
                 <button class="s-logout" type="button" title="Sair" @click="handleLogout">
@@ -58,8 +59,17 @@
 <script setup lang="ts">
 const route = useRoute()
 const { logout } = useAuth()
+const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 
 const isMobileMenuOpen = ref(false)
+const mobileMenuToggle = ref<HTMLElement | null>(null)
+const mobileMenuPanel = ref<HTMLElement | null>(null)
+
+const roleLabels: Record<string, string> = {
+    owner: 'Dono',
+    manager: 'Gestor',
+    staff: 'Colaborador',
+}
 
 const items = [
     { label: 'Painel', to: '/dashboard' },
@@ -72,6 +82,27 @@ const comingSoon = ['Clientes', 'Marketing']
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
+const businessName = computed(() => currentBusiness.value?.business_name || 'TF Booking')
+
+const businessRoleLabel = computed(() => {
+    const role = currentBusiness.value?.role || ''
+    return roleLabels[role] || 'Negócio'
+})
+
+const businessInitials = computed(() => {
+    const words = businessName.value.trim().split(/\s+/).filter(Boolean)
+
+    if (!words.length) {
+        return 'TF'
+    }
+
+    return words
+        .slice(0, 2)
+        .map((word) => word.charAt(0))
+        .join('')
+        .toUpperCase()
+})
+
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false
 }
@@ -80,10 +111,38 @@ const toggleMobileMenu = () => {
     isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
 
+const isTargetInside = (element: HTMLElement | null, target: EventTarget | null) => {
+    return Boolean(element && target instanceof Node && element.contains(target))
+}
+
+const handleOutsidePointerDown = (event: PointerEvent) => {
+    if (!isMobileMenuOpen.value) {
+        return
+    }
+
+    if (
+        isTargetInside(mobileMenuToggle.value, event.target)
+        || isTargetInside(mobileMenuPanel.value, event.target)
+    ) {
+        return
+    }
+
+    closeMobileMenu()
+}
+
 const handleLogout = () => {
     closeMobileMenu()
     logout()
 }
+
+onMounted(() => {
+    document.addEventListener('pointerdown', handleOutsidePointerDown)
+    loadCurrentBusiness()
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', handleOutsidePointerDown)
+})
 
 watch(
     () => route.path,

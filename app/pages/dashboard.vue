@@ -5,7 +5,7 @@
             <div class="dashboard-header">
                 <div>
                     <p class="dash-date">{{ todayLabel }}</p>
-                    <h1>Olá, Marta 👋</h1>
+                    <h1>{{ dashboardTitle }}</h1>
                 </div>
 
                 <div class="header-actions">
@@ -38,33 +38,34 @@
             </article>
 
             <p v-if="copyMessage" class="copy-message">{{ copyMessage }}</p>
+            <p v-if="dashboardError" class="error-message compact-error">{{ dashboardError }}</p>
 
             <!-- KPIs -->
             <div class="kpi-grid">
                 <article class="kpi kpi-dark">
                     <p class="kpi-label kpi-label-accent">Marcações hoje</p>
-                    <div class="kpi-value">12</div>
-                    <p class="kpi-foot">3 por confirmar</p>
+                    <div class="kpi-value">{{ dashboardKpis.appointments_today }}</div>
+                    <p class="kpi-foot">{{ dashboardKpis.pending_today }} por confirmar</p>
                 </article>
 
                 <article class="kpi">
                     <p class="kpi-label">Receita do dia</p>
-                    <div class="kpi-value">340€</div>
-                    <p class="kpi-foot kpi-up">▲ 18% vs. ontem</p>
+                    <div class="kpi-value">{{ formatCurrency(dashboardKpis.revenue_today) }}</div>
+                    <p class="kpi-foot" :class="revenueFootClass">{{ revenueFoot }}</p>
                 </article>
 
                 <article class="kpi">
                     <p class="kpi-label">Ocupação</p>
-                    <div class="kpi-value">78<span class="kpi-unit">%</span></div>
+                    <div class="kpi-value">{{ dashboardKpis.occupancy_percentage }}<span class="kpi-unit">%</span></div>
                     <div class="kpi-bar">
-                        <div class="kpi-bar-fill" style="width: 78%;"></div>
+                        <div class="kpi-bar-fill" :style="{ width: `${dashboardKpis.occupancy_percentage}%` }"></div>
                     </div>
                 </article>
 
                 <article class="kpi">
-                    <p class="kpi-label">Via Instagram</p>
-                    <div class="kpi-value">5</div>
-                    <p class="kpi-foot">de 12 marcações</p>
+                    <p class="kpi-label">{{ topSourceLabel }}</p>
+                    <div class="kpi-value">{{ dashboardKpis.top_source.count }}</div>
+                    <p class="kpi-foot">de {{ dashboardKpis.top_source.total }} marcações</p>
                 </article>
             </div>
 
@@ -76,8 +77,14 @@
                         <NuxtLink to="/schedule" class="panel-link">ver agenda →</NuxtLink>
                     </div>
 
-                    <div class="appointment-list">
-                        <div v-for="appointment in appointments" :key="appointment.time" class="appointment-item">
+                    <p v-if="isLoadingDashboard" class="muted-text">A carregar marcações...</p>
+
+                    <p v-else-if="appointments.length === 0" class="muted-text">
+                        Sem próximas marcações.
+                    </p>
+
+                    <div v-else class="appointment-list">
+                        <div v-for="appointment in appointments" :key="appointment.uuid" class="appointment-item">
                             <div class="appointment-time">{{ appointment.time }}</div>
 
                             <div class="appointment-body">
@@ -101,7 +108,13 @@
                 <article class="card panel">
                     <h2>Origem dos clientes</h2>
 
-                    <div class="origin-list">
+                    <p v-if="isLoadingDashboard" class="muted-text">A carregar origem dos clientes...</p>
+
+                    <p v-else-if="origins.length === 0" class="muted-text">
+                        Ainda sem dados de origem.
+                    </p>
+
+                    <div v-else class="origin-list">
                         <div v-for="origin in origins" :key="origin.label" class="origin-row">
                             <div class="origin-top">
                                 <span>{{ origin.label }}</span>
@@ -116,10 +129,7 @@
 
                     <div class="insight">
                         <p class="insight-eyebrow">Insight</p>
-                        <p class="insight-text">
-                            O Instagram trouxe <strong>+18 marcações</strong> esta semana.
-                            Continua a partilhar o teu link.
-                        </p>
+                        <p class="insight-text">{{ insightText }}</p>
                     </div>
                 </article>
             </div>
@@ -163,6 +173,7 @@ type Service = {
     id: number
     uuid: string
     business: number
+    business_uuid: string
     business_name: string
     name: string
     description: string
@@ -171,45 +182,105 @@ type Service = {
     is_active: boolean
 }
 
-type BusinessMembership = {
-    id: number
-    business_uuid: string
-    business_name: string
-    business_slug: string
-    role: string
-    is_active: boolean
-    created_at: string
+type DashboardTopSource = {
+    source: string
+    source_key: string
+    label: string
+    count: number
+    total: number
 }
 
-type MeResponse = {
-    id: number
-    username: string
-    email: string
-    first_name: string
-    last_name: string
-    is_staff: boolean
-    is_superuser: boolean
-    businesses: BusinessMembership[]
+type DashboardKpis = {
+    appointments_today: number
+    pending_today: number
+    revenue_today: string
+    revenue_yesterday: string
+    revenue_change_percent: number | null
+    occupancy_percentage: number
+    top_source: DashboardTopSource
 }
 
-type AppointmentPreview = {
+type DashboardAppointment = {
+    uuid: string
     time: string
     service: string
     customer: string
     duration: number
     source: string
-    sourceKey: 'instagram' | 'whatsapp' | 'google'
+    source_key: string
+    status: string
+    status_label: string
     confirmed: boolean
 }
 
+type DashboardOrigin = {
+    source: string
+    source_key: string
+    label: string
+    value: number
+    count: number
+}
+
+type BusinessDashboard = {
+    business: {
+        id: number
+        uuid: string
+        name: string
+        slug: string
+        email: string
+        phone: string
+        city: string
+    }
+    membership: {
+        role: string
+        role_label: string
+    }
+    user: {
+        display_name: string
+    }
+    kpis: DashboardKpis
+    upcoming_appointments: DashboardAppointment[]
+    origins: DashboardOrigin[]
+    insight: string
+}
+
 const { apiFetch } = useApi()
+const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 
 const services = ref<Service[]>([])
-const businesses = ref<BusinessMembership[]>([])
+const dashboard = ref<BusinessDashboard | null>(null)
+const isLoadingDashboard = ref(false)
 const isLoadingServices = ref(false)
+const dashboardError = ref('')
 const apiError = ref('')
 const publicOrigin = ref('')
 const copyMessage = ref('')
+
+const emptyKpis: DashboardKpis = {
+    appointments_today: 0,
+    pending_today: 0,
+    revenue_today: '0.00',
+    revenue_yesterday: '0.00',
+    revenue_change_percent: null,
+    occupancy_percentage: 0,
+    top_source: {
+        source: '',
+        source_key: '',
+        label: '',
+        count: 0,
+        total: 0,
+    },
+}
+
+const originColors: Record<string, string> = {
+    instagram: '#d7ff3e',
+    google: '#0b0b0f',
+    whatsapp: '#25d366',
+    facebook: '#1877f2',
+    ads: '#ffb703',
+    manual: '#c5c0b4',
+    'public-page': '#9a958a',
+}
 
 const todayLabel = computed(() => {
     const label = new Intl.DateTimeFormat('pt-PT', {
@@ -220,44 +291,61 @@ const todayLabel = computed(() => {
     return label.charAt(0).toUpperCase() + label.slice(1)
 })
 
-const appointments: AppointmentPreview[] = [
-    {
-        time: '15:00',
-        service: 'Limpeza de pele',
-        customer: 'Maria Silva',
-        duration: 60,
-        source: 'Instagram',
-        sourceKey: 'instagram',
-        confirmed: true,
-    },
-    {
-        time: '15:45',
-        service: 'Corte + Barba',
-        customer: 'João Costa',
-        duration: 50,
-        source: 'WhatsApp',
-        sourceKey: 'whatsapp',
-        confirmed: false,
-    },
-    {
-        time: '16:30',
-        service: 'Manicure gel',
-        customer: 'Ana Reis',
-        duration: 45,
-        source: 'Google',
-        sourceKey: 'google',
-        confirmed: true,
-    },
-]
+const primaryBusiness = computed(() => currentBusiness.value)
 
-const origins = [
-    { label: 'Instagram', value: 42, color: '#d7ff3e' },
-    { label: 'Google', value: 27, color: '#0b0b0f' },
-    { label: 'WhatsApp', value: 19, color: '#9a958a' },
-    { label: 'Direto', value: 12, color: '#c5c0b4' },
-]
+const dashboardKpis = computed(() => dashboard.value?.kpis || emptyKpis)
 
-const primaryBusiness = computed(() => businesses.value[0] || null)
+const dashboardTitle = computed(() => {
+    const businessName = dashboard.value?.business.name || primaryBusiness.value?.business_name
+    return businessName ? `Olá, ${businessName}` : 'Olá'
+})
+
+const appointments = computed(() =>
+    (dashboard.value?.upcoming_appointments || []).map((appointment) => ({
+        ...appointment,
+        sourceKey: appointment.source_key,
+    }))
+)
+
+const origins = computed(() =>
+    (dashboard.value?.origins || []).map((origin) => ({
+        ...origin,
+        color: originColors[origin.source_key] || '#c5c0b4',
+    }))
+)
+
+const topSourceLabel = computed(() => {
+    const label = dashboardKpis.value.top_source.label
+    return label ? `Via ${label}` : 'Origem principal'
+})
+
+const revenueFoot = computed(() => {
+    const change = dashboardKpis.value.revenue_change_percent
+
+    if (change === null) {
+        return 'Sem comparativo de ontem'
+    }
+
+    if (change === 0) {
+        return '0% vs. ontem'
+    }
+
+    return `${change > 0 ? '+' : '-'}${Math.abs(change)}% vs. ontem`
+})
+
+const revenueFootClass = computed(() => {
+    const change = dashboardKpis.value.revenue_change_percent
+
+    if (change === null || change >= 0) {
+        return 'kpi-up'
+    }
+
+    return 'kpi-down'
+})
+
+const insightText = computed(() =>
+    dashboard.value?.insight || 'Ainda não há dados suficientes. Partilha o link público para começar a medir a origem dos clientes.'
+)
 
 const publicBusinessPath = computed(() =>
     primaryBusiness.value ? `/${primaryBusiness.value.business_slug}` : '/'
@@ -275,12 +363,35 @@ const publicBusinessUrl = computed(() => {
     return `${publicOrigin.value}${publicBusinessPath.value}`
 })
 
-const loadMe = async () => {
+const formatCurrency = (value: string | number) => {
+    const amount = Number(value || 0)
+
+    return new Intl.NumberFormat('pt-PT', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0)
+}
+
+const loadDashboard = async () => {
+    if (!primaryBusiness.value) {
+        dashboard.value = null
+        return
+    }
+
     try {
-        const response = await apiFetch<MeResponse>('/me/')
-        businesses.value = response.businesses
+        isLoadingDashboard.value = true
+        dashboardError.value = ''
+
+        dashboard.value = await apiFetch<BusinessDashboard>(
+            `/businesses/${primaryBusiness.value.business_uuid}/dashboard/`
+        )
     } catch (error) {
-        console.error('Erro ao carregar negÃ³cios do utilizador:', error)
+        console.error('Erro ao carregar dashboard:', error)
+        dashboardError.value = 'Não foi possível carregar o resumo do negócio.'
+    } finally {
+        isLoadingDashboard.value = false
     }
 }
 
@@ -299,6 +410,12 @@ const copyPublicLink = async () => {
 }
 
 const loadServices = async () => {
+    if (!primaryBusiness.value) {
+        services.value = []
+        apiError.value = 'Este utilizador ainda não tem um negócio associado.'
+        return
+    }
+
     try {
         isLoadingServices.value = true
         apiError.value = ''
@@ -308,7 +425,7 @@ const loadServices = async () => {
             next: string | null
             previous: string | null
             results: Service[]
-        }>('/services/')
+        }>(`/services/?business_uuid=${primaryBusiness.value.business_uuid}&is_active=true`)
 
         services.value = response.results
     } catch (error) {
@@ -319,10 +436,13 @@ const loadServices = async () => {
     }
 }
 
-onMounted(() => {
+onMounted(async () => {
     publicOrigin.value = window.location.origin
-    loadMe()
-    loadServices()
+    await loadCurrentBusiness()
+    await Promise.all([
+        loadDashboard(),
+        loadServices(),
+    ])
 })
 </script>
 
@@ -433,6 +553,10 @@ onMounted(() => {
     font-weight: 800;
 }
 
+.compact-error {
+    margin: 0 0 16px;
+}
+
 /* KPIs */
 .kpi-grid {
     display: grid;
@@ -490,6 +614,11 @@ onMounted(() => {
 
 .kpi-up {
     color: #2f9e63;
+    font-weight: 700;
+}
+
+.kpi-down {
+    color: #b42318;
     font-weight: 700;
 }
 
@@ -591,7 +720,11 @@ onMounted(() => {
 }
 
 .source-whatsapp,
-.source-google {
+.source-google,
+.source-public-page,
+.source-manual,
+.source-facebook,
+.source-ads {
     background: #eef1e0;
     color: #5c6b12;
 }

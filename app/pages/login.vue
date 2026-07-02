@@ -73,14 +73,10 @@
                             {{ isLoading ? 'A entrar...' : 'Entrar no dashboard →' }}
                         </button>
 
-                        <button class="btn btn-secondary google-btn" type="button" disabled>
-                            <span class="google-mark">G</span>
-                            Continuar com Google
-                        </button>
                     </form>
 
                     <div class="form-footer">
-                        Novo por aqui? <strong>Criar conta do negócio</strong>
+                        Acesso fornecido pela equipa TF Creative.
                     </div>
                 </div>
             </section>
@@ -368,28 +364,11 @@ const handleLogin = async () => {
     font-weight: 800;
 }
 
-.submit-btn,
-.google-btn {
+.submit-btn {
     min-height: 64px;
     width: 100%;
     font-size: 17px;
     letter-spacing: 0;
-}
-
-.google-btn {
-    background: #fffefa;
-}
-
-.google-mark {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--tf-black);
-    color: var(--tf-accent);
-    font-size: 12px;
-    font-weight: 900;
 }
 
 .form-footer {
@@ -472,8 +451,7 @@ const handleLogin = async () => {
         font-size: 16px;
     }
 
-    .submit-btn,
-    .google-btn {
+    .submit-btn {
         min-height: 58px;
         font-size: 15px;
     }
