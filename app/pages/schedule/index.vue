@@ -5,14 +5,35 @@
                 <div>
                     <p class="tf-eyebrow">Agenda</p>
                     <h1>Agenda do negócio</h1>
-                    <p>
+                    <p class="schedule-header-copy">
                         Gere horários de trabalho, bloqueios e marcações numa agenda visual.
                     </p>
                 </div>
 
-                <NuxtLink to="/dashboard" class="btn btn-secondary">
-                    Voltar ao dashboard
-                </NuxtLink>
+                <div class="schedule-header-actions">
+                    <div class="integration-stack">
+                        <button
+                            class="btn btn-secondary btn-google-calendar"
+                            type="button"
+                            :disabled="isGoogleCalendarButtonDisabled"
+                            @click="connectGoogleCalendar"
+                        >
+                            {{ googleCalendarButtonLabel }}
+                        </button>
+
+                        <p
+                            v-if="selectedBusiness"
+                            class="integration-hint"
+                            :class="{ connected: googleCalendarStatus.is_connected }"
+                        >
+                            {{ googleCalendarHint }}
+                        </p>
+                    </div>
+
+                    <NuxtLink to="/dashboard" class="btn btn-secondary">
+                        Voltar ao dashboard
+                    </NuxtLink>
+                </div>
             </div>
 
             <div v-if="isLoadingBusinesses" class="card empty-card">
@@ -450,7 +471,17 @@ type SelectedRange = {
     weekday: number
 }
 
+type GoogleCalendarStatus = {
+    is_configured: boolean
+    is_connected: boolean
+    can_connect: boolean
+    calendar_id: string
+    connected_at: string | null
+}
+
 const { apiFetch } = useApi()
+const route = useRoute()
+const router = useRouter()
 
 const weekdays = [
     { value: 0, label: 'Segunda-feira' },
@@ -487,9 +518,19 @@ const isLoadingStaff = ref(false)
 const isSavingWorkingHour = ref(false)
 const isSavingBlock = ref(false)
 const isSavingAppointment = ref(false)
+const isLoadingGoogleCalendarStatus = ref(false)
+const isConnectingGoogleCalendar = ref(false)
 
 const errorMessage = ref('')
 const successMessage = ref('')
+
+const googleCalendarStatus = reactive<GoogleCalendarStatus>({
+    is_configured: false,
+    is_connected: false,
+    can_connect: false,
+    calendar_id: 'primary',
+    connected_at: null,
+})
 
 const editingWorkingHour = ref<WorkingHour | null>(null)
 const editingBlock = ref<StaffBlock | null>(null)
@@ -525,6 +566,52 @@ const selectedStaff = computed(() => {
     }
 
     return staffMembers.value.find((staff) => staff.id === selectedStaffId.value) || null
+})
+
+const googleCalendarButtonLabel = computed(() => {
+    if (isConnectingGoogleCalendar.value) {
+        return 'A ligar ao Google...'
+    }
+
+    if (isLoadingGoogleCalendarStatus.value) {
+        return 'A verificar Google...'
+    }
+
+    if (!googleCalendarStatus.is_configured) {
+        return 'Google Calendar indisponível'
+    }
+
+    if (googleCalendarStatus.is_connected) {
+        return 'Google Calendar ligado'
+    }
+
+    return 'Conectar Google Calendar'
+})
+
+const googleCalendarHint = computed(() => {
+    if (!googleCalendarStatus.is_configured) {
+        return 'Falta configurar as credenciais Google no backend.'
+    }
+
+    if (googleCalendarStatus.is_connected) {
+        return 'Novas marcações passam a ser enviadas para o calendário Google.'
+    }
+
+    if (!googleCalendarStatus.can_connect) {
+        return 'Só donos e gestores podem ligar esta integração.'
+    }
+
+    return 'Liga o negócio a um calendário Google.'
+})
+
+const isGoogleCalendarButtonDisabled = computed(() => {
+    return (
+        !selectedBusiness.value
+        || !googleCalendarStatus.is_configured
+        || !googleCalendarStatus.can_connect
+        || isLoadingGoogleCalendarStatus.value
+        || isConnectingGoogleCalendar.value
+    )
 })
 
 const calendarEvents = computed<EventInput[]>(() => {
@@ -875,6 +962,86 @@ const loadBusinesses = async () => {
     } finally {
         isLoadingBusinesses.value = false
     }
+}
+
+const loadGoogleCalendarStatus = async () => {
+    if (!selectedBusiness.value) {
+        googleCalendarStatus.is_configured = false
+        googleCalendarStatus.is_connected = false
+        googleCalendarStatus.can_connect = false
+        googleCalendarStatus.calendar_id = 'primary'
+        googleCalendarStatus.connected_at = null
+        return
+    }
+
+    try {
+        isLoadingGoogleCalendarStatus.value = true
+
+        const response = await apiFetch<GoogleCalendarStatus>(
+            `/businesses/${selectedBusiness.value.uuid}/google-calendar/status/`
+        )
+
+        googleCalendarStatus.is_configured = response.is_configured
+        googleCalendarStatus.is_connected = response.is_connected
+        googleCalendarStatus.can_connect = response.can_connect
+        googleCalendarStatus.calendar_id = response.calendar_id
+        googleCalendarStatus.connected_at = response.connected_at
+    } catch (error) {
+        console.error(error)
+        googleCalendarStatus.is_connected = false
+        googleCalendarStatus.can_connect = false
+        errorMessage.value = 'Não foi possível verificar o estado do Google Calendar.'
+    } finally {
+        isLoadingGoogleCalendarStatus.value = false
+    }
+}
+
+const connectGoogleCalendar = async () => {
+    if (!selectedBusiness.value || isGoogleCalendarButtonDisabled.value) {
+        return
+    }
+
+    try {
+        isConnectingGoogleCalendar.value = true
+        resetMessages()
+
+        const response = await apiFetch<{ url: string }>(
+            `/businesses/${selectedBusiness.value.uuid}/google-calendar/connect/`,
+            {
+                method: 'POST',
+            }
+        )
+
+        window.location.href = response.url
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data?.detail || 'Não foi possível iniciar a ligação ao Google Calendar.'
+    } finally {
+        isConnectingGoogleCalendar.value = false
+    }
+}
+
+const applyGoogleCalendarFeedbackFromQuery = async () => {
+    const googleCalendarResult = route.query.google_calendar
+
+    if (typeof googleCalendarResult !== 'string') {
+        return
+    }
+
+    if (googleCalendarResult === 'connected') {
+        successMessage.value = 'Google Calendar ligado com sucesso.'
+    } else if (googleCalendarResult === 'cancelled') {
+        errorMessage.value = 'Ligação ao Google Calendar cancelada.'
+    } else if (googleCalendarResult === 'error') {
+        errorMessage.value = 'Não foi possível concluir a ligação ao Google Calendar.'
+    }
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.google_calendar
+
+    await router.replace({
+        query: nextQuery,
+    })
 }
 
 const loadServices = async () => {
@@ -1266,11 +1433,13 @@ onMounted(async () => {
     resetAppointmentForm()
 
     await loadBusinesses()
+    await loadGoogleCalendarStatus()
     await loadServices()
     await loadStaff()
     await loadWorkingHours()
     await loadBlocks()
     await loadAppointments()
+    await applyGoogleCalendarFeedbackFromQuery()
 })
 </script>
 
@@ -1287,6 +1456,12 @@ onMounted(async () => {
     margin-bottom: 28px;
 }
 
+.schedule-header-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
 .schedule-header h1 {
     margin: 0;
     font-size: clamp(42px, 6vw, 74px);
@@ -1294,10 +1469,33 @@ onMounted(async () => {
     letter-spacing: -0.07em;
 }
 
-.schedule-header p:last-child {
+.schedule-header-copy {
     margin: 16px 0 0;
     color: var(--tf-muted);
     font-size: 18px;
+}
+
+.integration-stack {
+    display: grid;
+    gap: 8px;
+}
+
+.integration-hint {
+    margin: 0;
+    max-width: 320px;
+    color: var(--tf-muted);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: right;
+}
+
+.integration-hint.connected {
+    color: #166534;
+}
+
+.btn-google-calendar {
+    white-space: nowrap;
 }
 
 .calendar-layout {
@@ -1614,6 +1812,17 @@ button:disabled {
     .schedule-header {
         align-items: start;
         flex-direction: column;
+    }
+
+    .schedule-header-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .integration-hint {
+        max-width: none;
+        text-align: left;
     }
 
     .two-columns {
