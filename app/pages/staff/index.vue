@@ -151,18 +151,6 @@
                                         {{ accessStatusLabels[staff.access_status] }}
                                     </small>
 
-                                    <button
-                                        v-if="staff.access_status !== 'active'"
-                                        class="mini-button"
-                                        type="button"
-                                        :disabled="invitingStaffId === staff.id"
-                                        @click="inviteStaff(staff)"
-                                    >
-                                        {{ invitingStaffId === staff.id
-                                            ? 'A enviar...'
-                                            : staff.access_status === 'pending' ? 'Reenviar convite' : 'Convidar' }}
-                                    </button>
-
                                     <button class="mini-button" type="button"
                                         :class="{ active: expandedStaffId === staff.id }"
                                         @click="toggleStaffSchedule(staff)">
@@ -415,7 +403,6 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const editingStaff = ref<StaffMember | null>(null)
-const invitingStaffId = ref<number | null>(null)
 
 const accessStatusLabels: Record<AccessStatus, string> = {
     none: 'Sem acesso',
@@ -860,12 +847,22 @@ const saveStaff = async () => {
 
             successMessage.value = 'Colaborador atualizado com sucesso.'
         } else {
-            await apiFetch('/staff/', {
+            const created = await apiFetch<StaffMember>('/staff/', {
                 method: 'POST',
                 body: payload,
             })
 
-            successMessage.value = 'Colaborador criado com sucesso.'
+            if (created.email) {
+                try {
+                    await apiFetch(`/staff/${created.id}/invite/`, { method: 'POST' })
+                    successMessage.value = `Colaborador criado e convite enviado para ${created.email}.`
+                } catch (inviteError) {
+                    console.error(inviteError)
+                    successMessage.value = 'Colaborador criado, mas não foi possível enviar o convite automaticamente.'
+                }
+            } else {
+                successMessage.value = 'Colaborador criado com sucesso.'
+            }
         }
 
         resetForm()
@@ -881,31 +878,6 @@ const saveStaff = async () => {
         }
     } finally {
         isSaving.value = false
-    }
-}
-
-const inviteStaff = async (staff: StaffMember) => {
-    resetMessages()
-
-    if (!staff.email) {
-        errorMessage.value = 'Define o email do colaborador antes de o convidar.'
-        return
-    }
-
-    try {
-        invitingStaffId.value = staff.id
-
-        await apiFetch(`/staff/${staff.id}/invite/`, {
-            method: 'POST',
-        })
-
-        successMessage.value = `Convite enviado para ${staff.email}.`
-        await loadStaff()
-    } catch (error: any) {
-        console.error(error)
-        errorMessage.value = error?.data?.detail || 'Não foi possível enviar o convite.'
-    } finally {
-        invitingStaffId.value = null
     }
 }
 
@@ -1320,8 +1292,12 @@ onMounted(async () => {
 
 .staff-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    min-width: 0;
+    max-width: 260px;
 }
 
 .status-pill {
@@ -1675,6 +1651,7 @@ button:disabled {
         grid-column: 1 / -1;
         justify-content: space-between;
         width: 100%;
+        max-width: none;
     }
 }
 </style>
