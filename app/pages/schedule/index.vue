@@ -29,10 +29,6 @@
                             {{ googleCalendarHint }}
                         </p>
                     </div>
-
-                    <NuxtLink to="/dashboard" class="btn btn-secondary">
-                        Voltar ao dashboard
-                    </NuxtLink>
                 </div>
             </div>
 
@@ -49,46 +45,47 @@
                 <NuxtLink to="/staff">/staff</NuxtLink>.
             </div>
 
-            <div v-else class="calendar-layout">
-                <aside class="card sidebar-card">
-                    <h2>Configuração</h2>
+            <div v-else class="schedule-body">
+                <div class="card calendar-card">
+                    <div class="cal-toolbar">
+                        <div class="cal-toolbar-left">
+                            <h2 class="cal-title">{{ calendarTitle }}</h2>
 
-                    <p class="business-label">
-                        Negócio: <strong>{{ selectedBusiness.name }}</strong>
-                    </p>
+                            <div class="cal-nav">
+                                <button type="button" aria-label="Anterior" @click="calPrev">‹</button>
+                                <button type="button" aria-label="Seguinte" @click="calNext">›</button>
+                            </div>
 
-                    <div class="field">
-                        <label class="label">Colaborador</label>
+                            <button class="cal-today" type="button" @click="calToday">Hoje</button>
+                        </div>
 
-                        <select v-model.number="selectedStaffId" class="input" @change="handleStaffChange">
-                            <option :value="null" disabled>
-                                Escolhe um colaborador
-                            </option>
+                        <div class="cal-toolbar-right">
+                            <select v-model.number="selectedStaffId" class="cal-staff" @change="handleStaffChange">
+                                <option :value="null" disabled>Colaborador</option>
 
-                            <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
-                                {{ staff.name }}
-                            </option>
-                        </select>
-                    </div>
+                                <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
+                                    {{ staff.name }}
+                                </option>
+                            </select>
 
-                    <div v-if="selectedStaff" class="selected-staff-box">
-                        <strong>{{ selectedStaff.name }}</strong>
-                        <span>{{ selectedStaff.email || 'Sem email' }}</span>
+                            <div class="view-toggle">
+                                <button v-for="view in calendarViews" :key="view.value" type="button" class="view-btn"
+                                    :class="{ active: currentView === view.value }" @click="setCalendarView(view.value)">
+                                    {{ view.label }}
+                                </button>
+                            </div>
 
-                        <div class="staff-services">
-                            <small v-for="serviceName in selectedStaff.services_names" :key="serviceName">
-                                {{ serviceName }}
-                            </small>
+                            <button class="btn btn-accent cal-new" type="button" @click="selectedTool = 'appointment'">
+                                + Marcação
+                            </button>
                         </div>
                     </div>
 
-                    <div class="tool-box">
-                        <label class="label">Modo rápido</label>
-
+                    <div class="cal-subbar">
                         <div class="tool-buttons">
                             <button class="tool-button" :class="{ active: selectedTool === 'working' }" type="button"
                                 @click="selectedTool = 'working'">
-                                Horário de trabalho
+                                Horário
                             </button>
 
                             <button class="tool-button" :class="{ active: selectedTool === 'block' }" type="button"
@@ -96,41 +93,27 @@
                                 Bloqueio
                             </button>
 
-                            <button class="tool-button" :class="{ active: selectedTool === 'appointment' }"
-                                type="button" @click="selectedTool = 'appointment'">
+                            <button class="tool-button" :class="{ active: selectedTool === 'appointment' }" type="button"
+                                @click="selectedTool = 'appointment'">
                                 Marcação
                             </button>
                         </div>
 
-                        <p class="hint">
-                            Arrasta na agenda para selecionar um período. Depois escolhe uma ação.
-                        </p>
-                    </div>
-
-                    <div class="legend">
-                        <div>
-                            <span class="dot dot-working"></span>
-                            Horário de trabalho
-                        </div>
-
-                        <div>
-                            <span class="dot dot-block"></span>
-                            Bloqueio
-                        </div>
-
-                        <div>
-                            <span class="dot dot-appointment"></span>
-                            Marcação
+                        <div class="legend">
+                            <span><span class="dot dot-working"></span>Horário</span>
+                            <span><span class="dot dot-block"></span>Bloqueio</span>
+                            <span><span class="dot dot-appointment"></span>Marcação</span>
                         </div>
                     </div>
-                </aside>
 
-                <main class="calendar-main">
-                    <div class="card calendar-card">
-                        <ClientOnly>
-                            <FullCalendar :options="calendarOptions" />
-                        </ClientOnly>
-                    </div>
+                    <p class="cal-hint">
+                        Arrasta na agenda para selecionar um período e escolhe uma ação.
+                    </p>
+
+                    <ClientOnly>
+                        <FullCalendar ref="calendarRef" :options="calendarOptions" />
+                    </ClientOnly>
+                </div>
 
                     <div v-if="selectedRange" class="card selected-range-card">
                         <div>
@@ -359,9 +342,8 @@
                             </div>
                         </article>
                     </div>
-                </main>
-            </div>
-        </section>
+                </div>
+            </section>
     </div>
 </template>
 
@@ -381,6 +363,7 @@ import type {
 
 definePageMeta({
     middleware: 'auth',
+    layout: 'backoffice',
 })
 
 type Business = {
@@ -482,6 +465,26 @@ type GoogleCalendarStatus = {
 const { apiFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
+
+const calendarRef = ref<any>(null)
+const calendarTitle = ref('')
+const currentView = ref('timeGridWeek')
+
+const getCalendarApi = () => calendarRef.value?.getApi?.()
+const calPrev = () => getCalendarApi()?.prev()
+const calNext = () => getCalendarApi()?.next()
+const calToday = () => getCalendarApi()?.today()
+
+const calendarViews = [
+    { value: 'timeGridDay', label: 'Dia' },
+    { value: 'timeGridWeek', label: 'Semana' },
+    { value: 'dayGridMonth', label: 'Mês' },
+]
+
+const setCalendarView = (view: string) => {
+    currentView.value = view
+    getCalendarApi()?.changeView(view)
+}
 
 const weekdays = [
     { value: 0, label: 'Segunda-feira' },
@@ -621,9 +624,9 @@ const calendarEvents = computed<EventInput[]>(() => {
         daysOfWeek: [toFullCalendarWeekday(hour.weekday)],
         startTime: normalizeTime(hour.start_time),
         endTime: normalizeTime(hour.end_time),
-        backgroundColor: hour.is_active ? '#d9f99d' : '#e5e7eb',
-        borderColor: hour.is_active ? '#84cc16' : '#9ca3af',
-        textColor: '#111116',
+        backgroundColor: hour.is_active ? '#eaf6c0' : '#efeade',
+        borderColor: hour.is_active ? '#c2e800' : '#c5c0b4',
+        textColor: '#3c4a0a',
         extendedProps: {
             type: 'working-hour',
             source: hour,
@@ -649,8 +652,8 @@ const calendarEvents = computed<EventInput[]>(() => {
         title: `${appointment.service_name || 'Marcação'} · ${appointment.customer_name || 'Cliente'}`,
         start: appointment.start_at,
         end: appointment.end_at,
-        backgroundColor: '#111116',
-        borderColor: '#111116',
+        backgroundColor: '#0b0b0f',
+        borderColor: '#0b0b0f',
         textColor: '#ffffff',
         extendedProps: {
             type: 'appointment',
@@ -683,17 +686,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     slotMinTime: '07:00:00',
     slotMaxTime: '22:00:00',
     slotDuration: '00:15:00',
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'timeGridDay,timeGridWeek,dayGridMonth',
-    },
-    buttonText: {
-        today: 'Hoje',
-        month: 'Mês',
-        week: 'Semana',
-        day: 'Dia',
-    },
+    headerToolbar: false,
     events: calendarEvents.value,
     select: handleCalendarSelect,
     eventClick: handleEventClick,
@@ -820,6 +813,9 @@ const clearSelectedRange = () => {
 }
 
 const handleDatesSet = async (info: DatesSetArg) => {
+    calendarTitle.value = info.view.title
+    currentView.value = info.view.type
+
     const endDate = new Date(info.end)
     endDate.setDate(endDate.getDate() - 1)
 
@@ -1498,14 +1494,11 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-.calendar-layout {
+.schedule-body {
     display: grid;
-    grid-template-columns: 320px 1fr;
     gap: 18px;
-    align-items: start;
 }
 
-.sidebar-card,
 .calendar-card,
 .form-card,
 .empty-card,
@@ -1513,17 +1506,135 @@ onMounted(async () => {
     padding: 24px;
 }
 
-.sidebar-card {
-    position: sticky;
-    top: 24px;
-}
-
-.sidebar-card h2,
 .form-card h2,
 .selected-range-card h2 {
     margin: 0;
     font-size: 26px;
     letter-spacing: -0.05em;
+}
+
+/* ---- calendar toolbar (design) ---- */
+.cal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.cal-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cal-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    text-transform: capitalize;
+}
+
+.cal-nav {
+    display: flex;
+    gap: 6px;
+}
+
+.cal-nav button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: #fff;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.cal-nav button:hover {
+    border-color: var(--tf-black);
+}
+
+.cal-today {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: #fff;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.cal-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cal-staff {
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 999px;
+    background: #fff;
+    font-family: var(--tf-sans);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+    background: #eee8da;
+}
+
+.view-btn {
+    padding: 7px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8a857a;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.view-btn.active {
+    background: #fff;
+    color: var(--tf-black);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.cal-new {
+    height: 44px;
+}
+
+/* ---- calendar sub-bar (tools + legend) ---- */
+.cal-subbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--tf-border);
+}
+
+.cal-hint {
+    margin: 0 0 14px;
+    color: var(--tf-muted);
+    font-size: 13px;
 }
 
 .selected-range-card {
@@ -1547,104 +1658,52 @@ onMounted(async () => {
     gap: 10px;
 }
 
-.business-label {
-    margin: 10px 0 20px;
-    color: var(--tf-muted);
-}
-
-.field {
-    display: grid;
-    gap: 8px;
-}
-
-.selected-staff-box {
-    margin-top: 18px;
-    padding: 16px;
-    border-radius: 18px;
-    background: var(--tf-bg);
-}
-
-.selected-staff-box strong {
-    display: block;
-}
-
-.selected-staff-box span {
-    display: block;
-    margin-top: 4px;
-    color: var(--tf-muted);
-}
-
-.staff-services {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
-}
-
-.staff-services small {
-    padding: 6px 9px;
-    border-radius: 999px;
-    background: var(--tf-white);
-    border: 1px solid var(--tf-border);
-    color: var(--tf-black);
-    font-weight: 800;
-}
-
-.tool-box {
-    margin-top: 24px;
-}
-
 .tool-buttons {
-    display: grid;
-    gap: 8px;
-    margin-top: 10px;
+    display: flex;
+    gap: 6px;
 }
 
 .tool-button {
-    min-height: 42px;
+    padding: 8px 16px;
     border: 1px solid var(--tf-border);
     border-radius: 999px;
-    background: var(--tf-white);
+    background: #fff;
     color: var(--tf-black);
-    font-weight: 900;
+    font-weight: 700;
+    font-size: 13px;
     cursor: pointer;
 }
 
 .tool-button.active {
     background: var(--tf-black);
-    color: var(--tf-white);
-}
-
-.hint {
-    margin: 12px 0 0;
-    color: var(--tf-muted);
-    font-size: 14px;
-    line-height: 1.4;
+    color: #fff;
+    border-color: var(--tf-black);
 }
 
 .legend {
-    display: grid;
-    gap: 10px;
-    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
     color: var(--tf-muted);
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 700;
 }
 
-.legend div {
-    display: flex;
+.legend>span {
+    display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
 }
 
 .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 999px;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
     display: inline-block;
 }
 
 .dot-working {
-    background: #84cc16;
+    background: #c2e800;
 }
 
 .dot-block {
@@ -1652,12 +1711,7 @@ onMounted(async () => {
 }
 
 .dot-appointment {
-    background: #111116;
-}
-
-.calendar-main {
-    display: grid;
-    gap: 18px;
+    background: #0b0b0f;
 }
 
 .calendar-card {
@@ -1778,8 +1832,9 @@ button:disabled {
 
 .calendar-card :deep(.fc-event) {
     border-radius: 10px;
-    padding: 2px 4px;
-    font-weight: 800;
+    padding: 3px 6px;
+    font-weight: 700;
+    font-size: 11px;
     cursor: pointer;
 }
 
@@ -1787,15 +1842,46 @@ button:disabled {
     height: 42px;
 }
 
+.calendar-card :deep(.fc-col-header-cell) {
+    padding: 10px 0;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.calendar-card :deep(.fc-day-today) {
+    background: #fbfbf6 !important;
+}
+
+.calendar-card :deep(.fc-timegrid-axis),
+.calendar-card :deep(.fc-timegrid-slot-label) {
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    color: #b0aa9c;
+}
+
+.calendar-card :deep(.fc-timegrid-now-indicator-line) {
+    border-color: #ff5c35;
+}
+
+.calendar-card :deep(.fc-timegrid-now-indicator-arrow) {
+    border-color: #ff5c35;
+    color: #ff5c35;
+}
+
+.calendar-card :deep(.fc-theme-standard td),
+.calendar-card :deep(.fc-theme-standard th),
+.calendar-card :deep(.fc-scrollgrid) {
+    border-color: #f0ebdf;
+}
+
 @media (max-width: 1100px) {
 
-    .calendar-layout,
     .forms-grid {
         grid-template-columns: 1fr;
-    }
-
-    .sidebar-card {
-        position: static;
     }
 
     .selected-range-card {

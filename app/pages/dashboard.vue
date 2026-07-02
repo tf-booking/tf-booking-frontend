@@ -1,115 +1,116 @@
 <template>
     <div class="page dashboard-page">
         <section class="container">
+            <!-- header -->
             <div class="dashboard-header">
                 <div>
-                    <p class="tf-eyebrow">Dashboard</p>
-                    <h1>Agenda do negócio</h1>
-                    <p>
-                        Visão rápida das marcações, clientes e origem dos contactos.
-                    </p>
+                    <p class="dash-date">{{ todayLabel }}</p>
+                    <h1>Olá, Marta 👋</h1>
                 </div>
 
                 <div class="header-actions">
-                    <button class="btn btn-secondary" type="button" @click="logout">
-                        Sair
-                    </button>
-
-                    <div class="header-actions">
-                        <NuxtLink to="/schedule" class="btn btn-secondary">
-                            Horários
-                        </NuxtLink>
-                        
-                        <NuxtLink to="/services" class="btn btn-secondary">
-                            Serviços
-                        </NuxtLink>
-
-                        <NuxtLink to="/staff" class="btn btn-secondary">
-                            Colaboradores
-                        </NuxtLink>
-
-                        <button class="btn btn-accent" type="button">
-                            Nova marcação
-                        </button>
+                    <div class="search-box">
+                        <span class="search-dot"></span>
+                        Procurar cliente…
                     </div>
+
+                    <button class="btn" type="button">+ Nova marcação</button>
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <article class="stat-card dark">
-                    <span>Marcações hoje</span>
-                    <strong>8</strong>
+            <!-- KPIs -->
+            <div class="kpi-grid">
+                <article class="kpi kpi-dark">
+                    <p class="kpi-label kpi-label-accent">Marcações hoje</p>
+                    <div class="kpi-value">12</div>
+                    <p class="kpi-foot">3 por confirmar</p>
                 </article>
 
-                <article class="stat-card">
-                    <span>Esta semana</span>
-                    <strong>34</strong>
+                <article class="kpi">
+                    <p class="kpi-label">Receita do dia</p>
+                    <div class="kpi-value">340€</div>
+                    <p class="kpi-foot kpi-up">▲ 18% vs. ontem</p>
                 </article>
 
-                <article class="stat-card">
-                    <span>Origem principal</span>
-                    <strong>Instagram</strong>
+                <article class="kpi">
+                    <p class="kpi-label">Ocupação</p>
+                    <div class="kpi-value">78<span class="kpi-unit">%</span></div>
+                    <div class="kpi-bar">
+                        <div class="kpi-bar-fill" style="width: 78%;"></div>
+                    </div>
+                </article>
+
+                <article class="kpi">
+                    <p class="kpi-label">Via Instagram</p>
+                    <div class="kpi-value">5</div>
+                    <p class="kpi-foot">de 12 marcações</p>
                 </article>
             </div>
 
+            <!-- lower grid -->
             <div class="dashboard-grid">
-                <article class="card agenda-card">
-                    <div class="card-title-row">
-                        <h2>Marcações de hoje</h2>
-                        <span>Europe/Lisbon</span>
+                <article class="card panel">
+                    <div class="panel-head">
+                        <h2>Próximas marcações</h2>
+                        <NuxtLink to="/schedule" class="panel-link">ver agenda →</NuxtLink>
                     </div>
 
                     <div class="appointment-list">
                         <div v-for="appointment in appointments" :key="appointment.time" class="appointment-item">
-                            <div class="time">
-                                {{ appointment.time }}
+                            <div class="appointment-time">{{ appointment.time }}</div>
+
+                            <div class="appointment-body">
+                                <div class="appointment-service">{{ appointment.service }}</div>
+                                <div class="appointment-customer">
+                                    {{ appointment.customer }} · {{ appointment.duration }} min
+                                </div>
                             </div>
 
-                            <div>
-                                <strong>{{ appointment.service }}</strong>
-                                <span>{{ appointment.customer }}</span>
-                            </div>
+                            <span class="source-chip" :class="`source-${appointment.sourceKey}`">
+                                {{ appointment.source }}
+                            </span>
 
-                            <small>{{ appointment.source }}</small>
+                            <span class="status" :class="appointment.confirmed ? 'ok' : 'pending'">
+                                {{ appointment.confirmed ? 'Confirmada' : 'Por confirmar' }}
+                            </span>
                         </div>
                     </div>
                 </article>
 
-                <article class="card source-card">
-                    <p class="tf-eyebrow">Marketing</p>
-                    <h2>Origem das marcações</h2>
+                <article class="card panel">
+                    <h2>Origem dos clientes</h2>
 
-                    <div class="source-list">
-                        <div>
-                            <span>Instagram</span>
-                            <strong>18</strong>
+                    <div class="origin-list">
+                        <div v-for="origin in origins" :key="origin.label" class="origin-row">
+                            <div class="origin-top">
+                                <span>{{ origin.label }}</span>
+                                <span class="origin-pct">{{ origin.value }}%</span>
+                            </div>
+                            <div class="origin-bar">
+                                <div class="origin-bar-fill" :style="{ width: origin.value + '%', background: origin.color }">
+                                </div>
+                            </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <span>Google</span>
-                            <strong>9</strong>
-                        </div>
-
-                        <div>
-                            <span>WhatsApp</span>
-                            <strong>7</strong>
-                        </div>
+                    <div class="insight">
+                        <p class="insight-eyebrow">Insight</p>
+                        <p class="insight-text">
+                            O Instagram trouxe <strong>+18 marcações</strong> esta semana.
+                            Continua a partilhar o teu link.
+                        </p>
                     </div>
                 </article>
             </div>
 
-            <article class="card services-test-card">
-                <div class="card-title-row">
+            <!-- live services from the API -->
+            <article class="card panel services-card">
+                <div class="panel-head">
                     <h2>Serviços</h2>
-
-                    <button class="btn btn-secondary" type="button" @click="loadServices">
-                        Atualizar
-                    </button>
+                    <button class="btn btn-secondary" type="button" @click="loadServices">Atualizar</button>
                 </div>
 
-                <p v-if="isLoadingServices" class="muted-text">
-                    A carregar serviços...
-                </p>
+                <p v-if="isLoadingServices" class="muted-text">A carregar serviços...</p>
 
                 <p v-else-if="services.length === 0" class="muted-text">
                     Ainda não existem serviços ou o pedido à API falhou.
@@ -121,14 +122,11 @@
                             <strong>{{ service.name }}</strong>
                             <span>{{ service.business_name }}</span>
                         </div>
-
                         <small>{{ service.duration_minutes }} min · {{ service.price }}€</small>
                     </div>
                 </div>
 
-                <p v-if="apiError" class="error-message">
-                    {{ apiError }}
-                </p>
+                <p v-if="apiError" class="error-message">{{ apiError }}</p>
             </article>
         </section>
     </div>
@@ -137,6 +135,7 @@
 <script setup lang="ts">
 definePageMeta({
     middleware: ['auth'],
+    layout: 'backoffice',
 })
 
 type Service = {
@@ -155,35 +154,62 @@ type AppointmentPreview = {
     time: string
     service: string
     customer: string
+    duration: number
     source: string
+    sourceKey: 'instagram' | 'whatsapp' | 'google'
+    confirmed: boolean
 }
 
-const { logout } = useAuth()
 const { apiFetch } = useApi()
 
 const services = ref<Service[]>([])
 const isLoadingServices = ref(false)
 const apiError = ref('')
 
+const todayLabel = computed(() => {
+    const label = new Intl.DateTimeFormat('pt-PT', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    }).format(new Date())
+    return label.charAt(0).toUpperCase() + label.slice(1)
+})
+
 const appointments: AppointmentPreview[] = [
     {
-        time: '09:30',
-        service: 'Corte cabelo',
-        customer: 'João Pereira · Kika',
-        source: 'Instagram',
-    },
-    {
-        time: '11:00',
-        service: 'Limpeza de pele',
-        customer: 'Maria Silva · Ana',
-        source: 'Google',
-    },
-    {
         time: '15:00',
-        service: 'Barba + corte',
-        customer: 'Pedro Costa · Tomás',
-        source: 'WhatsApp',
+        service: 'Limpeza de pele',
+        customer: 'Maria Silva',
+        duration: 60,
+        source: 'Instagram',
+        sourceKey: 'instagram',
+        confirmed: true,
     },
+    {
+        time: '15:45',
+        service: 'Corte + Barba',
+        customer: 'João Costa',
+        duration: 50,
+        source: 'WhatsApp',
+        sourceKey: 'whatsapp',
+        confirmed: false,
+    },
+    {
+        time: '16:30',
+        service: 'Manicure gel',
+        customer: 'Ana Reis',
+        duration: 45,
+        source: 'Google',
+        sourceKey: 'google',
+        confirmed: true,
+    },
+]
+
+const origins = [
+    { label: 'Instagram', value: 42, color: '#d7ff3e' },
+    { label: 'Google', value: 27, color: '#0b0b0f' },
+    { label: 'WhatsApp', value: 19, color: '#9a958a' },
+    { label: 'Direto', value: 12, color: '#c5c0b4' },
 ]
 
 const loadServices = async () => {
@@ -214,168 +240,297 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-page {
-    padding: 56px 0 88px;
+    padding: 48px 0 88px;
 }
 
+/* header */
 .dashboard-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    align-items: end;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
+}
+
+.dash-date {
+    margin: 0 0 9px;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
 }
 
 .dashboard-header h1 {
     margin: 0;
-    font-size: clamp(42px, 6vw, 74px);
-    line-height: 0.92;
-    letter-spacing: -0.07em;
-}
-
-.dashboard-header p:last-child {
-    margin: 16px 0 0;
-    color: var(--tf-muted);
-    font-size: 18px;
+    font-size: clamp(32px, 4vw, 40px);
+    letter-spacing: -0.045em;
 }
 
 .header-actions {
     display: flex;
-    gap: 12px;
     align-items: center;
+    gap: 12px;
 }
 
-.stats-grid {
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 46px;
+    width: 220px;
+    padding: 0 16px;
+    border: 1px solid var(--tf-border);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 14px;
+    color: #9a958a;
+}
+
+.search-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #c5c0b4;
+}
+
+/* KPIs */
+.kpi-grid {
     display: grid;
-    grid-template-columns: 0.8fr 0.8fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 16px;
 }
 
-.stat-card {
-    padding: 24px;
-    border-radius: 28px;
-    background: var(--tf-white);
+.kpi {
+    padding: 22px;
+    border-radius: 22px;
+    background: #fff;
     border: 1px solid var(--tf-border);
 }
 
-.stat-card.dark {
+.kpi-dark {
     background: var(--tf-black);
-    color: var(--tf-white);
+    color: #fff;
+    border-color: var(--tf-black);
 }
 
-.stat-card span {
-    display: block;
-    margin-bottom: 12px;
-    color: var(--tf-muted);
-    font-weight: 800;
-}
-
-.stat-card.dark span {
-    color: #c8c8c8;
-}
-
-.stat-card strong {
-    display: block;
-    font-size: clamp(32px, 4vw, 48px);
-    letter-spacing: -0.06em;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1.35fr 0.65fr;
-    gap: 16px;
-}
-
-.agenda-card,
-.source-card,
-.services-test-card {
-    padding: 28px;
-}
-
-.card-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 22px;
-}
-
-.card-title-row h2,
-.source-card h2 {
-    margin: 0;
-    font-size: 28px;
-    letter-spacing: -0.04em;
-}
-
-.card-title-row span {
-    color: var(--tf-muted);
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.appointment-list {
-    display: grid;
-    gap: 12px;
-}
-
-.appointment-item {
-    display: grid;
-    grid-template-columns: 86px 1fr auto;
-    gap: 18px;
-    align-items: center;
-    padding: 18px;
-    border-radius: 22px;
-    background: var(--tf-bg);
-}
-
-.time {
-    font-weight: 950;
-    font-size: 20px;
-    letter-spacing: -0.04em;
-}
-
-.appointment-item strong {
-    display: block;
-}
-
-.appointment-item span {
-    display: block;
-    margin-top: 4px;
+.kpi-label {
+    margin: 0 0 18px;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--tf-muted);
 }
 
-.appointment-item small {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: var(--tf-black);
-    color: var(--tf-white);
-    font-weight: 800;
+.kpi-label-accent {
+    color: var(--tf-accent);
 }
 
-.source-card {
+.kpi-value {
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1;
+}
+
+.kpi-unit {
+    font-size: 24px;
+}
+
+.kpi-foot {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--tf-muted);
+}
+
+.kpi-dark .kpi-foot {
+    color: #b7b3aa;
+}
+
+.kpi-up {
+    color: #2f9e63;
+    font-weight: 700;
+}
+
+.kpi-bar {
+    margin-top: 12px;
+    height: 6px;
+    border-radius: 99px;
+    background: #eee8da;
+    overflow: hidden;
+}
+
+.kpi-bar-fill {
+    height: 100%;
     background: var(--tf-accent);
 }
 
-.source-card .tf-eyebrow {
-    color: rgba(11, 11, 15, 0.55);
-}
-
-.source-list {
+/* lower grid */
+.dashboard-grid {
     display: grid;
-    gap: 12px;
-    margin-top: 24px;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 16px;
 }
 
-.source-list div {
+.panel {
+    padding: 24px;
+}
+
+.panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.panel h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.panel-link {
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    color: #9a958a;
+}
+
+.appointment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.appointment-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #faf8f3;
+    border: 1px solid #eee8da;
+}
+
+.appointment-time {
+    width: 52px;
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: -0.03em;
+}
+
+.appointment-body {
+    flex: 1;
+}
+
+.appointment-service {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.appointment-customer {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--tf-muted);
+}
+
+.source-chip {
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 999px;
+}
+
+.source-instagram {
+    background: var(--tf-black);
+    color: var(--tf-accent);
+}
+
+.source-whatsapp,
+.source-google {
+    background: #eef1e0;
+    color: #5c6b12;
+}
+
+.status {
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status.ok {
+    color: #2f9e63;
+}
+
+.status.pending {
+    color: #c98a1a;
+}
+
+/* origins */
+.origin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.origin-top {
     display: flex;
     justify-content: space-between;
-    padding: 16px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.55);
-    font-weight: 900;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
-.services-test-card {
+.origin-pct {
+    color: var(--tf-muted);
+}
+
+.origin-bar {
+    height: 9px;
+    border-radius: 99px;
+    background: #eee8da;
+    overflow: hidden;
+}
+
+.origin-bar-fill {
+    height: 100%;
+}
+
+.insight {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--tf-black);
+    color: #fff;
+}
+
+.insight-eyebrow {
+    margin: 0 0 8px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tf-accent);
+}
+
+.insight-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #e7e4dd;
+}
+
+.insight-text strong {
+    color: #fff;
+}
+
+/* services card */
+.services-card {
     margin-top: 16px;
 }
 
@@ -390,7 +545,7 @@ onMounted(() => {
     justify-content: space-between;
     gap: 16px;
     padding: 16px;
-    border-radius: 18px;
+    border-radius: 16px;
     background: var(--tf-bg);
 }
 
@@ -418,33 +573,41 @@ onMounted(() => {
     margin: 18px 0 0;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--tf-danger-bg);
+    color: var(--tf-danger-fg);
     font-weight: 700;
 }
 
-@media (max-width: 920px) {
-
-    .dashboard-header,
-    .stats-grid,
-    .dashboard-grid,
-    .appointment-item {
-        grid-template-columns: 1fr;
+@media (max-width: 1080px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
     .dashboard-header {
-        align-items: start;
         flex-direction: column;
     }
 
     .header-actions {
         width: 100%;
-        flex-wrap: wrap;
     }
 
-    .service-item {
-        align-items: flex-start;
-        flex-direction: column;
+    .search-box {
+        flex: 1;
+        width: auto;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .appointment-item {
+        flex-wrap: wrap;
     }
 }
 </style>

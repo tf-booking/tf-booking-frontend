@@ -154,6 +154,7 @@
 <script setup lang="ts">
 definePageMeta({
     middleware: 'auth',
+    layout: 'backoffice',
 })
 
 type Business = {
