@@ -6,16 +6,20 @@
                 Booking
             </NuxtLink>
 
-            <button
-                ref="mobileMenuToggle"
-                class="s-menu-toggle"
-                type="button"
-                :aria-expanded="isMobileMenuOpen"
-                aria-label="Abrir menu"
-                @click="toggleMobileMenu"
-            >
-                ...
-            </button>
+            <div class="s-topbar-actions">
+                <NotificationBell />
+
+                <button
+                    ref="mobileMenuToggle"
+                    class="s-menu-toggle"
+                    type="button"
+                    :aria-expanded="isMobileMenuOpen"
+                    aria-label="Abrir menu"
+                    @click="toggleMobileMenu"
+                >
+                    ...
+                </button>
+            </div>
         </div>
 
         <div ref="mobileMenuPanel" class="s-panel" :class="{ open: isMobileMenuOpen }">
@@ -60,6 +64,7 @@
 const route = useRoute()
 const { logout } = useAuth()
 const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
+const { startPolling, stopPolling } = useNotifications()
 
 const isMobileMenuOpen = ref(false)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
@@ -148,10 +153,12 @@ const handleLogout = () => {
 onMounted(() => {
     document.addEventListener('pointerdown', handleOutsidePointerDown)
     loadCurrentBusiness()
+    startPolling()
 })
 
 onBeforeUnmount(() => {
     document.removeEventListener('pointerdown', handleOutsidePointerDown)
+    stopPolling()
 })
 
 watch(
@@ -205,6 +212,12 @@ watch(
     background: var(--tf-accent);
     color: var(--tf-black);
     font-size: 12px;
+}
+
+.s-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .s-menu-toggle {
