@@ -1,6 +1,9 @@
 export const useApi = () => {
     const config = useRuntimeConfig()
     const apiBase = String(config.public.apiBase || 'http://127.0.0.1:8000/api')
+    type ApiFetchOptions = NonNullable<Parameters<typeof $fetch>[1]> & {
+        auth?: boolean
+    }
 
     const getAccessToken = () => {
         if (!import.meta.client) {
@@ -12,12 +15,13 @@ export const useApi = () => {
 
     const apiFetch = async <T>(
         endpoint: string,
-        options: Parameters<typeof $fetch>[1] = {}
+        options: ApiFetchOptions = {}
     ) => {
-        const token = getAccessToken()
+        const { auth = true, headers: optionHeaders, ...fetchOptions } = options
+        const token = auth ? getAccessToken() : null
 
         const headers: Record<string, string> = {
-            ...(options.headers as Record<string, string> || {}),
+            ...(optionHeaders as Record<string, string> || {}),
         }
 
         if (token) {
@@ -25,7 +29,7 @@ export const useApi = () => {
         }
 
         return await $fetch<T>(`${apiBase}${endpoint}`, {
-            ...options,
+            ...fetchOptions,
             headers,
         })
     }

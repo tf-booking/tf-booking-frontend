@@ -85,7 +85,9 @@ const form = reactive({
 const loadInvite = async () => {
     try {
         isLoading.value = true
-        invite.value = await apiFetch<InviteDetail>(`/auth/invite/${token}/`)
+        invite.value = await apiFetch<InviteDetail>(`/auth/invite/${token}/`, {
+            auth: false,
+        })
     } catch (error: any) {
         console.error(error)
         errorMessage.value = error?.data?.detail || 'Este convite é inválido, expirou ou já foi utilizado.'
@@ -115,6 +117,7 @@ const acceptInvite = async () => {
 
         await apiFetch('/auth/invite/accept/', {
             method: 'POST',
+            auth: false,
             body: {
                 token,
                 password: invite.value?.requires_password ? form.password : undefined,

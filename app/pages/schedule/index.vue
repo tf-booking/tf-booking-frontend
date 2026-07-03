@@ -1,7 +1,7 @@
 <template>
-    <div class="page schedule-page">
+    <div class="page schedule-page" :class="{ 'schedule-page-locked': isMobileLayout }">
         <section class="container">
-            <div class="schedule-header">
+            <div v-if="!isMobileLayout" class="schedule-header">
                 <div>
                     <p class="tf-eyebrow">Agenda</p>
                     <h1>{{ isStaffOnly ? 'A minha agenda' : 'Agenda do negócio' }}</h1>
@@ -46,8 +46,8 @@
             </div>
 
             <div v-else class="schedule-body">
-                <div class="card calendar-card">
-                    <div class="cal-toolbar">
+                <div class="card calendar-card" :class="{ 'calendar-card-mobile': isMobileLayout }">
+                    <div v-if="!isMobileLayout" class="cal-toolbar">
                         <div class="cal-toolbar-left">
                             <h2 class="cal-title">{{ calendarTitle }}</h2>
 
@@ -86,7 +86,27 @@
                         </div>
                     </div>
 
-                    <p class="cal-hint">
+                    <div v-else class="mobile-date-nav">
+                        <div class="cal-nav">
+                            <button type="button" aria-label="Dia anterior" @click="mobileGoPrevDay">‹</button>
+                            <button type="button" aria-label="Dia seguinte" @click="mobileGoNextDay">›</button>
+                        </div>
+
+                        <button class="cal-today" type="button" @click="mobileGoToday">Hoje</button>
+
+                        <button type="button" class="mobile-date-picker" aria-label="Escolher data" @click="isDatePickerOpen = true">
+                            <span class="mobile-date-label">{{ mobileDateLabel }}</span>
+
+                            <svg class="mobile-date-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M3 8H17" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M7 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                                <path d="M13 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p v-if="!isMobileLayout" class="cal-hint">
                         A área verde-clara mostra o horário de trabalho do colaborador. Clica ou arrasta na agenda para criar uma marcação ou bloqueio.
                     </p>
 
@@ -98,11 +118,43 @@
                         {{ successMessage }}
                     </p>
 
-                    <ClientOnly>
+                    <ClientOnly v-if="!isMobileLayout">
                         <FullCalendar ref="calendarRef" :options="calendarOptions" />
                     </ClientOnly>
+
+                    <div v-else class="mobile-board-wrapper">
+                        <p v-if="isLoadingMobileDay" class="muted-text">A carregar agenda...</p>
+
+                        <ScheduleMobileBoard
+                            v-else
+                            :staff-members="staffMembers"
+                            :appointments="mobileAppointments"
+                            :blocks="mobileBlocks"
+                            :working-hours="mobileWorkingHours"
+                            :date="mobileDate"
+                            @open-appointment="handleMobileOpenAppointment"
+                            @open-block="handleMobileOpenBlock"
+                        />
+                    </div>
                 </div>
             </div>
+
+            <button
+                v-if="isMobileLayout && selectedBusiness && staffMembers.length > 0"
+                class="floating-add"
+                type="button"
+                aria-label="Nova marcação"
+                @click="handleMobileCreate"
+            >
+                +
+            </button>
+
+            <DatePickerModal
+                :open="isDatePickerOpen"
+                :selected="mobileDate"
+                @update:open="isDatePickerOpen = $event"
+                @select="handleMobileDatePicked"
+            />
         </section>
 
         <Teleport to="body">
@@ -416,6 +468,13 @@ import type {
     EventClickArg,
     EventInput,
 } from '@fullcalendar/core'
+import type {
+    Appointment,
+    StaffBlock,
+    StaffMember,
+    WorkingHour,
+} from '~/types/schedule'
+import { findNextAppointmentId, getAppointmentColors, getBlockColors } from '~/utils/scheduleColors'
 
 definePageMeta({
     middleware: 'auth',
@@ -440,65 +499,6 @@ type Service = {
     duration_minutes: number
     price: string
     is_active: boolean
-}
-
-type StaffMember = {
-    id: number
-    uuid: string
-    business: number
-    business_name: string
-    user: number | null
-    services: number[]
-    services_names: string[]
-    name: string
-    email: string
-    phone: string
-    bio: string
-    avatar_url: string
-    is_active: boolean
-}
-
-type WorkingHour = {
-    id: number
-    staff_member: number
-    staff_member_name: string
-    business_name: string
-    weekday: number
-    weekday_label: string
-    start_time: string
-    end_time: string
-    is_active: boolean
-}
-
-type StaffBlock = {
-    id: number
-    uuid: string
-    staff_member: number
-    staff_member_name: string
-    business_name: string
-    start_at: string
-    end_at: string
-    reason: string
-    created_at: string
-}
-
-type Appointment = {
-    id: number
-    uuid: string
-    business: number
-    service: number
-    service_name: string
-    staff_member: number
-    staff_member_name: string
-    customer: number
-    customer_name: string
-    customer_phone: string
-    start_at: string
-    end_at: string
-    status: string
-    source: string
-    notes: string
-    cancellation_reason: string
 }
 
 type RecurrenceFrequency = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
@@ -669,6 +669,29 @@ const currentRole = computed(() => {
 
 const isStaffOnly = computed(() => currentRole.value === 'staff')
 
+const isMobileLayout = ref(isMobileViewport)
+
+const updateIsMobileLayout = () => {
+    isMobileLayout.value = window.innerWidth <= 720
+}
+
+const mobileDate = ref('')
+const isDatePickerOpen = ref(false)
+const mobileAppointments = ref<Appointment[]>([])
+const mobileBlocks = ref<StaffBlock[]>([])
+const mobileWorkingHours = ref<WorkingHour[]>([])
+const isLoadingMobileDay = ref(false)
+
+const mobileDateLabel = computed(() => {
+    const date = new Date(`${mobileDate.value}T00:00:00`)
+
+    return new Intl.DateTimeFormat('pt-PT', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+    }).format(date)
+})
+
 const appointmentStatusOptions = computed(() => {
     return Object.entries(appointmentStatusLabels).map(([value, label]) => ({ value, label }))
 })
@@ -720,24 +743,7 @@ const isGoogleCalendarButtonDisabled = computed(() => {
 })
 
 const nextAppointmentId = computed(() => {
-    const now = Date.now()
-    let candidate: Appointment | null = null
-
-    for (const appointment of appointments.value) {
-        if (appointment.status !== 'confirmed' && appointment.status !== 'pending') {
-            continue
-        }
-
-        if (new Date(appointment.start_at).getTime() < now) {
-            continue
-        }
-
-        if (!candidate || new Date(appointment.start_at).getTime() < new Date(candidate.start_at).getTime()) {
-            candidate = appointment
-        }
-    }
-
-    return candidate?.id ?? null
+    return findNextAppointmentId(appointments.value)
 })
 
 const modalRangeLabel = computed(() => {
@@ -761,14 +767,16 @@ const calendarEvents = computed<EventInput[]>(() => {
         },
     }))
 
+    const blockColors = getBlockColors()
+
     const blockEvents: EventInput[] = blocks.value.map((block) => ({
         id: `block-${block.uuid}`,
         title: block.reason || 'Bloqueado',
         start: block.start_at,
         end: block.end_at,
-        backgroundColor: '#fee2e2',
-        borderColor: '#ef4444',
-        textColor: '#991b1b',
+        backgroundColor: blockColors.backgroundColor,
+        borderColor: blockColors.borderColor,
+        textColor: blockColors.textColor,
         extendedProps: {
             type: 'block',
             source: block,
@@ -777,36 +785,16 @@ const calendarEvents = computed<EventInput[]>(() => {
     }))
 
     const appointmentEvents: EventInput[] = appointments.value.map((appointment) => {
-        const isNext = appointment.id === nextAppointmentId.value
-        const isPending = appointment.status === 'pending'
-        const isInactive = appointment.status === 'cancelled' || appointment.status === 'no_show'
-
-        let backgroundColor = '#0b0b0f'
-        let borderColor = '#0b0b0f'
-        let textColor = '#ffffff'
-
-        if (isInactive) {
-            backgroundColor = '#f0ece2'
-            borderColor = '#d8d1c3'
-            textColor = '#8a857a'
-        } else if (isNext) {
-            backgroundColor = '#d7ff3e'
-            borderColor = '#c2e800'
-            textColor = '#0b0b0f'
-        } else if (isPending) {
-            backgroundColor = '#ffffff'
-            borderColor = '#0b0b0f'
-            textColor = '#0b0b0f'
-        }
+        const colors = getAppointmentColors(appointment, appointment.id === nextAppointmentId.value)
 
         return {
             id: `appointment-${appointment.uuid}`,
             title: appointment.service_name || 'Marcação',
             start: appointment.start_at,
             end: appointment.end_at,
-            backgroundColor,
-            borderColor,
-            textColor,
+            backgroundColor: colors.backgroundColor,
+            borderColor: colors.borderColor,
+            textColor: colors.textColor,
             extendedProps: {
                 type: 'appointment',
                 source: appointment,
@@ -1431,6 +1419,92 @@ const handleStaffChange = async () => {
     await loadAppointments()
 }
 
+const loadMobileDay = async () => {
+    if (!selectedBusiness.value || !mobileDate.value) {
+        return
+    }
+
+    const weekday = (new Date(`${mobileDate.value}T00:00:00`).getDay() + 6) % 7
+
+    try {
+        isLoadingMobileDay.value = true
+        resetMessages()
+
+        const [appointmentsResponse, blocksResponse, workingHoursResponse] = await Promise.all([
+            apiFetch<{ results: Appointment[] }>(
+                `/appointments/?business=${selectedBusiness.value.id}&date=${mobileDate.value}`
+            ),
+            apiFetch<{ results: StaffBlock[] }>(
+                `/staff-blocks/?business=${selectedBusiness.value.id}&date=${mobileDate.value}`
+            ),
+            apiFetch<{ results: WorkingHour[] }>(
+                `/working-hours/?business=${selectedBusiness.value.id}&weekday=${weekday}&is_active=true`
+            ),
+        ])
+
+        mobileAppointments.value = appointmentsResponse.results
+        mobileBlocks.value = blocksResponse.results
+        mobileWorkingHours.value = workingHoursResponse.results
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível carregar a agenda do dia.'
+    } finally {
+        isLoadingMobileDay.value = false
+    }
+}
+
+const shiftMobileDate = (days: number) => {
+    const date = new Date(`${mobileDate.value}T00:00:00`)
+    date.setDate(date.getDate() + days)
+    mobileDate.value = formatDateInput(date)
+}
+
+const mobileGoPrevDay = () => {
+    shiftMobileDate(-1)
+    loadMobileDay()
+}
+
+const mobileGoNextDay = () => {
+    shiftMobileDate(1)
+    loadMobileDay()
+}
+
+const mobileGoToday = () => {
+    mobileDate.value = todayDate()
+    loadMobileDay()
+}
+
+const handleMobileDatePicked = (iso: string) => {
+    mobileDate.value = iso
+    loadMobileDay()
+}
+
+const handleMobileOpenAppointment = (appointment: Appointment) => {
+    resetMessages()
+    modalAppointment.value = appointment
+    modalStep.value = 'appointment-detail'
+    isModalOpen.value = true
+}
+
+const handleMobileOpenBlock = (block: StaffBlock) => {
+    resetMessages()
+    modalBlock.value = block
+    modalStep.value = 'block-detail'
+    isModalOpen.value = true
+}
+
+const handleMobileCreate = () => {
+    resetMessages()
+
+    if (!staffMembers.value.length) {
+        errorMessage.value = 'Ainda não existem colaboradores.'
+        return
+    }
+
+    selectedStaffId.value = staffMembers.value[0]!.id
+    openNewAppointmentModal()
+}
+
 const saveBlock = async () => {
     resetMessages()
 
@@ -1758,9 +1832,19 @@ const deleteAppointmentFromModal = async () => {
     }
 }
 
+watch(isMobileLayout, (mobile) => {
+    if (mobile) {
+        loadMobileDay()
+    }
+})
+
 onMounted(async () => {
     resetBlockForm()
     resetAppointmentForm()
+
+    mobileDate.value = todayDate()
+    updateIsMobileLayout()
+    window.addEventListener('resize', updateIsMobileLayout)
 
     await loadCurrentBusiness()
     await loadBusinesses()
@@ -1771,6 +1855,14 @@ onMounted(async () => {
     await loadBlocks()
     await loadAppointments()
     await applyGoogleCalendarFeedbackFromQuery()
+
+    if (isMobileLayout.value) {
+        await loadMobileDay()
+    }
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', updateIsMobileLayout)
 })
 </script>
 
@@ -1975,6 +2067,51 @@ onMounted(async () => {
     background: #dcfce7;
     color: #166534;
     font-weight: 700;
+}
+
+.muted-text {
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.mobile-date-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mobile-date-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.mobile-date-label {
+    font-family: var(--tf-mono);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: var(--tf-muted);
+}
+
+.mobile-date-icon {
+    width: 15px;
+    height: 15px;
+    color: var(--tf-muted);
+}
+
+.mobile-board-wrapper {
+    flex: 1;
+    min-height: 0;
+}
+
+.floating-add {
+    display: none;
 }
 
 button:disabled {
@@ -2256,6 +2393,61 @@ button:disabled {
 
     .modal-card {
         padding: 24px;
+    }
+
+    .schedule-page-locked {
+        overflow: hidden;
+        height: 100dvh;
+    }
+
+    .calendar-card-mobile {
+        position: fixed;
+        top: 62px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--tf-white);
+        overflow: hidden;
+    }
+
+    .mobile-date-nav {
+        flex-shrink: 0;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--tf-border);
+    }
+
+    .error-message,
+    .success-message {
+        flex-shrink: 0;
+        margin-left: 14px;
+        margin-right: 14px;
+    }
+
+    .floating-add {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--tf-accent);
+        color: var(--tf-black);
+        box-shadow: 0 18px 34px -16px rgba(11, 11, 15, 0.45);
+        font-size: 30px;
+        font-weight: 600;
+        cursor: pointer;
     }
 }
 </style>
