@@ -85,40 +85,47 @@
                     <h2>Escolhe o serviço</h2>
                 </div>
 
-                <div class="screen-body service-list">
-                    <button
-                        v-for="service in business.services"
-                        :key="service.uuid"
-                        type="button"
-                        class="service-row"
-                        :class="{
-                            selected: selectedServiceUuid === service.uuid,
-                            unavailable: service.staff_members.length === 0,
-                        }"
-                        :disabled="service.staff_members.length === 0"
-                        @click="selectService(service)"
-                    >
-                        <div>
-                            <div class="service-name">{{ service.name }}</div>
-                            <div class="service-meta">
-                                {{ service.duration_minutes }} min · {{ serviceStaffLabel(service) }}
+                <div class="screen-body">
+                    <div class="service-list">
+                        <button
+                            v-for="service in business.services"
+                            :key="service.uuid"
+                            type="button"
+                            class="service-row"
+                            :class="{
+                                selected: selectedServiceUuid === service.uuid,
+                                unavailable: service.staff_members.length === 0,
+                            }"
+                            :disabled="service.staff_members.length === 0"
+                            @click="selectService(service)"
+                        >
+                            <div>
+                                <div class="service-name">{{ service.name }}</div>
+                                <div class="service-meta">
+                                    {{ service.duration_minutes }} min · {{ serviceStaffLabel(service) }}
+                                </div>
                             </div>
-                        </div>
-                        <div class="service-price-col">
-                            <div class="service-price">{{ formatPrice(service.price) }}</div>
-                            <span v-if="selectedServiceUuid === service.uuid" class="check">✓</span>
-                        </div>
-                    </button>
+                            <div class="service-price-col">
+                                <div class="service-price">{{ formatPrice(service.price) }}</div>
+                                <span v-if="selectedServiceUuid === service.uuid" class="check">✓</span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="screen-cta">
-                    <button class="btn btn-accent block-btn" type="button" :disabled="!selectedService" @click="goTo(2)">
+                    <button
+                        class="btn btn-accent block-btn"
+                        type="button"
+                        :disabled="!selectedService"
+                        @click="goTo(2)"
+                    >
                         Continuar →
                     </button>
                 </div>
             </section>
 
-            <!-- ============ STEP 2 · DATE / TIME ============ -->
+            <!-- ============ STEP 2 · STAFF ============ -->
             <section v-else-if="step === 2" class="screen">
                 <header class="step-head">
                     <button class="back" type="button" @click="goTo(1)">‹</button>
@@ -128,6 +135,66 @@
 
                 <div class="step-intro">
                     <p class="step-count">Passo 2 de 4</p>
+                    <h2>Escolha um profissional</h2>
+                </div>
+
+                <div class="screen-body">
+                    <section v-if="selectedService" class="staff-section staff-section-standalone">
+                        <div class="staff-list">
+                            <article
+                                v-for="staff in selectedServiceStaffMembers"
+                                :key="staff.uuid"
+                                class="staff-card"
+                                :class="{ selected: selectedStaffUuid === staff.uuid }"
+                            >
+                                <button type="button" class="staff-row" @click="selectStaff(staff)">
+                                    <div class="staff-avatar">
+                                        {{ staffInitials(staff.name) }}
+                                    </div>
+
+                                    <div class="staff-copy">
+                                        <div class="staff-name">{{ staff.name }}</div>
+                                        <div class="staff-meta">
+                                            {{ staff.bio?.trim() || 'Disponível para este serviço.' }}
+                                        </div>
+                                    </div>
+
+                                    <span v-if="selectedStaffUuid === staff.uuid" class="check">✓</span>
+                                </button>
+
+                                <NuxtLink
+                                    class="staff-profile-link"
+                                    :to="staffProfilePath(staff)"
+                                >
+                                    Ver perfil
+                                </NuxtLink>
+                            </article>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="screen-cta">
+                    <button
+                        class="btn btn-accent block-btn"
+                        type="button"
+                        :disabled="!selectedStaff"
+                        @click="goTo(3)"
+                    >
+                        Continuar →
+                    </button>
+                </div>
+            </section>
+
+            <!-- ============ STEP 3 · DATE / TIME ============ -->
+            <section v-else-if="step === 3" class="screen">
+                <header class="step-head">
+                    <button class="back" type="button" @click="goTo(2)">‹</button>
+                    <ProgressDots :current="3" />
+                    <span class="head-spacer"></span>
+                </header>
+
+                <div class="step-intro">
+                    <p class="step-count">Passo 3 de 4</p>
                     <h2>Quando queres vir?</h2>
                 </div>
 
@@ -192,23 +259,23 @@
                         class="btn btn-accent block-btn"
                         type="button"
                         :disabled="!selectedSlotStartAt"
-                        @click="goTo(3)"
+                        @click="goTo(4)"
                     >
                         Continuar<span v-if="selectedSlot"> → {{ selectedSlot }}</span>
                     </button>
                 </div>
             </section>
 
-            <!-- ============ STEP 3 · DATA ============ -->
-            <section v-else-if="step === 3" class="screen">
+            <!-- ============ STEP 4 · DATA ============ -->
+            <section v-else-if="step === 4" class="screen">
                 <header class="step-head">
-                    <button class="back" type="button" @click="goTo(2)">‹</button>
-                    <ProgressDots :current="3" />
+                    <button class="back" type="button" @click="goTo(3)">‹</button>
+                    <ProgressDots :current="4" />
                     <span class="head-spacer"></span>
                 </header>
 
                 <div class="step-intro">
-                    <p class="step-count">Passo 3 de 4</p>
+                    <p class="step-count">Passo 4 de 4</p>
                     <h2>Os teus dados</h2>
                 </div>
 
@@ -363,10 +430,10 @@ const step = ref(0)
 
 useHead(() => ({
     htmlAttrs: {
-        class: step.value >= 4 ? 'booking-success-lock' : undefined,
+        class: step.value >= 5 ? 'booking-success-lock' : undefined,
     },
     bodyAttrs: {
-        class: step.value >= 4 ? 'booking-success-lock' : undefined,
+        class: step.value >= 5 ? 'booking-success-lock' : undefined,
     },
 }))
 
@@ -392,10 +459,10 @@ const selectedService = computed(() =>
 )
 
 const selectedStaff = computed(() =>
-    selectedService.value?.staff_members.find((staff) => staff.uuid === selectedStaffUuid.value) ||
-    selectedService.value?.staff_members[0] ||
-    null
+    selectedService.value?.staff_members.find((staff) => staff.uuid === selectedStaffUuid.value) || null
 )
+
+const selectedServiceStaffMembers = computed(() => selectedService.value?.staff_members || [])
 
 const bookableServices = computed(() =>
     business.value?.services.filter((service) => service.staff_members.length > 0) || []
@@ -422,7 +489,7 @@ const customerCountLabel = computed(() => {
 const goTo = async (target: number) => {
     step.value = target
 
-    if (target === 2) {
+    if (target === 3) {
         await loadAvailableSlots()
     }
 
@@ -431,13 +498,31 @@ const goTo = async (target: number) => {
     }
 }
 
-const selectService = (service: PublicService) => {
-    selectedServiceUuid.value = service.uuid
-    selectedStaffUuid.value = service.staff_members[0]?.uuid || ''
+const resetAvailabilitySelection = () => {
+    availableSlots.value = []
     selectedSlot.value = null
     selectedSlotStartAt.value = null
     slotsError.value = ''
+    bookingError.value = ''
 }
+
+const selectService = (service: PublicService) => {
+    selectedServiceUuid.value = service.uuid
+    selectedStaffUuid.value = ''
+    resetAvailabilitySelection()
+}
+
+const selectStaff = (staff: PublicStaffMember) => {
+    if (selectedStaffUuid.value === staff.uuid) {
+        return
+    }
+
+    selectedStaffUuid.value = staff.uuid
+    resetAvailabilitySelection()
+}
+
+const staffProfilePath = (staff: PublicStaffMember) =>
+    `/${encodeURIComponent(business.value?.slug || slug.value)}/profissional/${encodeURIComponent(staff.uuid)}`
 
 const serviceStaffLabel = (service: PublicService) => {
     const firstStaff = service.staff_members[0]
@@ -452,6 +537,14 @@ const serviceStaffLabel = (service: PublicService) => {
 
     return `com ${firstStaff.name}`
 }
+
+const staffInitials = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || '')
+        .join('')
 
 const formatPrice = (value: string | number) => {
     const amount = Number(value)
@@ -550,7 +643,7 @@ const loadPublicBusiness = async () => {
 
         const firstBookableService = response.services.find((service) => service.staff_members.length > 0)
         selectedServiceUuid.value = firstBookableService?.uuid || ''
-        selectedStaffUuid.value = firstBookableService?.staff_members[0]?.uuid || ''
+        selectedStaffUuid.value = ''
         selectedSlot.value = null
         selectedSlotStartAt.value = null
         step.value = 0
@@ -620,7 +713,7 @@ const confirm = async () => {
             },
         })
 
-        goTo(4)
+        goTo(5)
     } catch (error: any) {
         console.error(error)
         const data = error?.data
@@ -637,19 +730,16 @@ const confirm = async () => {
 const reset = async () => {
     const firstBookableService = bookableServices.value[0]
     selectedServiceUuid.value = firstBookableService?.uuid || ''
-    selectedStaffUuid.value = firstBookableService?.staff_members[0]?.uuid || ''
-    selectedSlot.value = null
-    selectedSlotStartAt.value = null
-    availableSlots.value = []
+    selectedStaffUuid.value = ''
+    resetAvailabilitySelection()
     customer.name = ''
     customer.phone = ''
     customer.email = ''
-    bookingError.value = ''
     await goTo(0)
 }
 
 watch([selectedDay, selectedServiceUuid, selectedStaffUuid], () => {
-    if (step.value === 2) {
+    if (step.value === 3) {
         loadAvailableSlots()
     }
 })
@@ -987,6 +1077,99 @@ onMounted(() => {
     color: var(--tf-black);
     font-size: 12px;
     font-weight: 900;
+}
+
+.staff-section {
+    margin-top: 24px;
+}
+
+.staff-section-head {
+    margin-bottom: 14px;
+}
+
+.staff-section-head h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.staff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.staff-card {
+    border: 1px solid var(--tf-border);
+    border-radius: 20px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.staff-card.selected {
+    background: #f1ecdf;
+    border-color: var(--tf-black);
+}
+
+.staff-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 18px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.staff-avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--tf-black);
+    color: #fff;
+    font-family: var(--tf-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.staff-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.staff-name {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.staff-meta {
+    margin-top: 4px;
+    color: var(--tf-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.staff-profile-link {
+    display: block;
+    width: calc(100% - 36px);
+    margin: 0 18px 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 14px;
+    background: #f8f5ee;
+    color: var(--tf-black);
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
 }
 
 /* ---- date / time ---- */
@@ -1560,6 +1743,27 @@ onMounted(() => {
 
     .service-price {
         font-size: 26px;
+    }
+
+    .staff-section {
+        margin-top: 28px;
+        max-width: 620px;
+    }
+
+    .staff-row {
+        min-height: 88px;
+        padding: 18px 20px;
+        border-radius: 24px;
+    }
+
+    .staff-avatar {
+        width: 52px;
+        height: 52px;
+        font-size: 13px;
+    }
+
+    .staff-name {
+        font-size: 17px;
     }
 
     .day-row {
