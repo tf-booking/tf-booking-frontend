@@ -18,22 +18,15 @@
             <section v-else class="profile">
                 <div class="profile-scroll">
                     <div class="banner">
-                        <img
-                            v-if="heroPhoto"
-                            class="banner-photo"
-                            :src="heroPhoto"
-                            :alt="staffMember.name"
-                        />
-                        <div class="banner-overlay"></div>
                         <div class="banner-texture"></div>
-                        <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar"><</NuxtLink>
+                        <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar">&lsaquo;</NuxtLink>
                     </div>
 
                     <div class="avatar-wrap">
                         <img
-                            v-if="staffMember.avatar_url"
+                            v-if="avatarPhoto"
                             class="avatar avatar-img"
-                            :src="staffMember.avatar_url"
+                            :src="avatarPhoto"
                             :alt="staffMember.name"
                         />
                         <div v-else class="avatar">{{ staffInitials(staffMember.name) }}</div>
@@ -55,13 +48,7 @@
                     </div>
 
                     <div class="profile-about">
-                        <div class="section-head">
-                            <span class="section-label">Descricao</span>
-                        </div>
-
-                        <div class="about-card">
-                            <p class="profile-bio">{{ profileDescription }}</p>
-                        </div>
+                        <p class="profile-bio">{{ profileDescription }}</p>
 
                         <div v-if="serviceChips.length" class="chips">
                             <span
@@ -75,47 +62,21 @@
                         </div>
                     </div>
 
-                    <div v-if="profilePhotos.length" class="gallery-section">
-                        <div class="section-head">
-                            <span class="section-label">Fotos</span>
-                            <span class="section-meta">{{ profilePhotos.length }} imagens</span>
+                    <div v-if="profilePhotos.length" class="portfolio">
+                        <div class="portfolio-head">
+                            <span class="portfolio-label">Trabalhos</span>
+                            <span class="portfolio-count">{{ profilePhotos.length }} fotos</span>
                         </div>
 
-                        <div class="gallery-featured">
+                        <div class="portfolio-grid">
                             <img
-                                :src="profilePhotos[activePhotoIndex]"
-                                :alt="`${staffMember.name} - foto ${activePhotoIndex + 1}`"
-                            />
-                        </div>
-
-                        <div v-if="profilePhotos.length > 1" class="gallery-strip">
-                            <button
                                 v-for="(photo, index) in profilePhotos"
                                 :key="`${photo}-${index}`"
-                                type="button"
-                                class="gallery-thumb"
-                                :class="{ 'gallery-thumb-active': index === activePhotoIndex }"
-                                @click="activePhotoIndex = index"
-                            >
-                                <img :src="photo" :alt="`${staffMember.name} - miniatura ${index + 1}`" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div v-if="staffServices.length" class="works">
-                        <div class="works-head">
-                            <span class="works-label">Servicos</span>
-                            <span class="works-count">{{ staffServices.length }} disponiveis</span>
-                        </div>
-
-                        <div class="service-list">
-                            <article v-for="service in staffServices" :key="service.uuid" class="service-item">
-                                <div class="service-copy">
-                                    <h3>{{ service.name }}</h3>
-                                    <p>{{ service.duration_minutes }} min</p>
-                                </div>
-                                <strong class="service-price">{{ formatPrice(service.price) }}</strong>
-                            </article>
+                                class="portfolio-photo"
+                                :src="photo"
+                                :alt="`${staffMember.name} - trabalho ${index + 1}`"
+                                loading="lazy"
+                            />
                         </div>
                     </div>
                 </div>
@@ -165,12 +126,29 @@ type PublicBusiness = {
 }
 
 const route = useRoute()
-const { apiFetch } = useApi()
+const { apiFetch, apiBase } = useApi()
+
+// The API returns media as relative paths (/media/...); serve them from the backend origin,
+// not the frontend origin (otherwise the browser 404s them against localhost:3000).
+const mediaBase = apiBase.replace(/\/api\/?$/, '')
+
+const resolveMedia = (url: string) => {
+    const value = String(url || '').trim()
+
+    if (!value) {
+        return ''
+    }
+
+    if (/^https?:\/\//i.test(value) || value.startsWith('data:')) {
+        return value
+    }
+
+    return `${mediaBase}${value.startsWith('/') ? '' : '/'}${value}`
+}
 
 const slug = computed(() => String(route.params.slug || '').trim())
 const staffUuid = computed(() => String(route.params.staffUuid || '').trim())
 const serviceQuery = computed(() => String(route.query.service || '').trim())
-const activePhotoIndex = ref(0)
 
 const bookingQuery = computed(() => {
     const query: Record<string, string> = {
@@ -238,27 +216,25 @@ const profileDescription = computed(() =>
     staffMember.value?.bio?.trim() || 'Profissional disponivel para marcacoes neste negocio.'
 )
 
+const avatarPhoto = computed(() => resolveMedia(staffMember.value?.avatar_url || ''))
+
 const profilePhotos = computed(() => {
     const photos = new Set<string>()
 
-    if (staffMember.value?.avatar_url) {
-        photos.add(staffMember.value.avatar_url)
+    if (avatarPhoto.value) {
+        photos.add(avatarPhoto.value)
     }
 
     for (const url of staffMember.value?.gallery_image_urls || []) {
-        const cleaned = String(url || '').trim()
+        const resolved = resolveMedia(url)
 
-        if (cleaned) {
-            photos.add(cleaned)
+        if (resolved) {
+            photos.add(resolved)
         }
     }
 
     return Array.from(photos)
 })
-
-const heroPhoto = computed(() =>
-    profilePhotos.value[activePhotoIndex.value] || staffMember.value?.avatar_url || ''
-)
 
 const stats = computed(() => {
     const list: { value: string; label: string }[] = [
@@ -279,12 +255,6 @@ const stats = computed(() => {
 const serviceChips = computed(() =>
     staffServices.value.slice(0, 6).map((service) => service.name)
 )
-
-watch(profilePhotos, (photos) => {
-    if (!photos.length || activePhotoIndex.value >= photos.length) {
-        activePhotoIndex.value = 0
-    }
-}, { immediate: true })
 
 useHead(() => ({
     title: staffMember.value && business.value
@@ -424,30 +394,16 @@ watch([slug, staffUuid], () => {
 
 .banner {
     position: relative;
-    height: 218px;
+    height: 190px;
     overflow: hidden;
     background: linear-gradient(135deg, #17171d, #26262d);
 }
 
-.banner-photo,
-.gallery-featured img,
-.gallery-thumb img,
 .avatar-img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.banner-photo {
-    position: absolute;
-    inset: 0;
-}
-
-.banner-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(11, 11, 15, 0.3), rgba(11, 11, 15, 0.7));
 }
 
 .banner-texture {
@@ -474,6 +430,8 @@ watch([slug, staffUuid], () => {
 }
 
 .avatar-wrap {
+    position: relative;
+    z-index: 1;
     display: flex;
     justify-content: center;
     margin-top: -52px;
@@ -543,12 +501,11 @@ watch([slug, staffUuid], () => {
 }
 
 .profile-about,
-.gallery-section,
-.works {
+.portfolio {
     padding: 22px 24px 0;
 }
 
-.section-head {
+.portfolio-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -556,8 +513,7 @@ watch([slug, staffUuid], () => {
     margin-bottom: 12px;
 }
 
-.section-label,
-.works-label {
+.portfolio-label {
     font-family: var(--tf-mono);
     font-size: 11px;
     font-weight: 600;
@@ -566,25 +522,18 @@ watch([slug, staffUuid], () => {
     color: var(--tf-muted);
 }
 
-.section-meta,
-.works-count {
+.portfolio-count {
     font-family: var(--tf-mono);
     font-size: 11px;
     color: #9a958a;
 }
 
-.about-card {
-    padding: 18px;
-    border: 1px solid var(--tf-border);
-    border-radius: 22px;
-    background: linear-gradient(180deg, #fff, #fbf8f1);
-}
-
 .profile-bio {
     margin: 0;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: #4a483f;
+    text-align: center;
 }
 
 .chips {
@@ -608,82 +557,22 @@ watch([slug, staffUuid], () => {
     color: #fff;
 }
 
-.gallery-featured {
-    overflow: hidden;
-    border-radius: 24px;
-    background: #ece6d9;
-    aspect-ratio: 4 / 5;
-}
-
-.gallery-strip {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 88px;
-    gap: 10px;
-    margin-top: 12px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-}
-
-.gallery-thumb {
-    padding: 0;
-    border: 2px solid transparent;
-    border-radius: 18px;
-    overflow: hidden;
-    background: #ece6d9;
-    aspect-ratio: 1 / 1;
-    cursor: pointer;
-}
-
-.gallery-thumb-active {
-    border-color: var(--tf-black);
-}
-
-.works {
+.portfolio {
     padding-bottom: 26px;
 }
 
-.works-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
+.portfolio-grid {
+    column-count: 2;
+    column-gap: 10px;
 }
 
-.service-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.service-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 16px 18px;
-    border: 1px solid var(--tf-border);
-    border-radius: 18px;
-    background: #fff;
-}
-
-.service-copy h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 800;
-}
-
-.service-copy p {
-    margin: 3px 0 0;
-    font-size: 13px;
-    color: var(--tf-muted);
-}
-
-.service-price {
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
+.portfolio-photo {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    border-radius: 16px;
+    break-inside: avoid;
+    background: #ece6d9;
 }
 
 .profile-cta {
