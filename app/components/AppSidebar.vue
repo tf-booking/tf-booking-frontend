@@ -76,10 +76,12 @@ const ownerOrManagerItems = [
     { label: 'Agenda', to: '/schedule' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
+    { label: 'Conta', to: '/account' },
 ]
 
 const staffItems = [
     { label: 'A minha agenda', to: '/schedule' },
+    { label: 'Conta', to: '/account' },
 ]
 
 const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')

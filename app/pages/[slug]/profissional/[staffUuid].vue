@@ -1,114 +1,103 @@
 <template>
-    <div class="staff-profile-page">
-        <section v-if="isLoading" class="state-screen">
-            <div class="state-mark">TF</div>
-            <p class="step-count">A carregar</p>
-            <h1>A preparar o perfil do profissional...</h1>
-        </section>
+    <div class="profile-viewport">
+        <div class="device">
+            <!-- loading -->
+            <section v-if="isLoading" class="state-screen">
+                <div class="state-mark">TF</div>
+                <p class="step-count">A carregar</p>
+                <h1>A preparar o perfil...</h1>
+            </section>
 
-        <section v-else-if="errorMessage || !business || !staffMember" class="state-screen">
-            <div class="state-mark state-mark-error">!</div>
-            <p class="step-count">Perfil indisponível</p>
-            <h1>Não encontrámos este profissional.</h1>
-            <p class="state-copy">
-                {{ errorMessage || 'Confirma se o link está correto.' }}
-            </p>
-            <NuxtLink class="action-link" :to="bookingPath">
-                Voltar à marcação
-            </NuxtLink>
-        </section>
+            <!-- error -->
+            <section v-else-if="errorMessage || !business || !staffMember" class="state-screen">
+                <div class="state-mark state-mark-error">!</div>
+                <p class="step-count">Perfil indisponível</p>
+                <h1>Não encontrámos este profissional.</h1>
+                <p class="state-copy">{{ errorMessage || 'Confirma se o link está correto.' }}</p>
+                <NuxtLink class="btn btn-secondary state-btn" :to="bookingPath">Voltar à marcação</NuxtLink>
+            </section>
 
-        <section v-else class="profile-shell">
-            <header class="profile-topbar">
-                <NuxtLink class="back-link" :to="bookingPath">
-                    ‹ Voltar à marcação
-                </NuxtLink>
-                <span class="topbar-brand">TF Booking</span>
-            </header>
+            <!-- profile -->
+            <section v-else class="profile">
+                <div class="profile-scroll">
+                    <!-- banner -->
+                    <div class="banner">
+                        <div class="banner-texture"></div>
+                        <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar">‹</NuxtLink>
+                    </div>
 
-            <div class="profile-grid">
-                <section class="profile-hero card">
-                    <div class="profile-hero-copy">
-                        <p class="step-count">{{ business.name }}</p>
+                    <!-- avatar -->
+                    <div class="avatar-wrap">
+                        <img
+                            v-if="staffMember.avatar_url"
+                            class="avatar avatar-img"
+                            :src="staffMember.avatar_url"
+                            :alt="staffMember.name"
+                        />
+                        <div v-else class="avatar">{{ staffInitials(staffMember.name) }}</div>
+                    </div>
+
+                    <!-- head -->
+                    <div class="profile-head">
                         <h1>{{ staffMember.name }}</h1>
-                        <p class="profile-lede">
+                        <p class="profile-role">{{ profileSubtitle }}</p>
+
+                        <div v-if="stats.length" class="stats">
+                            <template v-for="(stat, index) in stats" :key="stat.label">
+                                <span v-if="index > 0" class="stat-divider"></span>
+                                <div class="stat">
+                                    <div class="stat-value">{{ stat.value }}</div>
+                                    <div class="stat-label">{{ stat.label }}</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- bio + chips -->
+                    <div class="profile-about">
+                        <p class="profile-bio">
                             {{ staffMember.bio?.trim() || 'Profissional disponível para marcações neste negócio.' }}
                         </p>
 
-                        <div class="profile-meta">
-                            <span>{{ staffServices.length }} serviços</span>
-                            <span v-if="business.city">{{ business.city }}</span>
+                        <div v-if="serviceChips.length" class="chips">
+                            <span
+                                v-for="(chip, index) in serviceChips"
+                                :key="chip"
+                                class="chip"
+                                :class="{ 'chip-dark': index === 0 }"
+                            >
+                                {{ chip }}
+                            </span>
                         </div>
                     </div>
 
-                    <div class="profile-avatar-wrap">
-                        <img
-                            v-if="staffMember.avatar_url"
-                            :src="staffMember.avatar_url"
-                            :alt="staffMember.name"
-                            class="profile-avatar-image"
-                        />
-                        <div v-else class="profile-avatar-fallback">
-                            {{ staffInitials(staffMember.name) }}
+                    <!-- services -->
+                    <div v-if="staffServices.length" class="works">
+                        <div class="works-head">
+                            <span class="works-label">Serviços</span>
+                            <span class="works-count">{{ staffServices.length }} disponíveis</span>
+                        </div>
+
+                        <div class="service-list">
+                            <article v-for="service in staffServices" :key="service.uuid" class="service-item">
+                                <div class="service-copy">
+                                    <h3>{{ service.name }}</h3>
+                                    <p>{{ service.duration_minutes }} min</p>
+                                </div>
+                                <strong class="service-price">{{ formatPrice(service.price) }}</strong>
+                            </article>
                         </div>
                     </div>
-                </section>
+                </div>
 
-                <section class="card detail-card">
-                    <p class="card-label">Sobre o profissional</p>
-                    <p class="detail-copy">
-                        {{ staffMember.bio?.trim() || 'Este profissional ainda não tem uma descrição pública.' }}
-                    </p>
-                </section>
-
-                <section class="card detail-card">
-                    <div class="services-head">
-                        <div>
-                            <p class="card-label">Serviços disponíveis</p>
-                            <h2>O que podes marcar com este profissional</h2>
-                        </div>
-                        <NuxtLink class="action-link action-link-dark" :to="bookingPath">
-                            Ir para a marcação
-                        </NuxtLink>
-                    </div>
-
-                    <div class="service-list">
-                        <article v-for="service in staffServices" :key="service.uuid" class="service-item">
-                            <div>
-                                <h3>{{ service.name }}</h3>
-                                <p>{{ service.description?.trim() || 'Serviço disponível para marcação pública.' }}</p>
-                            </div>
-                            <div class="service-meta">
-                                <span>{{ service.duration_minutes }} min</span>
-                                <strong>{{ formatPrice(service.price) }}</strong>
-                            </div>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="card detail-card business-card">
-                    <p class="card-label">Negócio</p>
-                    <h2>{{ business.name }}</h2>
-                    <p class="detail-copy">
-                        {{ business.address }}<span v-if="business.city">, {{ business.city }}</span>
-                    </p>
-                    <div class="business-links">
-                        <a v-if="business.phone" class="action-link" :href="`tel:${business.phone}`">
-                            {{ business.phone }}
-                        </a>
-                        <a
-                            v-if="business.website_url"
-                            class="action-link"
-                            :href="business.website_url"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            Website
-                        </a>
-                    </div>
-                </section>
-            </div>
-        </section>
+                <!-- pinned CTA -->
+                <div class="profile-cta">
+                    <NuxtLink class="btn btn-accent block-btn" :to="bookWithStaffPath">
+                        Marcar com {{ firstName }} →
+                    </NuxtLink>
+                </div>
+            </section>
+        </div>
     </div>
 </template>
 
@@ -150,7 +139,27 @@ const { apiFetch } = useApi()
 
 const slug = computed(() => String(route.params.slug || '').trim())
 const staffUuid = computed(() => String(route.params.staffUuid || '').trim())
-const bookingPath = computed(() => `/${encodeURIComponent(slug.value)}`)
+const serviceQuery = computed(() => String(route.query.service || '').trim())
+const bookingQuery = computed(() => {
+    const query: Record<string, string> = {
+        step: '2',
+        staff: staffUuid.value,
+    }
+
+    if (serviceQuery.value) {
+        query.service = serviceQuery.value
+    }
+
+    return query
+})
+const bookingPath = computed(() => ({
+    path: `/booking/${encodeURIComponent(slug.value)}`,
+    query: bookingQuery.value,
+}))
+const bookWithStaffPath = computed(() => ({
+    path: `/booking/${encodeURIComponent(slug.value)}`,
+    query: bookingQuery.value,
+}))
 
 const business = ref<PublicBusiness | null>(null)
 const isLoading = ref(true)
@@ -178,6 +187,29 @@ const staffServices = computed(() =>
     business.value?.services.filter((service) =>
         service.staff_members.some((staff) => staff.uuid === staffUuid.value)
     ) || []
+)
+
+const firstName = computed(() => staffMember.value?.name.trim().split(/\s+/)[0] || 'este profissional')
+
+const profileSubtitle = computed(() =>
+    business.value ? `Profissional · ${business.value.name}` : 'Profissional'
+)
+
+// Only real, backed data — no invented ratings/reviews.
+const stats = computed(() => {
+    const list: { value: string; label: string }[] = [
+        { value: String(staffServices.value.length), label: 'serviços' },
+    ]
+
+    if (business.value?.city) {
+        list.push({ value: business.value.city, label: 'local' })
+    }
+
+    return list
+})
+
+const serviceChips = computed(() =>
+    staffServices.value.slice(0, 6).map((service) => service.name)
 )
 
 useHead(() => ({
@@ -236,28 +268,30 @@ const loadProfile = async () => {
     }
 }
 
-onMounted(() => {
+watch([slug, staffUuid], () => {
     loadProfile()
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
-.staff-profile-page {
+.profile-viewport {
     min-height: 100svh;
-    background:
-        radial-gradient(circle at top left, rgba(215, 255, 62, 0.16), transparent 24%),
-        linear-gradient(180deg, #f8f5ee 0%, #fdfcf9 100%);
-    color: var(--tf-black);
+    background: #fdfcf9;
 }
 
-.state-screen {
+.device {
+    width: 100%;
     min-height: 100svh;
+    background: #fdfcf9;
+}
+
+/* ---- state screens ---- */
+.state-screen {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 34px 24px;
+    min-height: 100svh;
+    padding: 34px;
 }
 
 .state-mark {
@@ -278,6 +312,13 @@ onMounted(() => {
     color: var(--tf-danger-fg);
 }
 
+.state-screen h1 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 0.98;
+    font-weight: 900;
+}
+
 .step-count {
     margin: 0 0 8px;
     font-family: var(--tf-mono);
@@ -288,255 +329,271 @@ onMounted(() => {
     color: var(--tf-muted);
 }
 
-.state-screen h1,
-.profile-hero h1 {
-    margin: 0;
-    font-size: clamp(34px, 7vw, 62px);
-    line-height: 0.95;
-    font-weight: 900;
-}
-
 .state-copy {
     margin: 18px 0 24px;
     color: var(--tf-muted);
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
-.profile-shell {
-    width: min(1120px, 100%);
-    margin: 0 auto;
-    padding: 24px 24px 48px;
+.state-btn {
+    width: fit-content;
 }
 
-.profile-topbar {
+/* ---- profile shell ---- */
+.profile {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
+    flex-direction: column;
+    min-height: 100svh;
 }
 
-.back-link,
-.action-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 46px;
-    padding: 0 18px;
-    border-radius: 999px;
-    border: 1px solid var(--tf-border);
-    background: #fff;
-    color: var(--tf-black);
-    text-decoration: none;
-    font-weight: 700;
+.profile-scroll {
+    flex: 1;
 }
 
-.action-link-dark {
-    background: var(--tf-black);
-    border-color: var(--tf-black);
+/* ---- banner ---- */
+.banner {
+    position: relative;
+    height: 190px;
+    background: linear-gradient(135deg, #17171d, #26262d);
+}
+
+.banner-texture {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0 14px, transparent 14px 28px);
+}
+
+.banner-back {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(4px);
     color: #fff;
+    font-size: 18px;
+    font-weight: 800;
 }
 
-.topbar-brand {
+/* ---- avatar ---- */
+.avatar-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: -52px;
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    border: 5px solid #fdfcf9;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-weight: 900;
+    font-size: 34px;
+    object-fit: cover;
+}
+
+.avatar-img {
+    display: block;
+}
+
+/* ---- head ---- */
+.profile-head {
+    text-align: center;
+    padding: 14px 24px 0;
+}
+
+.profile-head h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
+.profile-role {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--tf-muted);
+}
+
+.stats {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 16px;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+.stat-label {
     font-family: var(--tf-mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
+    font-size: 9px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--tf-muted);
 }
 
-.profile-grid {
-    display: grid;
-    gap: 18px;
+.stat-divider {
+    width: 1px;
+    background: var(--tf-border);
 }
 
-.card {
-    border: 1px solid rgba(220, 214, 201, 0.9);
-    border-radius: 28px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 24px 70px -52px rgba(11, 11, 15, 0.35);
+/* ---- about ---- */
+.profile-about {
+    padding: 20px 24px 0;
 }
 
-.profile-hero {
-    display: grid;
-    gap: 24px;
-    padding: 26px;
-}
-
-.profile-lede {
-    margin: 18px 0 0;
-    max-width: 42ch;
+.profile-bio {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
     color: #4a483f;
-    font-size: 16px;
-    line-height: 1.65;
+    text-align: center;
 }
 
-.profile-meta {
+.chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
 }
 
-.profile-meta span {
-    padding: 8px 12px;
+.chip {
+    padding: 7px 13px;
     border-radius: 999px;
-    background: #f4f1ea;
+    background: #f1ecdf;
+    color: var(--tf-black);
     font-size: 12px;
     font-weight: 700;
 }
 
-.profile-avatar-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.profile-avatar-image,
-.profile-avatar-fallback {
-    width: 120px;
-    height: 120px;
-    border-radius: 28px;
-}
-
-.profile-avatar-image {
-    object-fit: cover;
-    border: 1px solid rgba(220, 214, 201, 0.9);
-}
-
-.profile-avatar-fallback {
-    display: grid;
-    place-items: center;
+.chip-dark {
     background: var(--tf-black);
     color: #fff;
-    font-size: 34px;
-    font-weight: 900;
-    letter-spacing: 0.08em;
 }
 
-.detail-card {
-    padding: 24px;
+/* ---- services ---- */
+.works {
+    padding: 22px 24px 26px;
 }
 
-.card-label {
-    margin: 0 0 10px;
+.works-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.works-label {
     font-family: var(--tf-mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--tf-muted);
 }
 
-.detail-card h2,
-.services-head h2,
-.service-item h3 {
-    margin: 0;
-}
-
-.detail-copy {
-    margin: 0;
-    color: #4a483f;
-    font-size: 15px;
-    line-height: 1.7;
-}
-
-.services-head {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    margin-bottom: 18px;
+.works-count {
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    color: #9a958a;
 }
 
 .service-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .service-item {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 18px;
-    border-radius: 20px;
-    background: #f8f5ee;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--tf-border);
+    border-radius: 18px;
+    background: #fff;
 }
 
-.service-item h3 {
-    font-size: 17px;
+.service-copy h3 {
+    margin: 0;
+    font-size: 15px;
     font-weight: 800;
 }
 
-.service-item p {
-    margin: 8px 0 0;
-    color: var(--tf-muted);
-    font-size: 14px;
-    line-height: 1.55;
-}
-
-.service-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-    white-space: nowrap;
+.service-copy p {
+    margin: 3px 0 0;
     font-size: 13px;
+    color: var(--tf-muted);
 }
 
-.service-meta strong {
+.service-price {
     font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
 }
 
-.business-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 18px;
+/* ---- pinned CTA ---- */
+.profile-cta {
+    position: sticky;
+    bottom: 0;
+    padding: 16px 24px 26px;
+    background: linear-gradient(to top, #fdfcf9 65%, rgba(253, 252, 249, 0));
 }
 
-@media (min-width: 860px) {
-    .profile-grid {
-        grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-    }
+.block-btn {
+    width: 100%;
+    height: 56px;
+    font-size: 17px;
+}
 
-    .profile-hero,
-    .detail-card:nth-child(3) {
-        grid-column: 1 / -1;
-    }
-
-    .profile-hero {
-        grid-template-columns: minmax(0, 1fr) 180px;
+/* ---- desktop framing ---- */
+@media (min-width: 620px) {
+    .profile-viewport {
+        display: flex;
         align-items: center;
-        padding: 36px;
+        justify-content: center;
+        padding: 32px;
+        background:
+            radial-gradient(circle at 18% 12%, rgba(215, 255, 62, 0.14), transparent 30%),
+            var(--tf-canvas);
     }
 
-    .services-head {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-}
-
-@media (max-width: 520px) {
-    .profile-shell {
-        padding-right: 16px;
-        padding-left: 16px;
+    .device {
+        width: min(460px, 100%);
+        min-height: 0;
+        border: 1px solid #d9d2c2;
+        border-radius: 34px;
+        box-shadow: 0 40px 90px -44px rgba(11, 11, 15, 0.5);
+        overflow: hidden;
     }
 
-    .profile-topbar {
-        flex-direction: column;
-        align-items: stretch;
+    .profile,
+    .state-screen {
+        min-height: min(820px, calc(100svh - 64px));
     }
 
-    .service-item {
-        flex-direction: column;
-    }
-
-    .service-meta {
-        align-items: flex-start;
+    .banner {
+        border-radius: 0;
     }
 }
 </style>

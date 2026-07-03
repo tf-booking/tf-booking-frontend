@@ -124,9 +124,9 @@
                         <div v-for="business in businesses" :key="business.uuid" class="business-item">
                             <div class="business-main">
                                 <strong>{{ business.name }}</strong>
-                                <NuxtLink :to="publicBookingPath(business)" target="_blank">
+                                <a :href="publicBookingUrl(business)" target="_blank" rel="noopener noreferrer">
                                     {{ publicBookingUrl(business) }}
-                                </NuxtLink>
+                                </a>
                             </div>
 
                             <div class="business-actions">
@@ -134,9 +134,9 @@
                                     Copiar
                                 </button>
 
-                                <NuxtLink class="mini-action" :to="publicBookingPath(business)" target="_blank">
+                                <a class="mini-action" :href="publicBookingUrl(business)" target="_blank" rel="noopener noreferrer">
                                     Abrir
-                                </NuxtLink>
+                                </a>
 
                                 <small :class="{ inactive: !business.is_active }">
                                     {{ business.is_active ? 'Ativo' : 'Inativo' }}
@@ -210,7 +210,7 @@ const loadBusinesses = async () => {
     }
 }
 
-const publicBookingPath = (business: Business) => `/${business.slug}`
+const publicBookingPath = (business: Business) => `/booking/${encodeURIComponent(business.slug)}`
 
 const publicBookingUrl = (business: Business) => {
     if (!publicOrigin.value) {

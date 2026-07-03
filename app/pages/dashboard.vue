@@ -22,18 +22,18 @@
                 <div>
                     <p class="link-eyebrow">Link público</p>
                     <h2>{{ primaryBusiness.business_name }}</h2>
-                    <NuxtLink :to="publicBusinessPath" target="_blank">
+                    <a :href="publicBusinessUrl" target="_blank" rel="noopener noreferrer">
                         {{ publicBusinessUrl }}
-                    </NuxtLink>
+                    </a>
                 </div>
 
                 <div class="link-actions">
                     <button class="btn btn-secondary" type="button" @click="copyPublicLink">
                         Copiar link
                     </button>
-                    <NuxtLink class="btn btn-accent" :to="publicBusinessPath" target="_blank">
+                    <a class="btn btn-accent" :href="publicBusinessUrl" target="_blank" rel="noopener noreferrer">
                         Abrir página
-                    </NuxtLink>
+                    </a>
                 </div>
             </article>
 
@@ -348,7 +348,7 @@ const insightText = computed(() =>
 )
 
 const publicBusinessPath = computed(() =>
-    primaryBusiness.value ? `/${primaryBusiness.value.business_slug}` : '/'
+    primaryBusiness.value ? `/booking/${encodeURIComponent(primaryBusiness.value.business_slug)}` : '/'
 )
 
 const publicBusinessUrl = computed(() => {

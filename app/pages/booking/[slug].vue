@@ -141,34 +141,37 @@
                 <div class="screen-body">
                     <section v-if="selectedService" class="staff-section staff-section-standalone">
                         <div class="staff-list">
-                            <article
+                            <div
                                 v-for="staff in selectedServiceStaffMembers"
                                 :key="staff.uuid"
                                 class="staff-card"
                                 :class="{ selected: selectedStaffUuid === staff.uuid }"
+                                role="button"
+                                tabindex="0"
+                                @click="selectStaff(staff)"
+                                @keydown.enter="selectStaff(staff)"
+                                @keydown.space.prevent="selectStaff(staff)"
                             >
-                                <button type="button" class="staff-row" @click="selectStaff(staff)">
-                                    <div class="staff-avatar">
-                                        {{ staffInitials(staff.name) }}
+                                <div class="staff-avatar">
+                                    {{ staffInitials(staff.name) }}
+                                </div>
+
+                                <div class="staff-copy">
+                                    <div class="staff-name">{{ staff.name }}</div>
+                                    <div class="staff-meta">
+                                        {{ staff.bio?.trim() || 'Disponível para este serviço.' }}
                                     </div>
+                                    <NuxtLink
+                                        class="staff-profile-link"
+                                        :to="staffProfilePath(staff)"
+                                        @click.stop
+                                    >
+                                        Ver perfil →
+                                    </NuxtLink>
+                                </div>
 
-                                    <div class="staff-copy">
-                                        <div class="staff-name">{{ staff.name }}</div>
-                                        <div class="staff-meta">
-                                            {{ staff.bio?.trim() || 'Disponível para este serviço.' }}
-                                        </div>
-                                    </div>
-
-                                    <span v-if="selectedStaffUuid === staff.uuid" class="check">✓</span>
-                                </button>
-
-                                <NuxtLink
-                                    class="staff-profile-link"
-                                    :to="staffProfilePath(staff)"
-                                >
-                                    Ver perfil
-                                </NuxtLink>
-                            </article>
+                                <span v-if="selectedStaffUuid === staff.uuid" class="staff-check">✓</span>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -343,9 +346,9 @@
                     <button class="btn btn-accent block-btn mb" type="button" @click="reset">
                         Fazer nova marcação
                     </button>
-                    <NuxtLink class="btn ghost block-btn" :to="`/${business.slug}`">
+                    <button class="btn ghost block-btn" type="button" @click="returnToBusinessLanding">
                         Ver página do negócio
-                    </NuxtLink>
+                    </button>
                 </div>
             </section>
         </div>
@@ -397,7 +400,9 @@ type AvailableSlot = {
 }
 
 const route = useRoute()
+const router = useRouter()
 const { apiFetch } = useApi()
+const isSyncingWizardRoute = ref(false)
 
 // Inline progress-dots component used by the wizard steps.
 const ProgressDots = defineComponent({
@@ -521,8 +526,19 @@ const selectStaff = (staff: PublicStaffMember) => {
     resetAvailabilitySelection()
 }
 
+const canonicalBookingPath = computed(() =>
+    `/booking/${encodeURIComponent(business.value?.slug || slug.value)}`
+)
+
 const staffProfilePath = (staff: PublicStaffMember) =>
-    `/${encodeURIComponent(business.value?.slug || slug.value)}/profissional/${encodeURIComponent(staff.uuid)}`
+    ({
+        path: `${canonicalBookingPath.value}/profissional/${encodeURIComponent(staff.uuid)}`,
+        query: {
+            step: '2',
+            service: selectedServiceUuid.value,
+            staff: staff.uuid,
+        },
+    })
 
 const serviceStaffLabel = (service: PublicService) => {
     const firstStaff = service.staff_members[0]
@@ -620,6 +636,18 @@ const canConfirm = computed(() =>
     )
 )
 
+const maxReachableStep = computed(() => {
+    if (selectedStaff.value) {
+        return 2
+    }
+
+    if (selectedService.value) {
+        return 1
+    }
+
+    return 0
+})
+
 const selectSlot = (slot: AvailableSlot) => {
     selectedSlot.value = slot.time
     selectedSlotStartAt.value = slot.start_at
@@ -641,12 +669,33 @@ const loadPublicBusiness = async () => {
         const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
         business.value = response
 
+        resetAvailabilitySelection()
+
         const firstBookableService = response.services.find((service) => service.staff_members.length > 0)
-        selectedServiceUuid.value = firstBookableService?.uuid || ''
-        selectedStaffUuid.value = ''
-        selectedSlot.value = null
-        selectedSlotStartAt.value = null
-        step.value = 0
+        const serviceQuery = String(route.query.service || '').trim()
+        const staffQuery = String(route.query.staff || '').trim()
+        const queriedService = response.services.find((service) => service.uuid === serviceQuery)
+        const serviceForStaff = staffQuery
+            ? response.services.find((service) =>
+                service.staff_members.some((staff) => staff.uuid === staffQuery)
+            )
+            : null
+
+        selectedServiceUuid.value = queriedService?.uuid || serviceForStaff?.uuid || firstBookableService?.uuid || ''
+
+        const selectedServiceFromRoute = response.services.find((service) => service.uuid === selectedServiceUuid.value)
+        selectedStaffUuid.value = selectedServiceFromRoute?.staff_members.some((staff) => staff.uuid === staffQuery)
+            ? staffQuery
+            : ''
+
+        const requestedStep = Number.parseInt(String(route.query.step || ''), 10)
+        const fallbackStep = selectedStaffUuid.value ? 2 : 0
+
+        if (Number.isFinite(requestedStep)) {
+            step.value = Math.max(0, Math.min(requestedStep, maxReachableStep.value))
+        } else {
+            step.value = fallbackStep
+        }
     } catch (error: any) {
         console.error(error)
         business.value = null
@@ -738,16 +787,109 @@ const reset = async () => {
     await goTo(0)
 }
 
+const returnToBusinessLanding = async () => {
+    await navigateTo(canonicalBookingPath.value, { replace: true })
+    await reset()
+}
+
+const syncWizardRoute = async () => {
+    if (!import.meta.client || isSyncingWizardRoute.value) {
+        return
+    }
+
+    const currentStep = String(route.query.step || '')
+    const currentService = String(route.query.service || '')
+    const currentStaff = String(route.query.staff || '')
+
+    const nextQuery: Record<string, string> = {}
+
+    if (step.value > 0) {
+        nextQuery.step = String(step.value)
+    }
+
+    if (selectedServiceUuid.value) {
+        nextQuery.service = selectedServiceUuid.value
+    }
+
+    if (selectedStaffUuid.value) {
+        nextQuery.staff = selectedStaffUuid.value
+    }
+
+    if (
+        currentStep === String(nextQuery.step || '')
+        && currentService === String(nextQuery.service || '')
+        && currentStaff === String(nextQuery.staff || '')
+    ) {
+        return
+    }
+
+    isSyncingWizardRoute.value = true
+
+    try {
+        await router.replace({
+            query: nextQuery,
+        })
+    } finally {
+        isSyncingWizardRoute.value = false
+    }
+}
+
 watch([selectedDay, selectedServiceUuid, selectedStaffUuid], () => {
     if (step.value === 3) {
         loadAvailableSlots()
     }
 })
 
-onMounted(() => {
+watch([step, selectedServiceUuid, selectedStaffUuid], () => {
+    syncWizardRoute()
+})
+
+watch(
+    [
+        () => String(route.query.step || ''),
+        () => String(route.query.service || ''),
+        () => String(route.query.staff || ''),
+    ],
+    () => {
+        if (isSyncingWizardRoute.value || !business.value) {
+            return
+        }
+
+        const serviceQuery = String(route.query.service || '').trim()
+        const staffQuery = String(route.query.staff || '').trim()
+        const requestedStep = Number.parseInt(String(route.query.step || ''), 10)
+        const serviceForStaff = staffQuery
+            ? business.value.services.find((service) =>
+                service.staff_members.some((staff) => staff.uuid === staffQuery)
+            )
+            : null
+        const queriedService = business.value.services.find((service) => service.uuid === serviceQuery)
+        const nextServiceUuid = queriedService?.uuid || serviceForStaff?.uuid || selectedServiceUuid.value
+        const nextStaffUuid = serviceForStaff?.staff_members.some((staff) => staff.uuid === staffQuery) ? staffQuery : ''
+
+        if (nextServiceUuid !== selectedServiceUuid.value) {
+            selectedServiceUuid.value = nextServiceUuid
+        }
+
+        if (nextStaffUuid !== selectedStaffUuid.value) {
+            selectedStaffUuid.value = nextStaffUuid
+        }
+
+        if (Number.isFinite(requestedStep)) {
+            step.value = Math.max(0, Math.min(requestedStep, maxReachableStep.value))
+            return
+        }
+
+        if (nextStaffUuid && step.value < 2) {
+            step.value = 2
+        }
+    }
+)
+
+watch(slug, () => {
     selectedDay.value = days.value[1]?.iso || days.value[0]?.iso || ''
     loadPublicBusiness()
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -1101,44 +1243,39 @@ onMounted(() => {
 }
 
 .staff-card {
-    border: 1px solid var(--tf-border);
-    border-radius: 20px;
-    background: #fff;
-    overflow: hidden;
-}
-
-.staff-card.selected {
-    background: #f1ecdf;
-    border-color: var(--tf-black);
-}
-
-.staff-row {
     display: flex;
     align-items: center;
     gap: 14px;
-    width: 100%;
-    padding: 16px 18px;
-    border: 0;
-    background: transparent;
-    text-align: left;
+    padding: 16px;
+    border: 1px solid var(--tf-border);
+    border-radius: 20px;
+    background: #fff;
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.staff-card.selected {
+    background: var(--tf-black);
+    border-color: var(--tf-black);
+    color: #fff;
 }
 
 .staff-avatar {
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: var(--tf-black);
-    color: #fff;
-    font-family: var(--tf-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    background: #f1ecdf;
+    color: var(--tf-black);
+    font-weight: 900;
+    font-size: 17px;
+}
+
+.staff-card.selected .staff-avatar {
+    background: #2a2a32;
+    color: var(--tf-accent);
 }
 
 .staff-copy {
@@ -1147,29 +1284,54 @@ onMounted(() => {
 }
 
 .staff-name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
 }
 
 .staff-meta {
-    margin-top: 4px;
+    margin-top: 2px;
     color: var(--tf-muted);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.staff-card.selected .staff-meta {
+    color: #b7b3aa;
 }
 
 .staff-profile-link {
-    display: block;
-    width: calc(100% - 36px);
-    margin: 0 18px 16px;
-    padding: 12px 14px;
-    border: 1px solid var(--tf-border);
-    border-radius: 14px;
-    background: #f8f5ee;
+    display: inline-block;
+    margin-top: 6px;
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a958a;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.staff-card.selected .staff-profile-link {
+    color: var(--tf-accent);
+}
+
+.staff-check {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--tf-accent);
     color: var(--tf-black);
-    font-weight: 700;
-    text-align: center;
-    text-decoration: none;
+    font-size: 12px;
+    font-weight: 900;
 }
 
 /* ---- date / time ---- */
@@ -1750,16 +1912,16 @@ onMounted(() => {
         max-width: 620px;
     }
 
-    .staff-row {
+    .staff-card {
         min-height: 88px;
         padding: 18px 20px;
         border-radius: 24px;
     }
 
     .staff-avatar {
-        width: 52px;
-        height: 52px;
-        font-size: 13px;
+        width: 56px;
+        height: 56px;
+        font-size: 18px;
     }
 
     .staff-name {
