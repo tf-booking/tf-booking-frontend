@@ -1,32 +1,34 @@
 <template>
     <div class="profile-viewport">
         <div class="device">
-            <!-- loading -->
             <section v-if="isLoading" class="state-screen">
                 <div class="state-mark">TF</div>
                 <p class="step-count">A carregar</p>
                 <h1>A preparar o perfil...</h1>
             </section>
 
-            <!-- error -->
             <section v-else-if="errorMessage || !business || !staffMember" class="state-screen">
                 <div class="state-mark state-mark-error">!</div>
-                <p class="step-count">Perfil indisponível</p>
-                <h1>Não encontrámos este profissional.</h1>
-                <p class="state-copy">{{ errorMessage || 'Confirma se o link está correto.' }}</p>
-                <NuxtLink class="btn btn-secondary state-btn" :to="bookingPath">Voltar à marcação</NuxtLink>
+                <p class="step-count">Perfil indisponivel</p>
+                <h1>Nao encontramos este profissional.</h1>
+                <p class="state-copy">{{ errorMessage || 'Confirma se o link esta correto.' }}</p>
+                <NuxtLink class="btn btn-secondary state-btn" :to="bookingPath">Voltar a marcacao</NuxtLink>
             </section>
 
-            <!-- profile -->
             <section v-else class="profile">
                 <div class="profile-scroll">
-                    <!-- banner -->
                     <div class="banner">
+                        <img
+                            v-if="heroPhoto"
+                            class="banner-photo"
+                            :src="heroPhoto"
+                            :alt="staffMember.name"
+                        />
+                        <div class="banner-overlay"></div>
                         <div class="banner-texture"></div>
-                        <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar">‹</NuxtLink>
+                        <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar"><</NuxtLink>
                     </div>
 
-                    <!-- avatar -->
                     <div class="avatar-wrap">
                         <img
                             v-if="staffMember.avatar_url"
@@ -37,7 +39,6 @@
                         <div v-else class="avatar">{{ staffInitials(staffMember.name) }}</div>
                     </div>
 
-                    <!-- head -->
                     <div class="profile-head">
                         <h1>{{ staffMember.name }}</h1>
                         <p class="profile-role">{{ profileSubtitle }}</p>
@@ -53,11 +54,14 @@
                         </div>
                     </div>
 
-                    <!-- bio + chips -->
                     <div class="profile-about">
-                        <p class="profile-bio">
-                            {{ staffMember.bio?.trim() || 'Profissional disponível para marcações neste negócio.' }}
-                        </p>
+                        <div class="section-head">
+                            <span class="section-label">Descricao</span>
+                        </div>
+
+                        <div class="about-card">
+                            <p class="profile-bio">{{ profileDescription }}</p>
+                        </div>
 
                         <div v-if="serviceChips.length" class="chips">
                             <span
@@ -71,11 +75,37 @@
                         </div>
                     </div>
 
-                    <!-- services -->
+                    <div v-if="profilePhotos.length" class="gallery-section">
+                        <div class="section-head">
+                            <span class="section-label">Fotos</span>
+                            <span class="section-meta">{{ profilePhotos.length }} imagens</span>
+                        </div>
+
+                        <div class="gallery-featured">
+                            <img
+                                :src="profilePhotos[activePhotoIndex]"
+                                :alt="`${staffMember.name} - foto ${activePhotoIndex + 1}`"
+                            />
+                        </div>
+
+                        <div v-if="profilePhotos.length > 1" class="gallery-strip">
+                            <button
+                                v-for="(photo, index) in profilePhotos"
+                                :key="`${photo}-${index}`"
+                                type="button"
+                                class="gallery-thumb"
+                                :class="{ 'gallery-thumb-active': index === activePhotoIndex }"
+                                @click="activePhotoIndex = index"
+                            >
+                                <img :src="photo" :alt="`${staffMember.name} - miniatura ${index + 1}`" />
+                            </button>
+                        </div>
+                    </div>
+
                     <div v-if="staffServices.length" class="works">
                         <div class="works-head">
-                            <span class="works-label">Serviços</span>
-                            <span class="works-count">{{ staffServices.length }} disponíveis</span>
+                            <span class="works-label">Servicos</span>
+                            <span class="works-count">{{ staffServices.length }} disponiveis</span>
                         </div>
 
                         <div class="service-list">
@@ -90,10 +120,9 @@
                     </div>
                 </div>
 
-                <!-- pinned CTA -->
                 <div class="profile-cta">
                     <NuxtLink class="btn btn-accent block-btn" :to="bookWithStaffPath">
-                        Marcar com {{ firstName }} →
+                        Marcar com {{ firstName }} ->
                     </NuxtLink>
                 </div>
             </section>
@@ -112,6 +141,7 @@ type PublicStaffMember = {
     name: string
     bio: string
     avatar_url: string
+    gallery_image_urls: string[]
 }
 
 type PublicService = {
@@ -140,6 +170,8 @@ const { apiFetch } = useApi()
 const slug = computed(() => String(route.params.slug || '').trim())
 const staffUuid = computed(() => String(route.params.staffUuid || '').trim())
 const serviceQuery = computed(() => String(route.query.service || '').trim())
+const activePhotoIndex = ref(0)
+
 const bookingQuery = computed(() => {
     const query: Record<string, string> = {
         step: '2',
@@ -152,13 +184,20 @@ const bookingQuery = computed(() => {
 
     return query
 })
+
+const bookWithStaffQuery = computed(() => ({
+    ...bookingQuery.value,
+    step: '3',
+}))
+
 const bookingPath = computed(() => ({
     path: `/booking/${encodeURIComponent(slug.value)}`,
     query: bookingQuery.value,
 }))
+
 const bookWithStaffPath = computed(() => ({
     path: `/booking/${encodeURIComponent(slug.value)}`,
-    query: bookingQuery.value,
+    query: bookWithStaffQuery.value,
 }))
 
 const business = ref<PublicBusiness | null>(null)
@@ -195,11 +234,40 @@ const profileSubtitle = computed(() =>
     business.value ? `Profissional · ${business.value.name}` : 'Profissional'
 )
 
-// Only real, backed data — no invented ratings/reviews.
+const profileDescription = computed(() =>
+    staffMember.value?.bio?.trim() || 'Profissional disponivel para marcacoes neste negocio.'
+)
+
+const profilePhotos = computed(() => {
+    const photos = new Set<string>()
+
+    if (staffMember.value?.avatar_url) {
+        photos.add(staffMember.value.avatar_url)
+    }
+
+    for (const url of staffMember.value?.gallery_image_urls || []) {
+        const cleaned = String(url || '').trim()
+
+        if (cleaned) {
+            photos.add(cleaned)
+        }
+    }
+
+    return Array.from(photos)
+})
+
+const heroPhoto = computed(() =>
+    profilePhotos.value[activePhotoIndex.value] || staffMember.value?.avatar_url || ''
+)
+
 const stats = computed(() => {
     const list: { value: string; label: string }[] = [
-        { value: String(staffServices.value.length), label: 'serviços' },
+        { value: String(staffServices.value.length), label: 'servicos' },
     ]
+
+    if (profilePhotos.value.length) {
+        list.push({ value: String(profilePhotos.value.length), label: 'fotos' })
+    }
 
     if (business.value?.city) {
         list.push({ value: business.value.city, label: 'local' })
@@ -211,6 +279,12 @@ const stats = computed(() => {
 const serviceChips = computed(() =>
     staffServices.value.slice(0, 6).map((service) => service.name)
 )
+
+watch(profilePhotos, (photos) => {
+    if (!photos.length || activePhotoIndex.value >= photos.length) {
+        activePhotoIndex.value = 0
+    }
+}, { immediate: true })
 
 useHead(() => ({
     title: staffMember.value && business.value
@@ -230,7 +304,7 @@ const formatPrice = (value: string | number) => {
     const amount = Number(value)
 
     if (Number.isNaN(amount)) {
-        return `${value}€`
+        return `${value}EUR`
     }
 
     return new Intl.NumberFormat('pt-PT', {
@@ -244,7 +318,7 @@ const formatPrice = (value: string | number) => {
 
 const loadProfile = async () => {
     if (!slug.value || !staffUuid.value) {
-        errorMessage.value = 'Link inválido.'
+        errorMessage.value = 'Link invalido.'
         isLoading.value = false
         return
     }
@@ -257,12 +331,12 @@ const loadProfile = async () => {
         business.value = response
 
         if (!staffMember.value) {
-            errorMessage.value = 'Este profissional não está disponível neste negócio.'
+            errorMessage.value = 'Este profissional nao esta disponivel neste negocio.'
         }
     } catch (error: any) {
         console.error(error)
         business.value = null
-        errorMessage.value = error?.data?.business || 'Não foi possível carregar o perfil deste profissional.'
+        errorMessage.value = error?.data?.business || 'Nao foi possivel carregar o perfil deste profissional.'
     } finally {
         isLoading.value = false
     }
@@ -285,7 +359,6 @@ watch([slug, staffUuid], () => {
     background: #fdfcf9;
 }
 
-/* ---- state screens ---- */
 .state-screen {
     display: flex;
     flex-direction: column;
@@ -339,7 +412,6 @@ watch([slug, staffUuid], () => {
     width: fit-content;
 }
 
-/* ---- profile shell ---- */
 .profile {
     display: flex;
     flex-direction: column;
@@ -350,11 +422,32 @@ watch([slug, staffUuid], () => {
     flex: 1;
 }
 
-/* ---- banner ---- */
 .banner {
     position: relative;
-    height: 190px;
+    height: 218px;
+    overflow: hidden;
     background: linear-gradient(135deg, #17171d, #26262d);
+}
+
+.banner-photo,
+.gallery-featured img,
+.gallery-thumb img,
+.avatar-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.banner-photo {
+    position: absolute;
+    inset: 0;
+}
+
+.banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11, 11, 15, 0.3), rgba(11, 11, 15, 0.7));
 }
 
 .banner-texture {
@@ -367,6 +460,7 @@ watch([slug, staffUuid], () => {
     position: absolute;
     top: 24px;
     left: 24px;
+    z-index: 1;
     display: grid;
     place-items: center;
     width: 40px;
@@ -379,7 +473,6 @@ watch([slug, staffUuid], () => {
     font-weight: 800;
 }
 
-/* ---- avatar ---- */
 .avatar-wrap {
     display: flex;
     justify-content: center;
@@ -397,14 +490,9 @@ watch([slug, staffUuid], () => {
     color: var(--tf-accent);
     font-weight: 900;
     font-size: 34px;
-    object-fit: cover;
+    overflow: hidden;
 }
 
-.avatar-img {
-    display: block;
-}
-
-/* ---- head ---- */
 .profile-head {
     text-align: center;
     padding: 14px 24px 0;
@@ -454,24 +542,55 @@ watch([slug, staffUuid], () => {
     background: var(--tf-border);
 }
 
-/* ---- about ---- */
-.profile-about {
-    padding: 20px 24px 0;
+.profile-about,
+.gallery-section,
+.works {
+    padding: 22px 24px 0;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.section-label,
+.works-label {
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.section-meta,
+.works-count {
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    color: #9a958a;
+}
+
+.about-card {
+    padding: 18px;
+    border: 1px solid var(--tf-border);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #fff, #fbf8f1);
 }
 
 .profile-bio {
     margin: 0;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.7;
     color: #4a483f;
-    text-align: center;
 }
 
 .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: center;
     margin-top: 16px;
 }
 
@@ -489,9 +608,39 @@ watch([slug, staffUuid], () => {
     color: #fff;
 }
 
-/* ---- services ---- */
+.gallery-featured {
+    overflow: hidden;
+    border-radius: 24px;
+    background: #ece6d9;
+    aspect-ratio: 4 / 5;
+}
+
+.gallery-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 88px;
+    gap: 10px;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.gallery-thumb {
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #ece6d9;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+}
+
+.gallery-thumb-active {
+    border-color: var(--tf-black);
+}
+
 .works {
-    padding: 22px 24px 26px;
+    padding-bottom: 26px;
 }
 
 .works-head {
@@ -499,21 +648,6 @@ watch([slug, staffUuid], () => {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 12px;
-}
-
-.works-label {
-    font-family: var(--tf-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--tf-muted);
-}
-
-.works-count {
-    font-family: var(--tf-mono);
-    font-size: 11px;
-    color: #9a958a;
 }
 
 .service-list {
@@ -552,7 +686,6 @@ watch([slug, staffUuid], () => {
     white-space: nowrap;
 }
 
-/* ---- pinned CTA ---- */
 .profile-cta {
     position: sticky;
     bottom: 0;
@@ -566,7 +699,6 @@ watch([slug, staffUuid], () => {
     font-size: 17px;
 }
 
-/* ---- desktop framing ---- */
 @media (min-width: 620px) {
     .profile-viewport {
         display: flex;
@@ -590,10 +722,6 @@ watch([slug, staffUuid], () => {
     .profile,
     .state-screen {
         min-height: min(820px, calc(100svh - 64px));
-    }
-
-    .banner {
-        border-radius: 0;
     }
 }
 </style>

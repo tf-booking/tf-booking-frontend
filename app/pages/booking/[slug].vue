@@ -617,11 +617,19 @@ const canConfirm = computed(() =>
 )
 
 const maxReachableStep = computed(() => {
+    if (selectedSlotStartAt.value && selectedSlotStillAvailable.value) {
+        return 4
+    }
+
     if (hasStaffChoice.value) {
-        return 2
+        return 3
     }
 
     if (selectedService.value) {
+        return 2
+    }
+
+    if (business.value) {
         return 1
     }
 

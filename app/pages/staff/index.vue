@@ -58,6 +58,25 @@
                         </div>
 
                         <div>
+                            <label class="label">Foto principal (URL)</label>
+                            <input
+                                v-model="form.avatar_url"
+                                class="input"
+                                type="url"
+                                placeholder="https://..."
+                            />
+                        </div>
+
+                        <div>
+                            <label class="label">Fotos do perfil</label>
+                            <textarea
+                                v-model="form.gallery_image_urls"
+                                class="input textarea textarea-compact"
+                                placeholder="Uma URL por linha para a galeria publica."
+                            />
+                        </div>
+
+                        <div>
                             <label class="label">Serviços que realiza</label>
 
                             <div v-if="services.length === 0" class="services-empty">
@@ -122,7 +141,15 @@
                         <template v-for="staff in staffMembers" :key="staff.uuid">
                             <div class="staff-item" :class="{ inactive: !staff.is_active, expanded: expandedStaffId === staff.id }">
                                 <div class="staff-avatar">
-                                    {{ staffInitials(staff.name) }}
+                                    <img
+                                        v-if="staff.avatar_url"
+                                        class="staff-avatar-image"
+                                        :src="staff.avatar_url"
+                                        :alt="staff.name"
+                                    />
+                                    <template v-else>
+                                        {{ staffInitials(staff.name) }}
+                                    </template>
                                 </div>
 
                                 <div class="staff-main">
@@ -356,6 +383,7 @@ type StaffMember = {
     phone: string
     bio: string
     avatar_url: string
+    gallery_image_urls: string[]
     is_active: boolean
     access_status: AccessStatus
 }
@@ -415,6 +443,8 @@ const form = reactive({
     email: '',
     phone: '',
     bio: '',
+    avatar_url: '',
+    gallery_image_urls: '',
     services: [] as number[],
     is_active: true,
 })
@@ -468,6 +498,15 @@ const staffInitials = (name: string) => {
         .join('')
         .toUpperCase()
 }
+
+const parseGalleryImageUrls = (value: string) =>
+    value
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+const stringifyGalleryImageUrls = (urls: string[] | null | undefined) =>
+    (urls || []).join('\n')
 
 const formatDateInput = (date: Date) => {
     const year = date.getFullYear()
@@ -718,6 +757,8 @@ const resetForm = () => {
     form.email = ''
     form.phone = ''
     form.bio = ''
+    form.avatar_url = ''
+    form.gallery_image_urls = ''
     form.services = []
     form.is_active = true
 }
@@ -835,7 +876,8 @@ const saveStaff = async () => {
             email: form.email,
             phone: form.phone,
             bio: form.bio,
-            avatar_url: '',
+            avatar_url: form.avatar_url.trim(),
+            gallery_image_urls: parseGalleryImageUrls(form.gallery_image_urls),
             is_active: form.is_active,
         }
 
@@ -891,6 +933,8 @@ const editStaff = (staff: StaffMember) => {
     form.email = staff.email || ''
     form.phone = staff.phone || ''
     form.bio = staff.bio || ''
+    form.avatar_url = staff.avatar_url || ''
+    form.gallery_image_urls = stringifyGalleryImageUrls(staff.gallery_image_urls)
     form.services = [...staff.services]
     form.is_active = staff.is_active
 
@@ -1032,6 +1076,10 @@ onMounted(async () => {
     min-height: 104px;
     padding-top: 14px;
     resize: vertical;
+}
+
+.textarea-compact {
+    min-height: 88px;
 }
 
 .two-columns {
@@ -1223,6 +1271,13 @@ onMounted(async () => {
     color: var(--tf-accent);
     font-size: 13px;
     font-weight: 900;
+    overflow: hidden;
+}
+
+.staff-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .staff-item.inactive .staff-avatar {

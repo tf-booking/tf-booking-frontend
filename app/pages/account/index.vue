@@ -6,7 +6,7 @@
                     <p class="tf-eyebrow">Conta</p>
                     <h1>Perfil</h1>
                     <p class="account-subtitle">
-                        Atualiza os teus dados de acesso e a informação base do utilizador.
+                        Atualiza os teus dados de acesso e a informacao base do utilizador.
                     </p>
                 </div>
             </div>
@@ -42,8 +42,8 @@
                             </div>
 
                             <div class="meta-chip">
-                                <span>Negócio atual</span>
-                                <strong>{{ currentBusiness?.business_name || 'Sem negócio' }}</strong>
+                                <span>Negocio atual</span>
+                                <strong>{{ currentBusiness?.business_name || 'Sem negocio' }}</strong>
                             </div>
                         </div>
                     </article>
@@ -57,7 +57,7 @@
                             <div class="section-head">
                                 <div>
                                     <p class="section-label">Dados principais</p>
-                                    <h2>Informação pessoal</h2>
+                                    <h2>Informacao pessoal</h2>
                                 </div>
                             </div>
 
@@ -65,11 +65,11 @@
                                 <div class="two-columns">
                                     <div>
                                         <label class="label">Primeiro nome</label>
-                                        <input v-model="form.first_name" class="input" type="text" placeholder="António" />
+                                        <input v-model="form.first_name" class="input" type="text" placeholder="Antonio" />
                                     </div>
 
                                     <div>
-                                        <label class="label">Último nome</label>
+                                        <label class="label">Ultimo nome</label>
                                         <input v-model="form.last_name" class="input" type="text" placeholder="Silva" />
                                     </div>
                                 </div>
@@ -100,7 +100,7 @@
                         <article class="card form-card security-card">
                             <div class="section-head">
                                 <div>
-                                    <p class="section-label">Segurança</p>
+                                    <p class="section-label">Seguranca</p>
                                     <h2>Alterar password</h2>
                                 </div>
                             </div>
@@ -108,13 +108,13 @@
                             <form class="form" @submit.prevent="savePassword">
                                 <div>
                                     <label class="label">Password atual</label>
-                                    <input v-model="passwordForm.current_password" class="input" type="password" placeholder="••••••••" />
+                                    <input v-model="passwordForm.current_password" class="input" type="password" placeholder="********" />
                                 </div>
 
                                 <div class="two-columns">
                                     <div>
                                         <label class="label">Nova password</label>
-                                        <input v-model="passwordForm.new_password" class="input" type="password" placeholder="Mínimo 6 caracteres" />
+                                        <input v-model="passwordForm.new_password" class="input" type="password" placeholder="Minimo 6 caracteres" />
                                     </div>
 
                                     <div>
@@ -124,7 +124,7 @@
                                 </div>
 
                                 <p class="security-hint">
-                                    Só é alterada se preencheres os três campos acima.
+                                    So e alterada se preencheres os tres campos acima.
                                 </p>
 
                                 <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
@@ -133,6 +133,88 @@
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="submit" :disabled="isSavingPassword">
                                         {{ isSavingPassword ? 'A atualizar...' : 'Atualizar password' }}
+                                    </button>
+                                </div>
+                            </form>
+                        </article>
+
+                        <article v-if="professionalProfileState !== 'hidden'" class="card form-card professional-card">
+                            <div class="section-head">
+                                <div>
+                                    <p class="section-label">Perfil publico</p>
+                                    <h2>Pagina do colaborador</h2>
+                                </div>
+                            </div>
+
+                            <div v-if="professionalProfileState === 'missing'" class="state-card inline-state-card">
+                                Este utilizador nao tem um perfil profissional associado ao negocio atual.
+                            </div>
+
+                            <form v-else class="form" @submit.prevent="saveProfessionalProfile">
+                                <div>
+                                    <label class="label">Descricao</label>
+                                    <textarea
+                                        v-model="professionalForm.bio"
+                                        class="input textarea"
+                                        placeholder="Fala um pouco sobre o teu trabalho, especialidade e estilo."
+                                    />
+                                </div>
+
+                                <div class="photo-head">
+                                    <div>
+                                        <label class="label">Fotos do perfil</label>
+                                        <p class="photo-help">Maximo 5 fotos. A primeira fica como principal.</p>
+                                    </div>
+
+                                    <button
+                                        class="btn btn-secondary photo-add"
+                                        type="button"
+                                        :disabled="professionalPhotos.length >= MAX_PROFILE_PHOTOS"
+                                        @click="triggerPhotoPicker"
+                                    >
+                                        Adicionar fotos
+                                    </button>
+
+                                    <input
+                                        ref="photoInputRef"
+                                        class="photo-input"
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        @change="handlePhotoInput"
+                                    />
+                                </div>
+
+                                <div v-if="professionalPhotos.length" class="photo-grid">
+                                    <article
+                                        v-for="(photo, index) in professionalPhotos"
+                                        :key="photo.id"
+                                        class="photo-card"
+                                    >
+                                        <img :src="photo.url" :alt="`Foto ${index + 1}`" />
+                                        <div class="photo-meta">
+                                            <span class="photo-badge">{{ index === 0 ? 'Principal' : `Foto ${index + 1}` }}</span>
+                                            <button class="photo-remove" type="button" @click="removeProfessionalPhoto(photo.id)">
+                                                Remover
+                                            </button>
+                                        </div>
+                                    </article>
+                                </div>
+
+                                <p v-else class="empty-photo-state">
+                                    Ainda nao tens fotos neste perfil.
+                                </p>
+
+                                <p class="security-hint">
+                                    Estas fotos e descricao aparecem na pagina publica do teu perfil.
+                                </p>
+
+                                <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+                                <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+
+                                <div class="form-actions">
+                                    <button class="btn btn-accent" type="submit" :disabled="isSavingProfessionalProfile">
+                                        {{ isSavingProfessionalProfile ? 'A guardar...' : 'Guardar pagina publica' }}
                                     </button>
                                 </div>
                             </form>
@@ -150,6 +232,8 @@ definePageMeta({
     layout: 'backoffice',
 })
 
+const MAX_PROFILE_PHOTOS = 5
+
 type MeResponse = {
     id: number
     username: string
@@ -160,20 +244,63 @@ type MeResponse = {
     is_superuser: boolean
 }
 
+type StaffProfilePhoto = {
+    id: number
+    url: string
+    position: number
+}
+
+type StaffSelfProfileResponse = {
+    id: number
+    uuid: string
+    business: number
+    business_uuid: string
+    business_name: string
+    name: string
+    bio: string
+    avatar_url: string
+    gallery_image_urls: string[]
+    photos: StaffProfilePhoto[]
+    updated_at: string
+}
+
+type ExistingProfessionalPhoto = {
+    id: number
+    url: string
+    isNew: false
+}
+
+type NewProfessionalPhoto = {
+    id: string
+    url: string
+    file: File
+    isNew: true
+}
+
+type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
+
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
 
 const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)
 const isSavingPassword = ref(false)
+const isSavingProfessionalProfile = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const professionalProfileState = ref<'hidden' | 'missing' | 'ready'>('hidden')
+const professionalPhotos = ref<ProfessionalPhoto[]>([])
+const photoInputRef = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
     username: '',
     email: '',
     first_name: '',
     last_name: '',
+})
+
+const professionalForm = reactive({
+    bio: '',
 })
 
 const passwordForm = reactive({
@@ -211,11 +338,106 @@ const resetPasswordForm = () => {
     passwordForm.new_password_confirm = ''
 }
 
+const revokeNewPhotoUrls = (photos: ProfessionalPhoto[]) => {
+    for (const photo of photos) {
+        if (photo.isNew) {
+            URL.revokeObjectURL(photo.url)
+        }
+    }
+}
+
 const applyProfile = (profile: MeResponse | null) => {
     form.username = profile?.username || ''
     form.email = profile?.email || ''
     form.first_name = profile?.first_name || ''
     form.last_name = profile?.last_name || ''
+}
+
+const applyProfessionalProfile = (profile: StaffSelfProfileResponse | null) => {
+    professionalForm.bio = profile?.bio || ''
+    revokeNewPhotoUrls(professionalPhotos.value)
+    professionalPhotos.value = (profile?.photos || []).map((photo) => ({
+        id: photo.id,
+        url: photo.url,
+        isNew: false,
+    }))
+}
+
+const triggerPhotoPicker = () => {
+    photoInputRef.value?.click()
+}
+
+const handlePhotoInput = (event: Event) => {
+    const input = event.target as HTMLInputElement
+    const files = Array.from(input.files || [])
+
+    if (!files.length) {
+        return
+    }
+
+    const remainingSlots = MAX_PROFILE_PHOTOS - professionalPhotos.value.length
+
+    if (remainingSlots <= 0) {
+        errorMessage.value = `Podes ter no maximo ${MAX_PROFILE_PHOTOS} fotos no perfil.`
+        input.value = ''
+        return
+    }
+
+    if (files.length > remainingSlots) {
+        errorMessage.value = `So podes adicionar mais ${remainingSlots} foto(s).`
+    }
+
+    const acceptedFiles = files.slice(0, remainingSlots)
+
+    professionalPhotos.value = [
+        ...professionalPhotos.value,
+        ...acceptedFiles.map((file, index) => ({
+            id: `new-${Date.now()}-${index}`,
+            url: URL.createObjectURL(file),
+            file,
+            isNew: true,
+        })),
+    ]
+
+    input.value = ''
+}
+
+const removeProfessionalPhoto = (photoId: string | number) => {
+    const photoIndex = professionalPhotos.value.findIndex((photo) => photo.id === photoId)
+
+    if (photoIndex === -1) {
+        return
+    }
+
+    const [photo] = professionalPhotos.value.splice(photoIndex, 1)
+
+    if (photo?.isNew) {
+        URL.revokeObjectURL(photo.url)
+    }
+}
+
+const loadProfessionalProfile = async () => {
+    if (!currentBusiness.value?.business_uuid) {
+        professionalProfileState.value = 'hidden'
+        applyProfessionalProfile(null)
+        return
+    }
+
+    try {
+        const response = await apiFetch<StaffSelfProfileResponse>(
+            `/staff/me-profile/?business_uuid=${encodeURIComponent(currentBusiness.value.business_uuid)}`
+        )
+        applyProfessionalProfile(response)
+        professionalProfileState.value = 'ready'
+    } catch (error: any) {
+        if (error?.status === 404 || error?.statusCode === 404) {
+            professionalProfileState.value = 'missing'
+            applyProfessionalProfile(null)
+            return
+        }
+
+        throw error
+    }
 }
 
 const loadProfile = async () => {
@@ -225,9 +447,10 @@ const loadProfile = async () => {
 
         await loadCurrentBusiness({ force: true })
         applyProfile(currentUser.value as MeResponse | null)
+        await loadProfessionalProfile()
     } catch (error) {
         console.error(error)
-        errorMessage.value = 'Não foi possível carregar o perfil.'
+        errorMessage.value = 'Nao foi possivel carregar o perfil.'
     } finally {
         isLoadingProfile.value = false
     }
@@ -268,7 +491,7 @@ const saveProfile = async () => {
     resetMessages()
 
     if (!form.username.trim()) {
-        errorMessage.value = 'O username é obrigatório.'
+        errorMessage.value = 'O username e obrigatorio.'
         return
     }
 
@@ -328,6 +551,56 @@ const savePassword = async () => {
         isSavingPassword.value = false
     }
 }
+
+const saveProfessionalProfile = async () => {
+    resetMessages()
+
+    if (!currentBusiness.value?.business_uuid) {
+        errorMessage.value = 'Nao existe negocio atual selecionado.'
+        return
+    }
+
+    if (professionalPhotos.value.length > MAX_PROFILE_PHOTOS) {
+        errorMessage.value = `Podes ter no maximo ${MAX_PROFILE_PHOTOS} fotos no perfil.`
+        return
+    }
+
+    try {
+        isSavingProfessionalProfile.value = true
+
+        const formData = new FormData()
+        formData.append('bio', professionalForm.bio.trim())
+
+        for (const photo of professionalPhotos.value) {
+            if (photo.isNew) {
+                formData.append('photos', photo.file)
+            } else {
+                formData.append('keep_photo_ids', String(photo.id))
+            }
+        }
+
+        const response = await apiFetch<StaffSelfProfileResponse>(
+            `/staff/me-profile/?business_uuid=${encodeURIComponent(currentBusiness.value.business_uuid)}`,
+            {
+                method: 'PATCH',
+                body: formData,
+            }
+        )
+
+        applyProfessionalProfile(response)
+        professionalProfileState.value = 'ready'
+        successMessage.value = 'Pagina publica atualizada com sucesso.'
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = formatApiError(error)
+    } finally {
+        isSavingProfessionalProfile.value = false
+    }
+}
+
+onBeforeUnmount(() => {
+    revokeNewPhotoUrls(professionalPhotos.value)
+})
 
 onMounted(() => {
     loadProfile()
@@ -529,15 +802,102 @@ onMounted(() => {
         var(--tf-white);
 }
 
-.security-hint {
-    margin: -2px 0 0;
+.professional-card {
+    grid-column: 1 / -1;
+}
+
+.security-hint,
+.photo-help {
+    margin: 0;
     color: var(--tf-muted);
     font-size: 13px;
     font-weight: 700;
 }
 
+.textarea {
+    min-height: 120px;
+    padding-top: 14px;
+    resize: vertical;
+}
+
 .state-card {
     border-radius: 18px;
+    color: var(--tf-muted);
+    font-weight: 700;
+}
+
+.inline-state-card {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.photo-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.photo-add {
+    flex-shrink: 0;
+}
+
+.photo-input {
+    display: none;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.photo-card {
+    overflow: hidden;
+    border: 1px solid var(--tf-border);
+    border-radius: 18px;
+    background: #faf7ef;
+}
+
+.photo-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+.photo-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.photo-badge {
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.photo-remove {
+    border: 0;
+    background: transparent;
+    color: #991b1b;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.empty-photo-state {
+    margin: 0;
+    padding: 18px;
+    border: 1px dashed var(--tf-border);
+    border-radius: 16px;
     color: var(--tf-muted);
     font-weight: 700;
 }
@@ -569,10 +929,6 @@ onMounted(() => {
     .account-nav-card {
         position: static;
     }
-
-    .account-nav {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 820px) {
@@ -581,8 +937,13 @@ onMounted(() => {
     }
 
     .profile-overview-card,
-    .two-columns {
+    .two-columns,
+    .photo-head {
         grid-template-columns: 1fr;
+    }
+
+    .photo-head {
+        display: grid;
     }
 
     .profile-overview-meta {
