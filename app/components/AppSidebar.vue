@@ -85,6 +85,7 @@ const ownerOrManagerItems = [
 ]
 
 const staffItems = [
+    { label: 'Painel', to: '/dashboard' },
     { label: 'A minha agenda', to: '/schedule' },
     { label: 'Conta', to: '/account' },
 ]

@@ -1,5 +1,5 @@
 <template>
-    <div class="page admin-page">
+    <div v-if="canAccessAdmin" class="page admin-page">
         <section class="container">
             <div class="admin-header">
                 <div>
@@ -154,6 +154,7 @@
 
 definePageMeta({
     middleware: 'admin' as any,
+    layout: false,
 })
 
 type Business = {
@@ -167,12 +168,13 @@ type Business = {
     is_active: boolean
 }
 
-const { logout } = useAuth()
+const { logout, loadTokens, isAuthenticated } = useAuth()
 const { apiFetch } = useApi()
 
 const businesses = ref<Business[]>([])
 const isLoadingBusinesses = ref(false)
 const isCreating = ref(false)
+const canAccessAdmin = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const publicOrigin = ref('')
@@ -281,9 +283,36 @@ const createBusinessWithOwner = async () => {
     }
 }
 
+const verifyAdminAccess = async () => {
+    loadTokens()
+
+    if (!isAuthenticated.value) {
+        await navigateTo('/login', { replace: true })
+        return
+    }
+
+    try {
+        const me = await apiFetch<{
+            is_superuser: boolean
+            is_staff: boolean
+        }>('/me/')
+
+        if (!me.is_superuser && !me.is_staff) {
+            await navigateTo('/dashboard', { replace: true })
+            return
+        }
+
+        canAccessAdmin.value = true
+        await loadBusinesses()
+    } catch (error) {
+        console.error('Erro ao validar acesso admin:', error)
+        await navigateTo('/login', { replace: true })
+    }
+}
+
 onMounted(() => {
     publicOrigin.value = window.location.origin
-    loadBusinesses()
+    verifyAdminAccess()
 })
 </script>
 

@@ -33,12 +33,8 @@
 
                 <div class="landing-body">
                     <div class="chips">
-                        <span
-                            v-for="chip in categoryChips"
-                            :key="chip"
-                            class="chip"
-                            :class="{ 'chip-dark': chip === categoryChips[0] }"
-                        >
+                        <span v-for="chip in categoryChips" :key="chip" class="chip"
+                            :class="{ 'chip-dark': chip === categoryChips[0] }">
                             {{ chip }}
                         </span>
                     </div>
@@ -60,12 +56,8 @@
                 </div>
 
                 <div class="screen-cta screen-cta--fade">
-                    <button
-                        class="btn btn-accent block-btn"
-                        type="button"
-                        :disabled="bookableServices.length === 0"
-                        @click="goTo(1)"
-                    >
+                    <button class="btn btn-accent block-btn" type="button" :disabled="bookableServices.length === 0"
+                        @click="goTo(1)">
                         {{ bookableServices.length === 0 ? 'Sem serviços disponíveis' : 'Marcar agora →' }}
                     </button>
                     <p class="powered">Powered by TF Creative</p>
@@ -87,18 +79,11 @@
 
                 <div class="screen-body">
                     <div class="service-list">
-                        <button
-                            v-for="service in business.services"
-                            :key="service.uuid"
-                            type="button"
-                            class="service-row"
-                            :class="{
+                        <button v-for="service in business.services" :key="service.uuid" type="button"
+                            class="service-row" :class="{
                                 selected: selectedServiceUuid === service.uuid,
                                 unavailable: service.staff_members.length === 0,
-                            }"
-                            :disabled="service.staff_members.length === 0"
-                            @click="selectService(service)"
-                        >
+                            }" :disabled="service.staff_members.length === 0" @click="selectService(service)">
                             <div>
                                 <div class="service-name">{{ service.name }}</div>
                                 <div class="service-meta">
@@ -114,12 +99,8 @@
                 </div>
 
                 <div class="screen-cta">
-                    <button
-                        class="btn btn-accent block-btn"
-                        type="button"
-                        :disabled="!selectedService"
-                        @click="goTo(2)"
-                    >
+                    <button class="btn btn-accent block-btn" type="button" :disabled="!selectedService"
+                        @click="goTo(2)">
                         Continuar →
                     </button>
                 </div>
@@ -141,17 +122,10 @@
                 <div class="screen-body">
                     <section v-if="selectedService" class="staff-section staff-section-standalone">
                         <div class="staff-list">
-                            <div
-                                v-for="staff in selectedServiceStaffMembers"
-                                :key="staff.uuid"
-                                class="staff-card"
-                                :class="{ selected: selectedStaffUuid === staff.uuid }"
-                                role="button"
-                                tabindex="0"
-                                @click="selectStaff(staff)"
-                                @keydown.enter="selectStaff(staff)"
-                                @keydown.space.prevent="selectStaff(staff)"
-                            >
+                            <div v-for="staff in selectedServiceStaffMembers" :key="staff.uuid" class="staff-card"
+                                :class="{ selected: selectedStaffUuid === staff.uuid }" role="button" tabindex="0"
+                                @click="selectStaff(staff)" @keydown.enter="selectStaff(staff)"
+                                @keydown.space.prevent="selectStaff(staff)">
                                 <div class="staff-avatar">
                                     {{ staffInitials(staff.name) }}
                                 </div>
@@ -161,28 +135,36 @@
                                     <div class="staff-meta">
                                         {{ staff.bio?.trim() || 'Disponível para este serviço.' }}
                                     </div>
-                                    <NuxtLink
-                                        class="staff-profile-link"
-                                        :to="staffProfilePath(staff)"
-                                        @click.stop
-                                    >
+                                    <NuxtLink class="staff-profile-link" :to="staffProfilePath(staff)" @click.stop>
                                         Ver perfil →
                                     </NuxtLink>
                                 </div>
 
                                 <span v-if="selectedStaffUuid === staff.uuid" class="staff-check">✓</span>
                             </div>
+
+                            <div class="staff-card staff-card-any" :class="{ selected: isAnyStaffSelected }"
+                                role="button" tabindex="0" @click="selectAnyStaff()" @keydown.enter="selectAnyStaff()"
+                                @keydown.space.prevent="selectAnyStaff()">
+                                <div class="staff-avatar staff-avatar-any">
+                                    ✦
+                                </div>
+
+                                <div class="staff-copy">
+                                    <div class="staff-name">Sem preferência</div>
+                                    <div class="staff-meta">
+                                        Qualquer profissional disponível para este serviço.
+                                    </div>
+                                </div>
+
+                                <span v-if="isAnyStaffSelected" class="staff-check">✓</span>
+                            </div>
                         </div>
                     </section>
                 </div>
 
                 <div class="screen-cta">
-                    <button
-                        class="btn btn-accent block-btn"
-                        type="button"
-                        :disabled="!selectedStaff"
-                        @click="goTo(3)"
-                    >
+                    <button class="btn btn-accent block-btn" type="button" :disabled="!hasStaffChoice" @click="goTo(3)">
                         Continuar →
                     </button>
                 </div>
@@ -203,14 +185,8 @@
 
                 <div class="screen-body">
                     <div class="day-row">
-                        <button
-                            v-for="day in days"
-                            :key="day.iso"
-                            type="button"
-                            class="day"
-                            :class="{ selected: selectedDay === day.iso }"
-                            @click="selectedDay = day.iso"
-                        >
+                        <button v-for="day in days" :key="day.iso" type="button" class="day"
+                            :class="{ selected: selectedDay === day.iso }" @click="selectedDay = day.iso">
                             <span class="day-name">{{ day.weekday }}</span>
                             <span class="day-num">{{ day.num }}</span>
                         </button>
@@ -226,14 +202,9 @@
                         <template v-if="morningSlots.length">
                             <p class="slot-group-label">Manhã</p>
                             <div class="slot-grid">
-                                <button
-                                    v-for="slot in morningSlots"
-                                    :key="slot.start_at"
-                                    type="button"
-                                    class="slot"
+                                <button v-for="slot in morningSlots" :key="slot.start_at" type="button" class="slot"
                                     :class="{ selected: selectedSlotStartAt === slot.start_at }"
-                                    @click="selectSlot(slot)"
-                                >
+                                    @click="selectSlot(slot)">
                                     {{ slot.time }}
                                 </button>
                             </div>
@@ -242,14 +213,9 @@
                         <template v-if="afternoonSlots.length">
                             <p class="slot-group-label">Tarde</p>
                             <div class="slot-grid">
-                                <button
-                                    v-for="slot in afternoonSlots"
-                                    :key="slot.start_at"
-                                    type="button"
-                                    class="slot"
+                                <button v-for="slot in afternoonSlots" :key="slot.start_at" type="button" class="slot"
                                     :class="{ selected: selectedSlotStartAt === slot.start_at }"
-                                    @click="selectSlot(slot)"
-                                >
+                                    @click="selectSlot(slot)">
                                     {{ slot.time }}
                                 </button>
                             </div>
@@ -258,12 +224,8 @@
                 </div>
 
                 <div class="screen-cta">
-                    <button
-                        class="btn btn-accent block-btn"
-                        type="button"
-                        :disabled="!selectedSlotStartAt"
-                        @click="goTo(4)"
-                    >
+                    <button class="btn btn-accent block-btn" type="button" :disabled="!selectedSlotStartAt"
+                        @click="goTo(4)">
                         Continuar<span v-if="selectedSlot"> → {{ selectedSlot }}</span>
                     </button>
                 </div>
@@ -296,11 +258,13 @@
                         <p class="summary-eyebrow">Resumo</p>
                         <div class="summary-top">
                             <span class="summary-service">{{ selectedService?.name }}</span>
-                            <span class="summary-price">{{ selectedService ? formatPrice(selectedService.price) : '' }}</span>
+                            <span class="summary-price">{{ selectedService ? formatPrice(selectedService.price) : ''
+                                }}</span>
                         </div>
                         <div class="summary-bottom">
                             <span>{{ selectedDayLabel }} · {{ selectedSlot }}</span>
-                            <span>{{ selectedService?.duration_minutes }} min · {{ selectedStaff?.name }}</span>
+                            <span>{{ selectedService?.duration_minutes }} min · {{ isAnyStaffSelected ? 'Sem preferência' :
+                                selectedStaff?.name }}</span>
                         </div>
                     </div>
 
@@ -308,12 +272,8 @@
                 </div>
 
                 <div class="screen-cta">
-                    <button
-                        class="btn btn-accent block-btn"
-                        type="button"
-                        :disabled="!canConfirm || isSubmitting"
-                        @click="confirm"
-                    >
+                    <button class="btn btn-accent block-btn" type="button" :disabled="!canConfirm || isSubmitting"
+                        @click="confirm">
                         {{ isSubmitting ? 'A confirmar...' : 'Confirmar marcação' }}
                     </button>
                 </div>
@@ -338,8 +298,12 @@
                         </div>
                         <div class="success-rows">
                             <div><span>Data</span><span>{{ selectedDayLabel }} · {{ selectedSlot }}</span></div>
-                            <div><span>Local</span><span>{{ business.name }}{{ business.city ? `, ${business.city}` : '' }}</span></div>
-                            <div><span>Total</span><span class="accent">{{ selectedService ? formatPrice(selectedService.price) : '' }}</span></div>
+                            <div><span>Local</span><span>{{ business.name }}{{ business.city ? `, ${business.city}` : ''
+                                    }}</span>
+                            </div>
+                            <div><span>Total</span><span class="accent">{{ selectedService ?
+                                    formatPrice(selectedService.price) : ''
+                                    }}</span></div>
                         </div>
                     </div>
 
@@ -397,7 +361,10 @@ type AvailableSlot = {
     time: string
     start_at: string
     end_at: string
+    staff_uuids?: string[]
 }
+
+const ANY_STAFF = '__any__'
 
 const route = useRoute()
 const router = useRouter()
@@ -467,6 +434,10 @@ const selectedStaff = computed(() =>
     selectedService.value?.staff_members.find((staff) => staff.uuid === selectedStaffUuid.value) || null
 )
 
+const isAnyStaffSelected = computed(() => selectedStaffUuid.value === ANY_STAFF)
+
+const hasStaffChoice = computed(() => Boolean(selectedStaff.value) || isAnyStaffSelected.value)
+
 const selectedServiceStaffMembers = computed(() => selectedService.value?.staff_members || [])
 
 const bookableServices = computed(() =>
@@ -526,19 +497,28 @@ const selectStaff = (staff: PublicStaffMember) => {
     resetAvailabilitySelection()
 }
 
+const selectAnyStaff = () => {
+    if (selectedStaffUuid.value === ANY_STAFF) {
+        return
+    }
+
+    selectedStaffUuid.value = ANY_STAFF
+    resetAvailabilitySelection()
+}
+
 const canonicalBookingPath = computed(() =>
     `/booking/${encodeURIComponent(business.value?.slug || slug.value)}`
 )
 
 const staffProfilePath = (staff: PublicStaffMember) =>
-    ({
-        path: `${canonicalBookingPath.value}/profissional/${encodeURIComponent(staff.uuid)}`,
-        query: {
-            step: '2',
-            service: selectedServiceUuid.value,
-            staff: staff.uuid,
-        },
-    })
+({
+    path: `${canonicalBookingPath.value}/profissional/${encodeURIComponent(staff.uuid)}`,
+    query: {
+        step: '2',
+        service: selectedServiceUuid.value,
+        staff: staff.uuid,
+    },
+})
 
 const serviceStaffLabel = (service: PublicService) => {
     const firstStaff = service.staff_members[0]
@@ -629,7 +609,7 @@ const selectedSlotStillAvailable = computed(() =>
 const canConfirm = computed(() =>
     Boolean(
         selectedService.value &&
-        selectedStaff.value &&
+        hasStaffChoice.value &&
         selectedSlotStillAvailable.value &&
         customer.name.trim() &&
         customer.phone.trim()
@@ -637,7 +617,7 @@ const canConfirm = computed(() =>
 )
 
 const maxReachableStep = computed(() => {
-    if (selectedStaff.value) {
+    if (hasStaffChoice.value) {
         return 2
     }
 
@@ -706,7 +686,7 @@ const loadPublicBusiness = async () => {
 }
 
 const loadAvailableSlots = async () => {
-    if (!business.value || !selectedService.value || !selectedStaff.value || !selectedDay.value) {
+    if (!business.value || !selectedService.value || !hasStaffChoice.value || !selectedDay.value) {
         availableSlots.value = []
         return
     }
@@ -717,9 +697,13 @@ const loadAvailableSlots = async () => {
         selectedSlot.value = null
         selectedSlotStartAt.value = null
 
-        const response = await apiFetch<{ slots: AvailableSlot[] }>(
-            `/public/available-slots/?business=${encodeURIComponent(business.value.slug)}&service=${selectedService.value.uuid}&staff=${selectedStaff.value.uuid}&date=${selectedDay.value}`
-        )
+        let endpoint = `/public/available-slots/?business=${encodeURIComponent(business.value.slug)}&service=${selectedService.value.uuid}&date=${selectedDay.value}`
+
+        if (selectedStaff.value) {
+            endpoint += `&staff=${selectedStaff.value.uuid}`
+        }
+
+        const response = await apiFetch<{ slots: AvailableSlot[] }>(endpoint)
 
         availableSlots.value = response.slots
             .filter((slot) => new Date(slot.start_at).getTime() > Date.now())
@@ -734,7 +718,7 @@ const loadAvailableSlots = async () => {
 }
 
 const confirm = async () => {
-    if (!business.value || !selectedService.value || !selectedStaff.value || !selectedSlotStartAt.value) {
+    if (!business.value || !selectedService.value || !hasStaffChoice.value || !selectedSlotStartAt.value) {
         return
     }
 
@@ -753,7 +737,7 @@ const confirm = async () => {
             body: {
                 business_slug: business.value.slug,
                 service_uuid: selectedService.value.uuid,
-                staff_uuid: selectedStaff.value.uuid,
+                ...(selectedStaff.value ? { staff_uuid: selectedStaff.value.uuid } : {}),
                 start_at: selectedSlotStartAt.value,
                 customer_name: customer.name,
                 customer_phone: customer.phone,
@@ -1278,6 +1262,15 @@ watch(slug, () => {
     color: var(--tf-accent);
 }
 
+.staff-avatar-any {
+    background: var(--tf-accent);
+    font-size: 20px;
+}
+
+.staff-card-any {
+    border-style: dashed;
+}
+
 .staff-copy {
     min-width: 0;
     flex: 1;
@@ -1717,6 +1710,7 @@ watch(slug, () => {
 }
 
 @media (min-width: 760px) {
+
     .hero-title,
     .hero-brand,
     .landing-body,
