@@ -18,6 +18,12 @@
             <section v-else class="profile">
                 <div class="profile-scroll">
                     <div class="banner">
+                        <img
+                            v-if="coverPhoto"
+                            class="banner-photo"
+                            :src="coverPhoto"
+                            :alt="business.name"
+                        />
                         <div class="banner-texture"></div>
                         <NuxtLink class="banner-back" :to="bookingPath" aria-label="Voltar">&lsaquo;</NuxtLink>
                     </div>
@@ -122,6 +128,7 @@ type PublicBusiness = {
     address: string
     city: string
     website_url: string
+    cover_image_url: string
     services: PublicService[]
 }
 
@@ -215,6 +222,8 @@ const profileSubtitle = computed(() =>
 const profileDescription = computed(() =>
     staffMember.value?.bio?.trim() || 'Profissional disponivel para marcacoes neste negocio.'
 )
+
+const coverPhoto = computed(() => resolveMedia(business.value?.cover_image_url || ''))
 
 const avatarPhoto = computed(() => resolveMedia(staffMember.value?.avatar_url || ''))
 
@@ -397,6 +406,14 @@ watch([slug, staffUuid], () => {
     height: 190px;
     overflow: hidden;
     background: linear-gradient(135deg, #17171d, #26262d);
+}
+
+.banner-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .avatar-img {

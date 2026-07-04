@@ -17,6 +17,12 @@
             <!-- ============ STEP 0 · LANDING ============ -->
             <section v-else-if="step === 0" class="screen landing">
                 <div class="hero">
+                    <img
+                        v-if="business.cover_image_url"
+                        class="hero-photo"
+                        :src="business.cover_image_url"
+                        :alt="business.name"
+                    />
                     <div class="hero-overlay"></div>
                     <div class="hero-brand">TF Booking</div>
                     <div class="hero-title">
@@ -40,7 +46,7 @@
                     </div>
 
                     <p class="landing-lede">
-                        Escolhe o serviço, vê os horários disponíveis e confirma a marcação em segundos.
+                        {{ business.description || 'Escolhe o serviço, vê os horários disponíveis e confirma a marcação em segundos.' }}
                     </p>
 
                     <div class="landing-stats">
@@ -352,6 +358,10 @@ type PublicBusiness = {
     instagram_url: string
     facebook_url: string
     website_url: string
+    description: string
+    categories: string[]
+    cover_image_url: string
+    gallery_image_urls: string[]
     service_count: number
     customer_count: number
     services: PublicService[]
@@ -447,6 +457,12 @@ const bookableServices = computed(() =>
 const primaryCategory = computed(() => categoryChips.value[0] || 'Marcações')
 
 const categoryChips = computed(() => {
+    const real = (business.value?.categories || []).filter(Boolean)
+
+    if (real.length) {
+        return real.slice(0, 3)
+    }
+
     const names = business.value?.services.map((service) => service.name.split(' ')[0]).filter(Boolean) || []
     const uniqueNames = Array.from(new Set(names)).slice(0, 3)
     return uniqueNames.length ? uniqueNames : ['Serviços']
@@ -954,6 +970,14 @@ watch(slug, () => {
     height: 340px;
     flex-shrink: 0;
     background: repeating-linear-gradient(135deg, #17171d 0 14px, #111116 14px 28px);
+}
+
+.hero-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .hero-overlay {

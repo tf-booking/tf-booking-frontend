@@ -44,7 +44,16 @@
                 </span>
             </nav>
 
-            <div class="s-user">
+            <div
+                class="s-user"
+                :class="{ active: isActive('/account') }"
+                role="button"
+                tabindex="0"
+                title="A minha conta"
+                @click="goToAccount"
+                @keydown.enter="goToAccount"
+                @keydown.space.prevent="goToAccount"
+            >
                 <span class="s-avatar">{{ businessInitials }}</span>
 
                 <div class="s-user-info">
@@ -52,7 +61,7 @@
                     <div class="s-user-plan">{{ businessRoleLabel }}</div>
                 </div>
 
-                <button class="s-logout" type="button" title="Sair" @click="handleLogout">
+                <button class="s-logout" type="button" title="Sair" @click.stop="handleLogout">
                     Sair
                 </button>
             </div>
@@ -81,13 +90,11 @@ const ownerOrManagerItems = [
     { label: 'Agenda', to: '/schedule' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
-    { label: 'Conta', to: '/account' },
 ]
 
 const staffItems = [
     { label: 'Painel', to: '/dashboard' },
     { label: 'A minha agenda', to: '/schedule' },
-    { label: 'Conta', to: '/account' },
 ]
 
 const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')
@@ -144,6 +151,11 @@ const handleOutsidePointerDown = (event: PointerEvent) => {
     }
 
     closeMobileMenu()
+}
+
+const goToAccount = () => {
+    closeMobileMenu()
+    navigateTo('/account')
 }
 
 const handleLogout = () => {
@@ -301,6 +313,16 @@ watch(
     padding: 14px;
     border-radius: 16px;
     background: #17171d;
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.s-user:hover {
+    background: #1f1f27;
+}
+
+.s-user.active {
+    box-shadow: inset 0 0 0 1px var(--tf-accent);
 }
 
 .s-avatar {
