@@ -34,6 +34,26 @@
                     </div>
 
                     <form class="form" @submit.prevent="saveStaff">
+                        <div class="avatar-field">
+                            <div class="avatar-preview">
+                                <img v-if="avatarPreviewUrl" class="avatar-preview-image" :src="avatarPreviewUrl" :alt="form.name" />
+                                <template v-else>{{ staffInitials(form.name) }}</template>
+                            </div>
+
+                            <div class="avatar-field-actions">
+                                <button class="btn btn-secondary" type="button" @click="pickAvatar">
+                                    {{ avatarPreviewUrl ? 'Alterar foto' : 'Adicionar foto' }}
+                                </button>
+                                <input
+                                    ref="avatarInput"
+                                    class="visually-hidden"
+                                    type="file"
+                                    accept="image/*"
+                                    @change="handleAvatarChange"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label class="label">Nome do colaborador</label>
                             <input v-model="form.name" class="input" type="text" placeholder="Ana Silva" />
@@ -65,11 +85,28 @@
                             </div>
 
                             <div v-else class="services-check-list">
-                                <label v-for="service in services" :key="service.id" class="service-check">
-                                    <input v-model="form.services" type="checkbox" :value="service.id" />
-                                    <span class="service-check-name">{{ service.name }}</span>
-                                </label>
+                                <div v-for="service in services" :key="service.id" class="service-check-row">
+                                    <label class="service-check">
+                                        <input v-model="form.services" type="checkbox" :value="service.id" />
+                                        <span class="service-check-name">{{ service.name }}</span>
+                                    </label>
+
+                                    <div v-if="form.services.includes(service.id)" class="service-duration-override">
+                                        <input
+                                            v-model.number="form.serviceDurations[service.id]"
+                                            class="input input-compact"
+                                            type="number"
+                                            min="1"
+                                            :placeholder="String(service.duration_minutes)"
+                                        />
+                                        <span class="duration-suffix">min</span>
+                                    </div>
+                                </div>
                             </div>
+
+                            <p class="services-hint">
+                                Deixa em branco para usar a duração padrão do serviço. Preenche só se este colaborador demorar mais ou menos tempo.
+                            </p>
                         </div>
 
                         <label class="toggle-row">
@@ -351,6 +388,11 @@ type Service = {
 
 type AccessStatus = 'none' | 'pending' | 'active'
 
+type ServiceOverride = {
+    service_id: number
+    duration_minutes_override: number | null
+}
+
 type StaffMember = {
     id: number
     uuid: string
@@ -359,6 +401,7 @@ type StaffMember = {
     user: number | null
     services: number[]
     services_names: string[]
+    service_overrides: ServiceOverride[]
     name: string
     email: string
     phone: string
@@ -425,8 +468,13 @@ const form = reactive({
     phone: '',
     bio: '',
     services: [] as number[],
+    serviceDurations: {} as Record<number, number | null>,
     is_active: true,
 })
+
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
 
 const weekdays = [
     { value: 0, label: 'Segunda-feira' },
@@ -720,6 +768,12 @@ const resetMessages = () => {
     successMessage.value = ''
 }
 
+const revokeAvatarPreview = () => {
+    if (avatarPreviewUrl.value && avatarPreviewUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreviewUrl.value)
+    }
+}
+
 const resetForm = () => {
     editingStaff.value = null
 
@@ -728,7 +782,45 @@ const resetForm = () => {
     form.phone = ''
     form.bio = ''
     form.services = []
+    form.serviceDurations = {}
     form.is_active = true
+
+    revokeAvatarPreview()
+    avatarFile.value = null
+    avatarPreviewUrl.value = ''
+}
+
+const pickAvatar = () => {
+    avatarInput.value?.click()
+}
+
+const handleAvatarChange = (event: Event) => {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+
+    if (!file) {
+        return
+    }
+
+    revokeAvatarPreview()
+    avatarFile.value = file
+    avatarPreviewUrl.value = URL.createObjectURL(file)
+    input.value = ''
+}
+
+const uploadAvatarIfNeeded = async (staffId: number) => {
+    if (!avatarFile.value) {
+        return
+    }
+
+    const formData = new FormData()
+    formData.append('photos_order', 'new')
+    formData.append('photos', avatarFile.value)
+
+    await apiFetch(`/staff/${staffId}/photos/`, {
+        method: 'PATCH',
+        body: formData,
+    })
 }
 
 const openCreateStaff = async () => {
@@ -837,9 +929,17 @@ const saveStaff = async () => {
     try {
         isSaving.value = true
 
+        const serviceDurationOverrides = form.services.map((serviceId) => {
+            const raw = form.serviceDurations[serviceId]
+            const value = typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null
+
+            return { service: serviceId, duration_minutes_override: value }
+        })
+
         const payload = {
             business: selectedBusiness.value.id,
             services: form.services,
+            service_duration_overrides: serviceDurationOverrides,
             name: form.name,
             email: form.email,
             phone: form.phone,
@@ -853,12 +953,16 @@ const saveStaff = async () => {
                 body: payload,
             })
 
+            await uploadAvatarIfNeeded(editingStaff.value.id)
+
             successMessage.value = 'Colaborador atualizado com sucesso.'
         } else {
             const created = await apiFetch<StaffMember>('/staff/', {
                 method: 'POST',
                 body: payload,
             })
+
+            await uploadAvatarIfNeeded(created.id)
 
             if (created.email) {
                 try {
@@ -891,6 +995,7 @@ const saveStaff = async () => {
 
 const editStaff = (staff: StaffMember) => {
     resetMessages()
+    revokeAvatarPreview()
 
     editingStaff.value = staff
     isFormOpen.value = true
@@ -900,7 +1005,13 @@ const editStaff = (staff: StaffMember) => {
     form.phone = staff.phone || ''
     form.bio = staff.bio || ''
     form.services = [...staff.services]
+    form.serviceDurations = Object.fromEntries(
+        (staff.service_overrides || []).map((override) => [override.service_id, override.duration_minutes_override])
+    )
     form.is_active = staff.is_active
+
+    avatarFile.value = null
+    avatarPreviewUrl.value = staff.avatar_url || ''
 
     focusForm()
 }
@@ -946,6 +1057,10 @@ onMounted(async () => {
     await loadBusinesses()
     await loadServices()
     await loadStaff()
+})
+
+onBeforeUnmount(() => {
+    revokeAvatarPreview()
 })
 </script>
 
@@ -1060,10 +1175,84 @@ onMounted(async () => {
     min-width: 0;
 }
 
+.avatar-field {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.avatar-preview {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-size: 16px;
+    font-weight: 900;
+    overflow: hidden;
+}
+
+.avatar-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-field-actions {
+    display: flex;
+    align-items: center;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .services-check-list {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.service-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.service-duration-override {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input-compact {
+    min-height: 38px;
+    width: 72px;
+    padding: 0 10px;
+}
+
+.duration-suffix {
+    color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.services-hint {
+    margin: 8px 0 0;
+    color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .service-check {

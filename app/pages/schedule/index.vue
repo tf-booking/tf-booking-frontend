@@ -119,7 +119,7 @@
                     </p>
 
                     <ClientOnly v-if="!isMobileLayout">
-                        <FullCalendar ref="calendarRef" :options="calendarOptions" />
+                        <FullCalendar :key="slotIntervalMinutes" ref="calendarRef" :options="calendarOptions" />
                     </ClientOnly>
 
                     <div v-else class="mobile-board-wrapper">
@@ -132,6 +132,7 @@
                             :blocks="mobileBlocks"
                             :working-hours="mobileWorkingHours"
                             :date="mobileDate"
+                            :slot-interval-minutes="slotIntervalMinutes"
                             @open-appointment="handleMobileOpenAppointment"
                             @open-block="handleMobileOpenBlock"
                         />
@@ -574,6 +575,7 @@ const MAX_RECURRENCE_OCCURRENCES = 52
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
+const slotIntervalMinutes = ref(30)
 
 const services = ref<Service[]>([])
 const staffMembers = ref<StaffMember[]>([])
@@ -846,6 +848,13 @@ const renderDayHeader = (arg: any) => {
     return { domNodes: [wrapper] }
 }
 
+const minutesToDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`
+}
+
 const calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [
         dayGridPlugin,
@@ -862,8 +871,9 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     height: 'auto',
     slotMinTime: '07:00:00',
     slotMaxTime: '22:00:00',
-    slotDuration: '01:00:00',
-    snapDuration: '00:15:00',
+    slotDuration: minutesToDuration(slotIntervalMinutes.value),
+    slotLabelInterval: minutesToDuration(slotIntervalMinutes.value),
+    snapDuration: minutesToDuration(Math.min(15, slotIntervalMinutes.value)),
     slotLabelFormat: {
         hour: '2-digit',
         minute: '2-digit',
@@ -877,6 +887,18 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     datesSet: handleDatesSet,
     ...(currentView.value !== 'dayGridMonth' ? { dayHeaderContent: renderDayHeader } : {}),
 }))
+
+watch(slotIntervalMinutes, (minutes) => {
+    const api = getCalendarApi()
+
+    if (!api) {
+        return
+    }
+
+    api.setOption('slotDuration', minutesToDuration(minutes))
+    api.setOption('slotLabelInterval', minutesToDuration(minutes))
+    api.setOption('snapDuration', minutesToDuration(Math.min(15, minutes)))
+})
 
 const resetMessages = () => {
     errorMessage.value = ''
@@ -1204,6 +1226,23 @@ const loadBusinesses = async () => {
         errorMessage.value = 'Não foi possível carregar o negócio do utilizador.'
     } finally {
         isLoadingBusinesses.value = false
+    }
+}
+
+const loadScheduleSettings = async () => {
+    if (!selectedBusiness.value) {
+        return
+    }
+
+    try {
+        const response = await apiFetch<{ slot_interval_minutes: number }>(
+            '/businesses/me-settings/',
+            { query: { business_uuid: selectedBusiness.value.uuid } }
+        )
+
+        slotIntervalMinutes.value = response.slot_interval_minutes
+    } catch (error) {
+        console.error('Erro ao carregar definições da agenda:', error)
     }
 }
 
@@ -1848,6 +1887,7 @@ onMounted(async () => {
 
     await loadCurrentBusiness()
     await loadBusinesses()
+    await loadScheduleSettings()
     await loadGoogleCalendarStatus()
     await loadServices()
     await loadStaff()

@@ -365,6 +365,11 @@ type PublicBusiness = {
     service_count: number
     customer_count: number
     services: PublicService[]
+    booking_settings: {
+        min_booking_notice_minutes: number
+        max_booking_horizon_days: number
+        slot_interval_minutes: number
+    }
 }
 
 type AvailableSlot = {
@@ -580,7 +585,10 @@ const monthShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 
 const days = computed(() => {
     const base = new Date()
-    return Array.from({ length: 4 }, (_, index) => {
+    const maxHorizonDays = business.value?.booking_settings?.max_booking_horizon_days ?? 4
+    const visibleDays = Math.min(4, Math.max(1, maxHorizonDays))
+
+    return Array.from({ length: visibleDays }, (_, index) => {
         const date = new Date(base)
         date.setDate(base.getDate() + index)
         const iso = date.toISOString().slice(0, 10)
@@ -729,8 +737,11 @@ const loadAvailableSlots = async () => {
 
         const response = await apiFetch<{ slots: AvailableSlot[] }>(endpoint)
 
+        const minNoticeMs = (business.value.booking_settings?.min_booking_notice_minutes || 0) * 60000
+        const earliestAllowed = Date.now() + minNoticeMs
+
         availableSlots.value = response.slots
-            .filter((slot) => new Date(slot.start_at).getTime() > Date.now())
+            .filter((slot) => new Date(slot.start_at).getTime() > earliestAllowed)
             .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
     } catch (error: any) {
         console.error(error)

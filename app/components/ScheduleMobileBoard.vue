@@ -23,7 +23,7 @@
                 v-for="staff in staffMembers"
                 :key="`col-${staff.id}`"
                 class="smb-column"
-                :style="{ height: `${totalHeight}px` }"
+                :style="{ height: `${totalHeight}px`, '--smb-slot-height': `${slotHeightPx}px` }"
             >
                 <div
                     v-for="wh in workingHoursByStaff[staff.id] || []"
@@ -80,6 +80,7 @@ const props = defineProps<{
     blocks: StaffBlock[]
     workingHours: WorkingHour[]
     date: string
+    slotIntervalMinutes: number
 }>()
 
 defineEmits<{
@@ -92,24 +93,23 @@ const END_HOUR = 22
 const PX_PER_MINUTE = 1.4
 const HEADER_HEIGHT = 56
 const totalHeight = (END_HOUR - START_HOUR) * 60 * PX_PER_MINUTE
+const slotHeightPx = computed(() => (props.slotIntervalMinutes > 0 ? props.slotIntervalMinutes : 30) * PX_PER_MINUTE)
 
 const blockColors = getBlockColors()
 
 const timeSlots = computed(() => {
     const slots: { minutes: number; label: string }[] = []
+    const totalMinutes = (END_HOUR - START_HOUR) * 60
+    const interval = props.slotIntervalMinutes > 0 ? props.slotIntervalMinutes : 30
 
-    for (let hour = START_HOUR; hour <= END_HOUR; hour += 1) {
-        for (const minute of [0, 30]) {
-            if (hour === END_HOUR && minute === 30) {
-                continue
-            }
+    for (let minutes = 0; minutes < totalMinutes; minutes += interval) {
+        const hour = START_HOUR + Math.floor(minutes / 60)
+        const minute = minutes % 60
 
-            const totalMinutes = (hour - START_HOUR) * 60 + minute
-            slots.push({
-                minutes: totalMinutes,
-                label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-            })
-        }
+        slots.push({
+            minutes,
+            label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        })
     }
 
     return slots
@@ -318,7 +318,7 @@ const eventStyle = (startAt: string, endAt: string, colors: { backgroundColor: s
         var(--tf-border) 0,
         var(--tf-border) 1px,
         transparent 1px,
-        transparent 42px
+        transparent var(--smb-slot-height, 42px)
     );
 }
 

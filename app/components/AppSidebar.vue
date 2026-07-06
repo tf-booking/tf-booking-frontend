@@ -90,6 +90,7 @@ const ownerOrManagerItems = [
     { label: 'Agenda', to: '/schedule' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
+    { label: 'Definições', to: '/business-settings' },
 ]
 
 const staffItems = [
