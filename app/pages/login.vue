@@ -164,14 +164,15 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-page {
-    min-height: 100svh;
+    height: 100svh;
+    overflow: hidden;
     background: #f7f6f2;
 }
 
 .login-shell {
     display: grid;
     grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
-    min-height: 100svh;
+    height: 100svh;
     width: 100%;
 }
 
@@ -179,9 +180,9 @@ const handleLogin = async () => {
     position: relative;
     display: grid;
     grid-template-rows: auto 1fr auto;
-    gap: 48px;
-    min-height: 100svh;
-    padding: clamp(36px, 5vw, 72px);
+    gap: clamp(16px, 4svh, 48px);
+    height: 100%;
+    padding: clamp(24px, 5vw, 72px);
     background: var(--tf-black);
     color: var(--tf-white);
     overflow: hidden;
@@ -296,9 +297,10 @@ const handleLogin = async () => {
 .form-panel {
     display: grid;
     place-items: center;
-    min-height: 100svh;
-    padding: clamp(36px, 6vw, 88px);
+    height: 100%;
+    padding: clamp(20px, 6vw, 88px);
     background: #fffefa;
+    overflow-y: auto;
 }
 
 .form-content {

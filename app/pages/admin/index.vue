@@ -89,6 +89,55 @@
                             </div>
                         </div>
 
+                        <div class="form-section">
+                            <h3>Serviços</h3>
+
+                            <div v-for="(service, index) in form.services" :key="index" class="service-row">
+                                <div class="service-row-header">
+                                    <label class="service-owner-radio">
+                                        <input v-model="ownerServiceIndex" type="radio" name="owner_service"
+                                            :value="index" />
+                                        Serviço do owner
+                                    </label>
+
+                                    <button v-if="form.services.length > 1" class="mini-action" type="button"
+                                        @click="removeServiceRow(index)">
+                                        Remover
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label class="label">Nome do serviço</label>
+                                    <input v-model="service.name" class="input" type="text"
+                                        placeholder="Corte de cabelo" />
+                                </div>
+
+                                <div class="two-columns">
+                                    <div>
+                                        <label class="label">Duração (min)</label>
+                                        <input v-model.number="service.duration_minutes" class="input" type="number"
+                                            min="1" placeholder="30" />
+                                    </div>
+
+                                    <div>
+                                        <label class="label">Preço (€)</label>
+                                        <input v-model.number="service.price" class="input" type="number" min="0"
+                                            step="0.01" placeholder="20" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="label">Descrição</label>
+                                    <input v-model="service.description" class="input" type="text"
+                                        placeholder="Opcional" />
+                                </div>
+                            </div>
+
+                            <button class="btn btn-secondary" type="button" @click="addServiceRow">
+                                + Adicionar serviço
+                            </button>
+                        </div>
+
                         <p v-if="errorMessage" class="error-message">
                             {{ errorMessage }}
                         </p>
@@ -168,6 +217,20 @@ type Business = {
     is_active: boolean
 }
 
+type ServiceRow = {
+    name: string
+    description: string
+    duration_minutes: number
+    price: number
+}
+
+const emptyServiceRow = (): ServiceRow => ({
+    name: '',
+    description: '',
+    duration_minutes: 30,
+    price: 0,
+})
+
 const { logout, loadTokens, isAuthenticated } = useAuth()
 const { apiFetch } = useApi()
 
@@ -190,7 +253,24 @@ const form = reactive({
     owner_first_name: '',
     owner_last_name: '',
     owner_password: '',
+    services: [emptyServiceRow()] as ServiceRow[],
 })
+
+const ownerServiceIndex = ref<number | null>(null)
+
+const addServiceRow = () => {
+    form.services.push(emptyServiceRow())
+}
+
+const removeServiceRow = (index: number) => {
+    form.services.splice(index, 1)
+
+    if (ownerServiceIndex.value === index) {
+        ownerServiceIndex.value = null
+    } else if (ownerServiceIndex.value !== null && ownerServiceIndex.value > index) {
+        ownerServiceIndex.value -= 1
+    }
+}
 
 const loadBusinesses = async () => {
     try {
@@ -243,6 +323,8 @@ const resetForm = () => {
     form.owner_first_name = ''
     form.owner_last_name = ''
     form.owner_password = ''
+    form.services = [emptyServiceRow()]
+    ownerServiceIndex.value = null
 }
 
 const createBusinessWithOwner = async () => {
@@ -257,10 +339,24 @@ const createBusinessWithOwner = async () => {
     try {
         isCreating.value = true
 
+        const filledServices = form.services.filter((service) => service.name.trim() !== '')
+
+        let ownerServiceIndexToSubmit: number | null = null
+
+        if (ownerServiceIndex.value !== null) {
+            const selectedService = form.services[ownerServiceIndex.value]
+
+            if (selectedService && selectedService.name.trim() !== '') {
+                ownerServiceIndexToSubmit = filledServices.indexOf(selectedService)
+            }
+        }
+
         await apiFetch('/admin/businesses/create-with-owner/', {
             method: 'POST',
             body: {
                 ...form,
+                services: filledServices,
+                owner_service_index: ownerServiceIndexToSubmit,
             },
         })
 
@@ -385,6 +481,31 @@ onMounted(() => {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
+}
+
+.service-row {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 16px;
+    background: #fff;
+}
+
+.service-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.service-owner-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--tf-muted);
 }
 
 .card-title-row {
