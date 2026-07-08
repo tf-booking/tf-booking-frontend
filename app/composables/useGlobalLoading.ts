@@ -7,6 +7,15 @@ export const useGlobalLoading = () => {
     const isLoading = useState<boolean>('tf-global-loading-visible', () => false)
 
     const start = () => {
+        // Server-side fetches (eg. an immediate watcher firing during SSR)
+        // resolve after Nuxt has already serialized this state into the
+        // page payload, so calling start() here would ship a permanently
+        // "stuck" counter that the client can never bring back to zero.
+        // The overlay is a client-only affordance, so skip it during SSR.
+        if (!import.meta.client) {
+            return
+        }
+
         if (hideTimeout) {
             clearTimeout(hideTimeout)
             hideTimeout = null
@@ -17,6 +26,10 @@ export const useGlobalLoading = () => {
     }
 
     const stop = () => {
+        if (!import.meta.client) {
+            return
+        }
+
         pendingRequests.value = Math.max(0, pendingRequests.value - 1)
 
         if (pendingRequests.value === 0 && !hideTimeout) {
