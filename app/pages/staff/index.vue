@@ -593,7 +593,7 @@ const toggleStaffSchedule = async (staff: StaffMember) => {
 const timeToMinutes = (value: string) => {
     const [hours, minutes] = value.slice(0, 5).split(':').map(Number)
 
-    return hours * 60 + minutes
+     return (hours ?? 0) * 60 + (minutes ?? 0)      
 }
 
 const hasOverlappingWorkingHour = (staffId: number) => {
@@ -1173,6 +1173,11 @@ onBeforeUnmount(() => {
 
 .two-columns .input {
     min-width: 0;
+}
+
+.two-columns .input[type="time"],
+.two-columns .input[type="date"] {
+    min-width: 120px;
 }
 
 .avatar-field {

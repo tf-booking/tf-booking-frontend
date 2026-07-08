@@ -28,10 +28,17 @@ export const useApi = () => {
             headers.Authorization = `Bearer ${token}`
         }
 
-        return await $fetch<T>(`${apiBase}${endpoint}`, {
-            ...fetchOptions,
-            headers,
-        })
+        const { start, stop } = useGlobalLoading()
+        start()
+
+        try {
+            return await $fetch<T>(`${apiBase}${endpoint}`, {
+                ...fetchOptions,
+                headers,
+            })
+        } finally {
+            stop()
+        }
     }
 
     return {

@@ -32,9 +32,7 @@
                 </div>
             </div>
 
-            <div v-if="isInitializing" class="card empty-card spinner-card">
-                <Spinner />
-            </div>
+            <div v-if="isInitializing" class="card empty-card" />
 
             <div v-else-if="!selectedBusiness" class="card empty-card">
                 Este utilizador ainda não tem nenhum negócio associado.
@@ -81,7 +79,7 @@
                             </div>
 
                             <button class="btn btn-accent cal-new" type="button" @click="openNewAppointmentModal">
-                                + Marcação
+                                + Novo
                             </button>
                         </div>
                     </div>
@@ -144,7 +142,7 @@
                 v-if="isMobileLayout && selectedBusiness && staffMembers.length > 0"
                 class="floating-add"
                 type="button"
-                aria-label="Nova marcação"
+                aria-label="Novo período"
                 @click="handleMobileCreate"
             >
                 +
@@ -1093,7 +1091,8 @@ const openNewAppointmentModal = () => {
 
     modalRange.value = null
     resetAppointmentForm()
-    modalStep.value = 'appointment-form'
+    resetBlockForm()
+    modalStep.value = 'choice'
     isModalOpen.value = true
 }
 
@@ -1980,10 +1979,7 @@ onBeforeUnmount(() => {
     padding: 24px;
 }
 
-.spinner-card {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.empty-card {
     min-height: 160px;
 }
 
@@ -2315,11 +2311,14 @@ button:disabled {
     width: 100%;
     max-width: 460px;
     max-height: 88vh;
+    max-height: 88dvh;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 32px;
     border-radius: 24px;
     background: var(--tf-white);
     box-shadow: 0 40px 90px -30px rgba(11, 11, 15, 0.5);
+    box-sizing: border-box;
 }
 
 .modal-close {
@@ -2404,6 +2403,11 @@ button:disabled {
     min-width: 0;
 }
 
+.two-columns .input[type="time"],
+.two-columns .input[type="date"] {
+    min-width: 120px;
+}
+
 .form-actions {
     display: flex;
     flex-wrap: wrap;
@@ -2443,8 +2447,28 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
+    .modal-overlay {
+        padding: 12px;
+    }
+
     .modal-card {
-        padding: 24px;
+        max-width: none;
+        max-height: 92dvh;
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .modal-close {
+        top: 12px;
+        right: 12px;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+
+    .modal-card h2 {
+        margin-right: 34px;
+        font-size: 21px;
     }
 
     .schedule-page-locked {

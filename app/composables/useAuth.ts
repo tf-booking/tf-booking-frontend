@@ -9,8 +9,7 @@ type LoginPayload = {
 }
 
 export const useAuth = () => {
-    const config = useRuntimeConfig()
-    const apiBase = String(config.public.apiBase || 'http://127.0.0.1:8000/api')
+    const { apiFetch } = useApi()
 
     const accessToken = useState<string | null>('accessToken', () => null)
     const refreshToken = useState<string | null>('refreshToken', () => null)
@@ -45,9 +44,10 @@ export const useAuth = () => {
     }
 
     const login = async (payload: LoginPayload) => {
-        const response = await $fetch<LoginResponse>(`${apiBase}/auth/token/`, {
+        const response = await apiFetch<LoginResponse>('/auth/token/', {
             method: 'POST',
             body: payload,
+            auth: false,
         })
 
         setTokens(response)

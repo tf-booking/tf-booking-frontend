@@ -207,7 +207,7 @@ button:disabled {
     background: var(--tf-white);
     color: var(--tf-ink);
     font-family: var(--tf-sans);
-    font-size: 15px;
+    font-size: 16px;
 }
 
 .input:focus {
