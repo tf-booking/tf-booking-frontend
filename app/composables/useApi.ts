@@ -3,6 +3,7 @@ export const useApi = () => {
     const apiBase = String(config.public.apiBase || 'http://127.0.0.1:8000/api')
     type ApiFetchOptions = NonNullable<Parameters<typeof $fetch>[1]> & {
         auth?: boolean
+        silent?: boolean
     }
 
     const getAccessToken = () => {
@@ -17,7 +18,7 @@ export const useApi = () => {
         endpoint: string,
         options: ApiFetchOptions = {}
     ) => {
-        const { auth = true, headers: optionHeaders, ...fetchOptions } = options
+        const { auth = true, silent = false, headers: optionHeaders, ...fetchOptions } = options
         const token = auth ? getAccessToken() : null
 
         const headers: Record<string, string> = {
@@ -29,7 +30,10 @@ export const useApi = () => {
         }
 
         const { start, stop } = useGlobalLoading()
-        start()
+
+        if (!silent) {
+            start()
+        }
 
         try {
             return await $fetch<T>(`${apiBase}${endpoint}`, {
@@ -37,7 +41,9 @@ export const useApi = () => {
                 headers,
             })
         } finally {
-            stop()
+            if (!silent) {
+                stop()
+            }
         }
     }
 

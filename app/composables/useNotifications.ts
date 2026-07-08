@@ -32,7 +32,7 @@ export const useNotifications = () => {
 
     const loadUnreadCount = async () => {
         try {
-            const response = await apiFetch<{ count: number }>('/notifications/unread-count/')
+            const response = await apiFetch<{ count: number }>('/notifications/unread-count/', { silent: true })
             unreadCount.value = response.count
         } catch (error) {
             console.error('Erro ao carregar contagem de notificações:', error)
@@ -43,7 +43,7 @@ export const useNotifications = () => {
         try {
             isLoading.value = true
 
-            const response = await apiFetch<NotificationListResponse>('/notifications/')
+            const response = await apiFetch<NotificationListResponse>('/notifications/', { silent: true })
             notifications.value = response.results
             nextPageUrl.value = response.next
         } catch (error) {
@@ -62,7 +62,7 @@ export const useNotifications = () => {
             isLoadingMore.value = true
 
             const relativeEndpoint = nextPageUrl.value.replace(apiBase, '')
-            const response = await apiFetch<NotificationListResponse>(relativeEndpoint)
+            const response = await apiFetch<NotificationListResponse>(relativeEndpoint, { silent: true })
             notifications.value = [...notifications.value, ...response.results]
             nextPageUrl.value = response.next
         } catch (error) {
@@ -81,7 +81,7 @@ export const useNotifications = () => {
         }
 
         try {
-            await apiFetch(`/notifications/${id}/mark-read/`, { method: 'POST' })
+            await apiFetch(`/notifications/${id}/mark-read/`, { method: 'POST', silent: true })
         } catch (error) {
             console.error('Erro ao marcar notificação como lida:', error)
         }
@@ -94,7 +94,7 @@ export const useNotifications = () => {
         unreadCount.value = 0
 
         try {
-            await apiFetch('/notifications/mark-all-read/', { method: 'POST' })
+            await apiFetch('/notifications/mark-all-read/', { method: 'POST', silent: true })
         } catch (error) {
             console.error('Erro ao marcar todas as notificações como lidas:', error)
         }

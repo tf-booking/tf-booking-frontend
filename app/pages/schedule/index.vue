@@ -199,12 +199,12 @@
                             <div class="two-columns">
                                 <div>
                                     <label class="label">Data</label>
-                                    <input v-model="appointmentForm.start_date" class="input" type="date" />
+                                    <DateField v-model="appointmentForm.start_date" />
                                 </div>
 
                                 <div>
                                     <label class="label">Hora</label>
-                                    <input v-model="appointmentForm.start_time" class="input" type="time" />
+                                    <TimeSelect v-model="appointmentForm.start_time" />
                                 </div>
                             </div>
 
@@ -248,7 +248,7 @@
 
                             <div v-if="appointmentForm.repeat !== 'none'">
                                 <label class="label">Repetir até</label>
-                                <input v-model="appointmentForm.repeat_until" class="input" type="date" />
+                                <DateField v-model="appointmentForm.repeat_until" />
                             </div>
 
                             <div class="form-actions">
@@ -271,24 +271,24 @@
                             <div class="two-columns">
                                 <div>
                                     <label class="label">Data início</label>
-                                    <input v-model="blockForm.start_date" class="input" type="date" />
+                                    <DateField v-model="blockForm.start_date" />
                                 </div>
 
                                 <div>
                                     <label class="label">Hora início</label>
-                                    <input v-model="blockForm.start_time" class="input" type="time" />
+                                    <TimeSelect v-model="blockForm.start_time" />
                                 </div>
                             </div>
 
                             <div class="two-columns">
                                 <div>
                                     <label class="label">Data fim</label>
-                                    <input v-model="blockForm.end_date" class="input" type="date" />
+                                    <DateField v-model="blockForm.end_date" />
                                 </div>
 
                                 <div>
                                     <label class="label">Hora fim</label>
-                                    <input v-model="blockForm.end_time" class="input" type="time" />
+                                    <TimeSelect v-model="blockForm.end_time" />
                                 </div>
                             </div>
 
@@ -313,7 +313,7 @@
 
                                 <div v-if="blockForm.repeat !== 'none'">
                                     <label class="label">Repetir até</label>
-                                    <input v-model="blockForm.repeat_until" class="input" type="date" />
+                                    <DateField v-model="blockForm.repeat_until" />
                                 </div>
                             </template>
 
@@ -381,24 +381,24 @@
                             <div class="two-columns">
                                 <div>
                                     <label class="label">Data início</label>
-                                    <input v-model="appointmentEditForm.start_date" class="input" type="date" />
+                                    <DateField v-model="appointmentEditForm.start_date" />
                                 </div>
 
                                 <div>
                                     <label class="label">Hora início</label>
-                                    <input v-model="appointmentEditForm.start_time" class="input" type="time" />
+                                    <TimeSelect v-model="appointmentEditForm.start_time" />
                                 </div>
                             </div>
 
                             <div class="two-columns">
                                 <div>
                                     <label class="label">Data fim</label>
-                                    <input v-model="appointmentEditForm.end_date" class="input" type="date" />
+                                    <DateField v-model="appointmentEditForm.end_date" />
                                 </div>
 
                                 <div>
                                     <label class="label">Hora fim</label>
-                                    <input v-model="appointmentEditForm.end_time" class="input" type="time" />
+                                    <TimeSelect v-model="appointmentEditForm.end_time" />
                                 </div>
                             </div>
 

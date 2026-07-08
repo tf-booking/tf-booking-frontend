@@ -271,12 +271,12 @@
                                                 <div class="two-columns">
                                                     <div>
                                                         <label class="label">Hora início</label>
-                                                        <input v-model="workingHourForm.start_time" class="input" type="time" />
+                                                        <TimeSelect v-model="workingHourForm.start_time" />
                                                     </div>
 
                                                     <div>
                                                         <label class="label">Hora fim</label>
-                                                        <input v-model="workingHourForm.end_time" class="input" type="time" />
+                                                        <TimeSelect v-model="workingHourForm.end_time" />
                                                     </div>
                                                 </div>
 
@@ -323,12 +323,12 @@
                                                 <div class="two-columns">
                                                     <div>
                                                         <label class="label">De</label>
-                                                        <input v-model="dayBlockForm.start_date" class="input" type="date" />
+                                                        <DateField v-model="dayBlockForm.start_date" />
                                                     </div>
 
                                                     <div>
                                                         <label class="label">Até</label>
-                                                        <input v-model="dayBlockForm.end_date" class="input" type="date" />
+                                                        <DateField v-model="dayBlockForm.end_date" />
                                                     </div>
                                                 </div>
 

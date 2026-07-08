@@ -216,12 +216,6 @@ button:disabled {
     box-shadow: 0 0 0 3px rgba(11, 11, 15, 0.08);
 }
 
-input[type="date"].input,
-input[type="time"].input {
-    -webkit-min-logical-width: 0px;
-    min-width: 0;
-}
-
 textarea.input {
     padding: 14px 16px;
     line-height: 1.5;
