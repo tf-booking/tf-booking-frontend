@@ -8,14 +8,6 @@
                     <h1>{{ dashboardTitle }}</h1>
                 </div>
 
-                <div class="header-actions">
-                    <div class="search-box">
-                        <span class="search-dot"></span>
-                        Procurar cliente…
-                    </div>
-
-                    <button class="btn" type="button">+ Nova marcação</button>
-                </div>
             </div>
 
             <article v-if="primaryBusiness" class="booking-link-card">

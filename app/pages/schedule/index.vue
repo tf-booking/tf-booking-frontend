@@ -32,8 +32,8 @@
                 </div>
             </div>
 
-            <div v-if="isLoadingBusinesses" class="card empty-card">
-                A carregar negócio...
+            <div v-if="isInitializing" class="card empty-card spinner-card">
+                <Spinner />
             </div>
 
             <div v-else-if="!selectedBusiness" class="card empty-card">
@@ -596,6 +596,7 @@ const visibleRange = reactive({
     end: '',
 })
 
+const isInitializing = ref(true)
 const isLoadingBusinesses = ref(false)
 const isLoadingStaff = ref(false)
 const isSavingBlock = ref(false)
@@ -1885,16 +1886,20 @@ onMounted(async () => {
     updateIsMobileLayout()
     window.addEventListener('resize', updateIsMobileLayout)
 
-    await loadCurrentBusiness()
-    await loadBusinesses()
-    await loadScheduleSettings()
-    await loadGoogleCalendarStatus()
-    await loadServices()
-    await loadStaff()
-    await loadWorkingHours()
-    await loadBlocks()
-    await loadAppointments()
-    await applyGoogleCalendarFeedbackFromQuery()
+    try {
+        await loadCurrentBusiness()
+        await loadBusinesses()
+        await loadScheduleSettings()
+        await loadGoogleCalendarStatus()
+        await loadServices()
+        await loadStaff()
+        await loadWorkingHours()
+        await loadBlocks()
+        await loadAppointments()
+        await applyGoogleCalendarFeedbackFromQuery()
+    } finally {
+        isInitializing.value = false
+    }
 
     if (isMobileLayout.value) {
         await loadMobileDay()
@@ -1973,6 +1978,13 @@ onBeforeUnmount(() => {
 .calendar-card,
 .empty-card {
     padding: 24px;
+}
+
+.spinner-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
 }
 
 /* ---- calendar toolbar (design) ---- */
