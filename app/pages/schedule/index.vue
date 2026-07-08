@@ -2309,6 +2309,7 @@ button:disabled {
 .modal-card {
     position: relative;
     width: 100%;
+    min-width: 0;
     max-width: 460px;
     max-height: 88vh;
     max-height: 88dvh;
@@ -2401,11 +2402,6 @@ button:disabled {
 
 .two-columns .input {
     min-width: 0;
-}
-
-.two-columns .input[type="time"],
-.two-columns .input[type="date"] {
-    min-width: 120px;
 }
 
 .form-actions {

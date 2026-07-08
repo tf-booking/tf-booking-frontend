@@ -1175,11 +1175,6 @@ onBeforeUnmount(() => {
     min-width: 0;
 }
 
-.two-columns .input[type="time"],
-.two-columns .input[type="date"] {
-    min-width: 120px;
-}
-
 .avatar-field {
     display: flex;
     align-items: center;
