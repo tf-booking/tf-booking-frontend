@@ -54,7 +54,6 @@
                                 <button type="button" aria-label="Seguinte" @click="calNext">›</button>
                             </div>
 
-                            <button class="cal-today" type="button" @click="calToday">Hoje</button>
                         </div>
 
                         <div class="cal-toolbar-right">

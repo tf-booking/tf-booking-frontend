@@ -88,6 +88,7 @@ const roleLabels: Record<string, string> = {
 const ownerOrManagerItems = [
     { label: 'Painel', to: '/dashboard' },
     { label: 'Agenda', to: '/schedule' },
+    { label: 'Clientes', to: '/customers' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
     { label: 'Definições', to: '/business-settings' },
@@ -102,7 +103,7 @@ const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')
 
 const items = computed(() => isStaffOnly.value ? staffItems : ownerOrManagerItems)
 
-const comingSoon = computed(() => isStaffOnly.value ? [] : ['Clientes', 'Marketing'])
+const comingSoon = computed(() => isStaffOnly.value ? [] : ['Marketing'])
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
