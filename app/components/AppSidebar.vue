@@ -91,6 +91,7 @@ const ownerOrManagerItems = [
     { label: 'Clientes', to: '/customers' },
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
+    { label: 'Estatísticas', to: '/statistics', ownerOnly: true },
     { label: 'Definições', to: '/business-settings' },
 ]
 
@@ -101,7 +102,15 @@ const staffItems = [
 
 const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')
 
-const items = computed(() => isStaffOnly.value ? staffItems : ownerOrManagerItems)
+const items = computed(() => {
+    if (isStaffOnly.value) {
+        return staffItems
+    }
+
+    const isOwner = currentBusiness.value?.role === 'owner'
+
+    return ownerOrManagerItems.filter((item) => !item.ownerOnly || isOwner)
+})
 
 const comingSoon = computed(() => isStaffOnly.value ? [] : ['Marketing'])
 

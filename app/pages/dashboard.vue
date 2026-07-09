@@ -54,11 +54,6 @@
                     </div>
                 </article>
 
-                <article class="kpi">
-                    <p class="kpi-label">{{ topSourceLabel }}</p>
-                    <div class="kpi-value">{{ dashboardKpis.top_source.count }}</div>
-                    <p class="kpi-foot">de {{ dashboardKpis.top_source.total }} marcações</p>
-                </article>
             </div>
 
             <!-- lower grid -->
