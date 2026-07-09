@@ -54,5 +54,7 @@ export type Appointment = {
     status: string
     source: string
     notes: string
+    discount_amount: string
+    final_price: string
     cancellation_reason: string
 }

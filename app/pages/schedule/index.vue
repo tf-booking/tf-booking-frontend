@@ -207,24 +207,37 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="label">Nome do cliente</label>
-                                <input v-model="appointmentForm.customer_name" class="input" type="text"
-                                    placeholder="Maria Silva" />
-                            </div>
+                            <label class="toggle-row">
+                                <input v-model="appointmentForm.is_walk_in" type="checkbox" />
+                                <span>Cliente de rua (sem ficha)</span>
+                            </label>
 
-                            <div class="two-columns">
+                            <template v-if="!appointmentForm.is_walk_in">
                                 <div>
-                                    <label class="label">Telefone</label>
-                                    <input v-model="appointmentForm.customer_phone" class="input" type="text"
-                                        placeholder="910000000" />
+                                    <label class="label">Nome do cliente</label>
+                                    <input v-model="appointmentForm.customer_name" class="input" type="text"
+                                        placeholder="Maria Silva" />
                                 </div>
 
-                                <div>
-                                    <label class="label">Email</label>
-                                    <input v-model="appointmentForm.customer_email" class="input" type="email"
-                                        placeholder="cliente@email.pt" />
+                                <div class="two-columns">
+                                    <div>
+                                        <label class="label">Telefone</label>
+                                        <input v-model="appointmentForm.customer_phone" class="input" type="text"
+                                            placeholder="910000000" />
+                                    </div>
+
+                                    <div>
+                                        <label class="label">Email</label>
+                                        <input v-model="appointmentForm.customer_email" class="input" type="email"
+                                            placeholder="cliente@email.pt" />
+                                    </div>
                                 </div>
+                            </template>
+
+                            <div v-if="isOwnerOrManager">
+                                <label class="label">Desconto (€)</label>
+                                <input v-model="appointmentForm.discount_amount" class="input" type="number" min="0"
+                                    step="0.01" placeholder="0.00" />
                             </div>
 
                             <div>
@@ -245,10 +258,18 @@
                                 </select>
                             </div>
 
-                            <div v-if="appointmentForm.repeat !== 'none'">
-                                <label class="label">Repetir até</label>
-                                <DateField v-model="appointmentForm.repeat_until" />
-                            </div>
+                            <template v-if="appointmentForm.repeat !== 'none'">
+                                <label class="toggle-row">
+                                    <input v-model="appointmentForm.repeat_no_end_date" type="checkbox"
+                                        @change="appointmentForm.repeat_until = ''" />
+                                    <span>Sem data limite</span>
+                                </label>
+
+                                <div v-if="!appointmentForm.repeat_no_end_date">
+                                    <label class="label">Repetir até</label>
+                                    <DateField v-model="appointmentForm.repeat_until" />
+                                </div>
+                            </template>
 
                             <div class="form-actions">
                                 <button class="btn btn-accent" type="submit" :disabled="isSavingAppointment">
@@ -348,6 +369,10 @@
                             <small v-if="modalAppointment.status !== 'confirmed'">
                                 {{ appointmentStatusLabels[modalAppointment.status] || modalAppointment.status }}
                             </small>
+                            <p v-if="Number(modalAppointment.discount_amount) > 0" class="modal-notes">
+                                Desconto: -{{ formatCurrency(modalAppointment.discount_amount) }}
+                                · Total: {{ formatCurrency(modalAppointment.final_price) }}
+                            </p>
                             <p v-if="modalAppointment.notes" class="modal-notes">{{ modalAppointment.notes }}</p>
                         </div>
 
@@ -399,6 +424,12 @@
                                     <label class="label">Hora fim</label>
                                     <TimeSelect v-model="appointmentEditForm.end_time" />
                                 </div>
+                            </div>
+
+                            <div v-if="isOwnerOrManager">
+                                <label class="label">Desconto (€)</label>
+                                <input v-model="appointmentEditForm.discount_amount" class="input" type="number"
+                                    min="0" step="0.01" placeholder="0.00" />
                             </div>
 
                             <div>
@@ -568,7 +599,7 @@ const appointmentStatusLabels: Record<string, string> = {
     no_show: 'Não apareceu',
 }
 
-const MAX_RECURRENCE_OCCURRENCES = 52
+const MAX_RECURRENCE_OCCURRENCES = 104
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -629,12 +660,15 @@ const appointmentForm = reactive({
     service_uuid: '',
     start_date: '',
     start_time: '',
+    is_walk_in: false,
     customer_name: '',
     customer_phone: '',
     customer_email: '',
+    discount_amount: '',
     notes: '',
     repeat: 'none' as RecurrenceFrequency,
     repeat_until: '',
+    repeat_no_end_date: false,
 })
 
 const appointmentEditForm = reactive({
@@ -643,6 +677,7 @@ const appointmentEditForm = reactive({
     start_time: '',
     end_date: '',
     end_time: '',
+    discount_amount: '',
     notes: '',
     cancellation_reason: '',
 })
@@ -668,6 +703,8 @@ const currentRole = computed(() => {
 })
 
 const isStaffOnly = computed(() => currentRole.value === 'staff')
+
+const isOwnerOrManager = computed(() => ['owner', 'manager', 'admin'].includes(currentRole.value || ''))
 
 const isMobileLayout = ref(isMobileViewport)
 
@@ -945,6 +982,18 @@ const formatDateTime = (value: string) => {
     }).format(new Date(value))
 }
 
+const formatCurrency = (value: string | number | null) => {
+    const amount = Number(value || 0)
+
+    return new Intl.NumberFormat('pt-PT', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 2,
+    })
+        .format(Number.isFinite(amount) ? amount : 0)
+        .replace(/\s/g, '')
+}
+
 const formatRangeLabel = (startIso: string, endIso: string) => {
     const start = new Date(startIso)
     const end = new Date(endIso)
@@ -992,12 +1041,15 @@ const resetAppointmentForm = () => {
     appointmentForm.service_uuid = services.value[0]?.uuid || ''
     appointmentForm.start_date = today
     appointmentForm.start_time = '09:00'
+    appointmentForm.is_walk_in = false
     appointmentForm.customer_name = ''
     appointmentForm.customer_phone = ''
     appointmentForm.customer_email = ''
+    appointmentForm.discount_amount = ''
     appointmentForm.notes = ''
     appointmentForm.repeat = 'none'
     appointmentForm.repeat_until = ''
+    appointmentForm.repeat_no_end_date = false
 }
 
 const fillFormsFromModalRange = () => {
@@ -1710,13 +1762,17 @@ const saveAppointment = async () => {
         return
     }
 
-    if (!appointmentForm.customer_name || !appointmentForm.customer_phone) {
+    if (!appointmentForm.is_walk_in && (!appointmentForm.customer_name || !appointmentForm.customer_phone)) {
         errorMessage.value = 'Preenche o nome e telefone do cliente.'
         return
     }
 
-    if (appointmentForm.repeat !== 'none' && !appointmentForm.repeat_until) {
-        errorMessage.value = 'Escolhe até quando a marcação se repete.'
+    if (
+        appointmentForm.repeat !== 'none'
+        && !appointmentForm.repeat_no_end_date
+        && !appointmentForm.repeat_until
+    ) {
+        errorMessage.value = 'Escolhe até quando a marcação se repete ou marca "Sem data limite".'
         return
     }
 
@@ -1742,9 +1798,11 @@ const saveAppointment = async () => {
                         service_uuid: appointmentForm.service_uuid,
                         staff_uuid: selectedStaff.value.uuid,
                         start_at: toDateTimePayload(occurrence.startDate, appointmentForm.start_time),
+                        is_walk_in: appointmentForm.is_walk_in,
                         customer_name: appointmentForm.customer_name,
                         customer_phone: appointmentForm.customer_phone,
                         customer_email: appointmentForm.customer_email,
+                        discount_amount: Number(appointmentForm.discount_amount) || 0,
                         notes: appointmentForm.notes,
                         source: 'manual',
                     },
@@ -1794,6 +1852,7 @@ const editAppointmentFromDetail = () => {
     appointmentEditForm.start_time = start.time
     appointmentEditForm.end_date = end.date
     appointmentEditForm.end_time = end.time
+    appointmentEditForm.discount_amount = modalAppointment.value.discount_amount || ''
     appointmentEditForm.notes = modalAppointment.value.notes || ''
     appointmentEditForm.cancellation_reason = modalAppointment.value.cancellation_reason || ''
 
@@ -1836,6 +1895,9 @@ const saveAppointmentEdit = async () => {
                 end_at: endAt,
                 notes: appointmentEditForm.notes,
                 cancellation_reason: appointmentEditForm.cancellation_reason,
+                ...(isOwnerOrManager.value
+                    ? { discount_amount: Number(appointmentEditForm.discount_amount) || 0 }
+                    : {}),
             },
         })
 
@@ -2387,6 +2449,47 @@ button:disabled {
 .modal-notes {
     margin: 4px 0 0;
     color: var(--tf-ink);
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    font-weight: 800;
+    color: var(--tf-black);
+}
+
+.toggle-row input {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: #d8d1c3;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.toggle-row input::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--tf-white);
+    transition: transform 0.16s ease;
+}
+
+.toggle-row input:checked {
+    background: var(--tf-black);
+}
+
+.toggle-row input:checked::after {
+    transform: translateX(18px);
 }
 
 .two-columns {
