@@ -703,6 +703,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
     min-height: 72px;
     padding: 12px 14px;
     border: 1px solid #eee8da;
@@ -735,9 +736,12 @@ onMounted(async () => {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
 }
 
 .customer-item strong {
+    display: block;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
