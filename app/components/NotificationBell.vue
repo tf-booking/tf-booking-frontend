@@ -353,6 +353,11 @@ onBeforeUnmount(() => {
     border-left-color: var(--tf-black);
 }
 
+.nb-item-recurrence_ending {
+    border-left-color: #f5a623;
+    background: #fff9ef;
+}
+
 .nb-item-top {
     display: flex;
     align-items: baseline;

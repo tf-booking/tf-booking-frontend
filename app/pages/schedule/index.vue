@@ -1543,6 +1543,15 @@ const loadMobileDay = async () => {
     }
 }
 
+const refreshScheduleData = async () => {
+    await loadBlocks()
+    await loadAppointments()
+
+    if (isMobileLayout.value) {
+        await loadMobileDay()
+    }
+}
+
 const shiftMobileDate = (days: number) => {
     const date = new Date(`${mobileDate.value}T00:00:00`)
     date.setDate(date.getDate() + days)
@@ -1633,8 +1642,7 @@ const saveBlock = async () => {
             successMessage.value = 'Bloqueio atualizado com sucesso.'
             resetBlockForm()
             closeModal()
-            await loadBlocks()
-            await loadAppointments()
+            await refreshScheduleData()
         } catch (error: any) {
             console.error(error)
             errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar bloqueio.'
@@ -1699,8 +1707,7 @@ const saveBlock = async () => {
         if (successCount) {
             resetBlockForm()
             closeModal()
-            await loadBlocks()
-            await loadAppointments()
+            await refreshScheduleData()
         }
     } finally {
         isSavingBlock.value = false
@@ -1736,8 +1743,7 @@ const deleteBlockFromModal = async () => {
 
         successMessage.value = 'Bloqueio apagado com sucesso.'
         closeModal()
-        await loadBlocks()
-        await loadAppointments()
+        await refreshScheduleData()
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Não foi possível apagar o bloqueio.'
@@ -1783,6 +1789,8 @@ const saveAppointment = async () => {
         appointmentForm.repeat_until,
     )
 
+    const recurrenceGroup = appointmentForm.repeat !== 'none' ? crypto.randomUUID() : null
+
     try {
         isSavingAppointment.value = true
 
@@ -1803,6 +1811,7 @@ const saveAppointment = async () => {
                         customer_phone: appointmentForm.customer_phone,
                         customer_email: appointmentForm.customer_email,
                         discount_amount: Number(appointmentForm.discount_amount) || 0,
+                        recurrence_group: recurrenceGroup,
                         notes: appointmentForm.notes,
                         source: 'manual',
                     },
@@ -1832,7 +1841,7 @@ const saveAppointment = async () => {
         if (successCount) {
             resetAppointmentForm()
             closeModal()
-            await loadAppointments()
+            await refreshScheduleData()
         }
     } finally {
         isSavingAppointment.value = false
@@ -1903,7 +1912,7 @@ const saveAppointmentEdit = async () => {
 
         successMessage.value = 'Marcação atualizada com sucesso.'
         closeModal()
-        await loadAppointments()
+        await refreshScheduleData()
     } catch (error: any) {
         console.error(error)
         errorMessage.value = error?.data?.detail
@@ -1925,7 +1934,7 @@ const deleteAppointmentFromModal = async () => {
 
         successMessage.value = 'Marcação apagada com sucesso.'
         closeModal()
-        await loadAppointments()
+        await refreshScheduleData()
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Não foi possível apagar a marcação.'
