@@ -394,6 +394,61 @@
                 </div>
 
                 <!-- SEGURANÇA -->
+                <!-- PLANO -->
+                <div v-if="canManageBusiness" v-show="activeTab === 'plano'" class="panel">
+                    <article class="card form-card">
+                        <div class="section-head">
+                            <div>
+                                <p class="section-label">Subscrição</p>
+                                <h2>Plano</h2>
+                            </div>
+                        </div>
+
+                        <p v-if="billingStatusMessage" class="success-message">{{ billingStatusMessage }}</p>
+                        <p v-if="billingError" class="error-message">{{ billingError }}</p>
+
+                        <div class="plan-card" :class="{ 'plan-card-pro': isPro }">
+                            <span class="plan-card-tag">{{ isPro ? 'PRO' : 'GRÁTIS' }}</span>
+
+                            <template v-if="isPro">
+                                <p class="plan-card-title">O teu negócio está no plano Pro.</p>
+                                <p class="plan-card-copy">
+                                    Subscrição de 19,90€/mês, renovada automaticamente até cancelares.
+                                    Gere o método de pagamento, vê faturas ou cancela a qualquer momento.
+                                </p>
+                                <div class="form-actions">
+                                    <button
+                                        class="btn btn-accent"
+                                        type="button"
+                                        :disabled="isRedirecting"
+                                        @click="openBillingPortal"
+                                    >
+                                        {{ isRedirecting ? 'A abrir...' : 'Gerir subscrição' }}
+                                    </button>
+                                </div>
+                            </template>
+
+                            <template v-else>
+                                <p class="plan-card-title">O teu negócio está no plano Grátis.</p>
+                                <p class="plan-card-copy">
+                                    Atualiza para o Pro (19,90€/mês) para desbloqueares estatísticas,
+                                    colaboradores extra, personalização do perfil e integração com o Google Calendar.
+                                </p>
+                                <div class="form-actions">
+                                    <button
+                                        class="btn btn-accent"
+                                        type="button"
+                                        :disabled="isRedirecting"
+                                        @click="startCheckout"
+                                    >
+                                        {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar para o Pro' }}
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </article>
+                </div>
+
                 <div v-show="activeTab === 'seguranca'" class="panel">
                     <article class="card form-card security-card">
                         <div class="section-head">
@@ -496,7 +551,9 @@ type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
 
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
-const { isFree } = usePlan()
+const { isFree, isPro } = usePlan()
+const { isRedirecting, billingError, startCheckout, openBillingPortal } = useBilling()
+const route = useRoute()
 
 const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)
@@ -546,7 +603,7 @@ const userInitials = computed(() => {
         .join('')
 })
 
-type AccountTab = 'perfil' | 'negocio' | 'publico' | 'seguranca'
+type AccountTab = 'perfil' | 'negocio' | 'publico' | 'plano' | 'seguranca'
 
 const activeTab = ref<AccountTab>('perfil')
 
@@ -564,6 +621,10 @@ const tabs = computed(() => {
 
     if (professionalProfileState.value !== 'hidden') {
         list.push({ key: 'publico', label: 'Perfil público' })
+    }
+
+    if (canManageBusiness.value) {
+        list.push({ key: 'plano', label: 'Plano' })
     }
 
     list.push({ key: 'seguranca', label: 'Segurança' })
@@ -1142,8 +1203,26 @@ onBeforeUnmount(() => {
     revokeNewPhotoUrls(businessGallery.value)
 })
 
+const billingStatusMessage = ref('')
+
 onMounted(() => {
     loadProfile()
+
+    const tabQuery = route.query.tab
+    if (tabQuery === 'plano') {
+        activeTab.value = 'plano'
+    }
+
+    if (route.query.billing === 'success') {
+        billingStatusMessage.value = 'Pagamento confirmado! A atualizar o teu plano...'
+        loadCurrentBusiness({ force: true }).then(() => {
+            billingStatusMessage.value = currentBusiness.value?.business_plan === 'pro'
+                ? 'O teu plano Pro já está ativo.'
+                : 'Pagamento recebido - o plano pode demorar alguns segundos a atualizar.'
+        })
+    } else if (route.query.billing === 'cancelled') {
+        billingStatusMessage.value = 'Pagamento não foi concluído. Podes tentar novamente quando quiseres.'
+    }
 })
 </script>
 
@@ -1288,6 +1367,50 @@ onMounted(() => {
     background:
         linear-gradient(180deg, rgba(215, 255, 62, 0.18), rgba(215, 255, 62, 0) 120px),
         var(--tf-white);
+}
+
+.plan-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 24px;
+    border: 1px solid var(--tf-border);
+    border-radius: 16px;
+    background: var(--tf-cream, #f6f2e9);
+}
+
+.plan-card-pro {
+    background: rgba(215, 255, 62, 0.14);
+    border-color: rgba(215, 255, 62, 0.4);
+}
+
+.plan-card-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.plan-card-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--tf-ink);
+}
+
+.plan-card-copy {
+    margin: 0;
+    color: var(--tf-muted);
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .professional-card {

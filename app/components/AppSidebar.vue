@@ -6,9 +6,15 @@
             </NuxtLink>
 
             <div class="s-topbar-actions">
-                <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-mobile-tag">
+                <button
+                    v-if="showUpgradeBadge"
+                    type="button"
+                    class="s-upgrade-mobile-tag"
+                    :disabled="isRedirecting"
+                    @click="startCheckout"
+                >
                     Pro
-                </NuxtLink>
+                </button>
 
                 <NotificationBell />
 
@@ -47,10 +53,16 @@
                 </span>
             </nav>
 
-            <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-pill">
+            <button
+                v-if="showUpgradeBadge"
+                type="button"
+                class="s-upgrade-pill"
+                :disabled="isRedirecting"
+                @click="startCheckout"
+            >
                 <span class="s-upgrade-pill-tag">PRO</span>
-                Atualizar plano
-            </NuxtLink>
+                {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar plano' }}
+            </button>
 
             <div
                 class="s-user"
@@ -82,6 +94,7 @@ const route = useRoute()
 const { logout } = useAuth()
 const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 const { startPolling, stopPolling } = useNotifications()
+const { isRedirecting, startCheckout } = useBilling()
 
 const isMobileMenuOpen = ref(false)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
@@ -264,6 +277,7 @@ watch(
     gap: 8px;
     margin-bottom: 8px;
     padding: 12px 14px;
+    border: 0;
     border-radius: 14px;
     background: var(--tf-accent);
     color: var(--tf-black);
@@ -271,12 +285,21 @@ watch(
     font-size: 13px;
     font-weight: 800;
     white-space: nowrap;
+    cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .s-upgrade-pill:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 20px -10px rgba(215, 255, 62, 0.5);
+}
+
+.s-upgrade-pill:disabled,
+.s-upgrade-mobile-tag:disabled {
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
 }
 
 .s-upgrade-pill-tag {
@@ -474,6 +497,7 @@ watch(
         align-items: center;
         margin-right: 10px;
         padding: 5px 11px;
+        border: 0;
         border-radius: 999px;
         background: var(--tf-accent);
         color: var(--tf-black);
@@ -482,6 +506,7 @@ watch(
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+        cursor: pointer;
     }
 
     .s-upgrade-pill {
