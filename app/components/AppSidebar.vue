@@ -6,10 +6,6 @@
             </NuxtLink>
 
             <div class="s-topbar-actions">
-                <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-pill">
-                    Pro
-                </NuxtLink>
-
                 <NotificationBell />
 
                 <button
@@ -46,6 +42,11 @@
                     {{ soon }}
                 </span>
             </nav>
+
+            <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-pill">
+                <span class="s-upgrade-pill-tag">PRO</span>
+                Atualizar plano
+            </NuxtLink>
 
             <div
                 class="s-user"
@@ -249,18 +250,18 @@ watch(
 }
 
 .s-upgrade-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    height: 30px;
-    padding: 0 12px;
-    border-radius: 999px;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 12px 14px;
+    border-radius: 14px;
     background: var(--tf-accent);
     color: var(--tf-black);
-    font-family: var(--tf-mono);
-    font-size: 11px;
+    font-family: var(--tf-sans);
+    font-size: 13px;
     font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     white-space: nowrap;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -268,6 +269,19 @@ watch(
 .s-upgrade-pill:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 20px -10px rgba(215, 255, 62, 0.5);
+}
+
+.s-upgrade-pill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
 }
 
 .s-menu-toggle {

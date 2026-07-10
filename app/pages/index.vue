@@ -187,8 +187,8 @@
                     <div class="contact-list">
                         <div class="contact-row">
                             <span class="contact-label">Email</span>
-                            <a class="contact-value contact-value-accent" href="mailto:ola@myklenda.com">
-                                ola@myklenda.com
+                            <a class="contact-value contact-value-accent" href="mailto:geral@myklenda.com">
+                                geral@myklenda.com
                             </a>
                         </div>
 

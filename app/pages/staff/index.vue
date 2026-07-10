@@ -8,23 +8,14 @@
                 </div>
 
                 <button
-                    v-if="!(isFree && activeStaffCount >= FREE_PLAN_STAFF_LIMIT)"
-                    class="btn btn-accent header-new-button"
+                    class="btn header-new-button"
+                    :class="isStaffLimitLocked ? 'btn-secondary pro-locked-button' : 'btn-accent'"
                     type="button"
                     @click="openCreateStaff"
                 >
-                    + Novo colaborador
+                    <span v-if="isStaffLimitLocked" class="pro-locked-tag">PRO</span>
+                    {{ isStaffLimitLocked ? 'Adicionar colaborador' : '+ Novo colaborador' }}
                 </button>
-
-                <NuxtLink
-                    v-else
-                    to="/#precos"
-                    class="btn btn-secondary header-new-button pro-locked-button"
-                    title="Disponível no plano Pro"
-                >
-                    <span class="pro-locked-tag">PRO</span>
-                    Adicionar colaborador
-                </NuxtLink>
             </div>
 
             <div v-if="isLoadingBusinesses" class="card empty-card">
@@ -49,7 +40,7 @@
                     </div>
 
                     <ProLock
-                        :locked="isFree && !editingStaff && activeStaffCount >= FREE_PLAN_STAFF_LIMIT"
+                        :locked="!editingStaff && isStaffLimitLocked"
                         message="O plano Grátis permite até 1 colaborador. Atualiza para o Pro para adicionares mais."
                     >
                     <form class="form" @submit.prevent="saveStaff">
@@ -226,7 +217,7 @@
                                         Editar
                                     </button>
 
-                                    <button class="mini-button danger" type="button" @click="deleteStaff(staff)">
+                                    <button class="mini-button danger" type="button" @click="confirmDeleteStaff(staff)">
                                         Apagar
                                     </button>
                                 </div>
@@ -377,6 +368,26 @@
                 +
             </button>
         </section>
+
+        <ConfirmModal
+            v-model:open="proModal.open"
+            tag="PRO"
+            :title="proModal.title"
+            :message="proModal.message"
+            confirm-to="/#precos"
+            confirm-label="Atualizar para o Pro"
+            cancel-label="Agora não"
+        />
+
+        <ConfirmModal
+            v-model:open="confirmModal.open"
+            :title="confirmModal.title"
+            :message="confirmModal.message"
+            confirm-label="Apagar"
+            cancel-label="Cancelar"
+            danger
+            @confirm="handleConfirmModalConfirm"
+        />
     </div>
 </template>
 
@@ -534,6 +545,29 @@ const dayBlockForm = reactive({
 
 const activeStaffCount = computed(() => staffMembers.value.filter((staff) => staff.is_active).length)
 const inactiveStaffCount = computed(() => staffMembers.value.length - activeStaffCount.value)
+const isStaffLimitLocked = computed(() => isFree.value && activeStaffCount.value >= FREE_PLAN_STAFF_LIMIT)
+
+const proModal = reactive({
+    open: false,
+    title: 'Disponível no plano Pro',
+    message: '',
+})
+
+const showProModal = (message: string) => {
+    proModal.message = message
+    proModal.open = true
+}
+
+const confirmModal = reactive({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: null as (() => void) | null,
+})
+
+const handleConfirmModalConfirm = () => {
+    confirmModal.onConfirm?.()
+}
 
 const staffInitials = (name: string) => {
     const words = name.trim().split(/\s+/).filter(Boolean)
@@ -814,6 +848,11 @@ const resetForm = () => {
 }
 
 const pickAvatar = () => {
+    if (isFree.value) {
+        showProModal('A personalização de fotos dos colaboradores está disponível no plano Pro.')
+        return
+    }
+
     avatarInput.value?.click()
 }
 
@@ -849,8 +888,8 @@ const uploadAvatarIfNeeded = async (staffId: number) => {
 const openCreateStaff = async () => {
     resetMessages()
 
-    if (isFree.value && activeStaffCount.value >= FREE_PLAN_STAFF_LIMIT) {
-        errorMessage.value = 'O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.'
+    if (isStaffLimitLocked.value) {
+        showProModal('O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.')
         return
     }
 
@@ -1051,13 +1090,14 @@ const cancelEdit = () => {
     isFormOpen.value = false
 }
 
+const confirmDeleteStaff = (staff: StaffMember) => {
+    confirmModal.title = 'Apagar colaborador?'
+    confirmModal.message = `Tens a certeza que queres apagar "${staff.name}"? Esta ação não pode ser revertida.`
+    confirmModal.onConfirm = () => deleteStaff(staff)
+    confirmModal.open = true
+}
+
 const deleteStaff = async (staff: StaffMember) => {
-    const confirmed = window.confirm(`Tens a certeza que queres apagar "${staff.name}"?`)
-
-    if (!confirmed) {
-        return
-    }
-
     try {
         resetMessages()
 
