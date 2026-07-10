@@ -472,9 +472,13 @@ watch(
     .s-upgrade-mobile-tag {
         display: inline-flex;
         align-items: center;
-        color: var(--tf-accent);
+        margin-right: 10px;
+        padding: 5px 11px;
+        border-radius: 999px;
+        background: var(--tf-accent);
+        color: var(--tf-black);
         font-family: var(--tf-mono);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
