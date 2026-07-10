@@ -217,6 +217,16 @@
                                         Editar
                                     </button>
 
+                                    <button
+                                        v-if="staff.access_status !== 'active' && staff.email"
+                                        class="mini-button"
+                                        type="button"
+                                        :disabled="invitingStaffId === staff.id"
+                                        @click="inviteStaff(staff)"
+                                    >
+                                        {{ invitingStaffId === staff.id ? 'A convidar...' : staff.access_status === 'pending' ? 'Reenviar convite' : 'Convidar' }}
+                                    </button>
+
                                     <button class="mini-button danger" type="button" @click="confirmDeleteStaff(staff)">
                                         Apagar
                                     </button>
@@ -487,6 +497,7 @@ const isFormOpen = ref(false)
 
 const errorMessage = ref('')
 const successMessage = ref('')
+const invitingStaffId = ref<number | null>(null)
 
 const editingStaff = ref<StaffMember | null>(null)
 
@@ -1095,6 +1106,24 @@ const confirmDeleteStaff = (staff: StaffMember) => {
     confirmModal.message = `Tens a certeza que queres apagar "${staff.name}"? Esta ação não pode ser revertida.`
     confirmModal.onConfirm = () => deleteStaff(staff)
     confirmModal.open = true
+}
+
+const inviteStaff = async (staff: StaffMember) => {
+    try {
+        resetMessages()
+        invitingStaffId.value = staff.id
+
+        await apiFetch(`/staff/${staff.id}/invite/`, { method: 'POST' })
+
+        successMessage.value = `Convite enviado para ${staff.email}.`
+
+        await loadStaff()
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = error?.data?.detail || 'Não foi possível enviar o convite.'
+    } finally {
+        invitingStaffId.value = null
+    }
 }
 
 const deleteStaff = async (staff: StaffMember) => {
