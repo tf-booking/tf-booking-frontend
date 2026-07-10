@@ -6,6 +6,10 @@
             </NuxtLink>
 
             <div class="s-topbar-actions">
+                <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-mobile-tag">
+                    Pro
+                </NuxtLink>
+
                 <NotificationBell />
 
                 <button
@@ -249,6 +253,10 @@ watch(
     gap: 10px;
 }
 
+.s-upgrade-mobile-tag {
+    display: none;
+}
+
 .s-upgrade-pill {
     display: flex;
     align-items: center;
@@ -459,6 +467,21 @@ watch(
         font-weight: 900;
         line-height: 1;
         cursor: pointer;
+    }
+
+    .s-upgrade-mobile-tag {
+        display: inline-flex;
+        align-items: center;
+        color: var(--tf-accent);
+        font-family: var(--tf-mono);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .s-upgrade-pill {
+        display: none;
     }
 
     .s-panel {

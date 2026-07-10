@@ -21,13 +21,6 @@
                             {{ googleCalendarButtonLabel }}
                         </button>
 
-                        <p
-                            v-if="selectedBusiness"
-                            class="integration-hint"
-                            :class="{ connected: googleCalendarStatus.is_connected }"
-                        >
-                            {{ googleCalendarHint }}
-                        </p>
                     </div>
                 </div>
             </div>
