@@ -191,12 +191,11 @@ const handleLogin = async () => {
     position: relative;
     z-index: 1;
     display: inline-flex;
-    align-items: center;
-    gap: 14px;
+    align-items: baseline;
     width: fit-content;
-    font-size: 20px;
+    font-size: 32px;
     font-weight: 900;
-    letter-spacing: 0;
+    letter-spacing: -0.02em;
 }
 
 .brand-dot {
@@ -450,7 +449,7 @@ const handleLogin = async () => {
     }
 
     .brand-logo {
-        font-size: 16px;
+        font-size: 22px;
     }
 
     .brand-copy h2 {

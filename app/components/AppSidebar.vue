@@ -216,13 +216,12 @@ watch(
 
 .s-brand {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    align-items: baseline;
     min-width: 0;
     padding: 0 8px 26px;
     font-weight: 900;
-    font-size: 17px;
-    letter-spacing: 0;
+    font-size: 24px;
+    letter-spacing: -0.02em;
 }
 
 .s-brand-dot {
@@ -394,7 +393,7 @@ watch(
 
     .s-brand {
         padding: 0;
-        font-size: 16px;
+        font-size: 20px;
     }
 
     .s-menu-toggle {

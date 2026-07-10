@@ -100,6 +100,77 @@
                 </div>
             </div>
         </section>
+
+        <section class="section pricing-section">
+            <div class="container">
+                <p class="tf-eyebrow">Planos</p>
+
+                <div class="section-heading">
+                    <h2>Escolhe o plano do teu negócio.</h2>
+
+                    <p>
+                        Sem fidelização, cancela quando quiseres. Começa grátis e passa a Pro
+                        quando precisares de mais colaboradores e de um perfil à tua imagem.
+                    </p>
+                </div>
+
+                <div class="pricing-grid">
+                    <article class="card pricing-card">
+                        <p class="pricing-tier">Grátis</p>
+
+                        <div class="pricing-price">
+                            <span class="pricing-amount">0€</span>
+                        </div>
+
+                        <p class="pricing-detail">para sempre, 1 profissional</p>
+
+                        <ul class="pricing-features">
+                            <li>Página de marcação online</li>
+                            <li>Agenda e calendário</li>
+                            <li>Notificações por email</li>
+                            <li class="pricing-feature-off">Personalização do perfil</li>
+                            <li class="pricing-feature-off">Estatísticas do negócio</li>
+                            <li class="pricing-feature-off">Notificações SMS</li>
+                        </ul>
+
+                        <NuxtLink to="/dashboard" class="btn btn-secondary pricing-cta">
+                            Começar grátis
+                        </NuxtLink>
+                    </article>
+
+                    <article class="card pricing-card pricing-card-pro">
+                        <span class="pricing-badge">Mais popular</span>
+
+                        <p class="pricing-tier pricing-tier-accent">Pro</p>
+
+                        <div class="pricing-price">
+                            <span class="pricing-amount">19,90€</span>
+                            <span class="pricing-period">/mês</span>
+                        </div>
+
+                        <p class="pricing-detail">até 3 colaboradores incluídos</p>
+
+                        <ul class="pricing-features">
+                            <li>Tudo do Grátis</li>
+                            <li>Perfil 100% personalizável</li>
+                            <li>Estatísticas do negócio</li>
+                            <li>Integração Google Calendar</li>
+                            <li>100 SMS de lembrete incluídos/mês</li>
+                            <li>Colaborador extra: +3,99€/mês</li>
+                        </ul>
+
+                        <NuxtLink to="/dashboard" class="btn btn-accent pricing-cta">
+                            Testar 14 dias grátis
+                        </NuxtLink>
+                    </article>
+                </div>
+
+                <p class="pricing-footnote">
+                    Colaborador extra: 3,99€/mês por colaborador além dos 3 incluídos.
+                    SMS extra além dos incluídos no Pro: 0,04€/SMS.
+                </p>
+            </div>
+        </section>
     </div>
 </template>
 
@@ -279,11 +350,145 @@
     line-height: 1.55;
 }
 
+.pricing-section {
+    padding-bottom: 96px;
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.pricing-card {
+    position: relative;
+    padding: 32px;
+}
+
+.pricing-card-pro {
+    background: var(--tf-black);
+    color: var(--tf-white);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.pricing-badge {
+    position: absolute;
+    top: -14px;
+    left: 32px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--tf-accent);
+    color: var(--tf-black);
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pricing-tier {
+    margin: 0 0 18px;
+    font-family: var(--tf-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tf-muted);
+}
+
+.pricing-tier-accent {
+    color: var(--tf-accent);
+}
+
+.pricing-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.pricing-amount {
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1;
+}
+
+.pricing-period {
+    color: var(--tf-muted);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.pricing-card-pro .pricing-period {
+    color: #b7b3aa;
+}
+
+.pricing-detail {
+    margin: 12px 0 0;
+    color: var(--tf-muted);
+    font-size: 14px;
+}
+
+.pricing-card-pro .pricing-detail {
+    color: #b7b3aa;
+}
+
+.pricing-features {
+    display: grid;
+    gap: 14px;
+    margin: 28px 0 0;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--tf-border);
+    list-style: none;
+}
+
+.pricing-card-pro .pricing-features {
+    border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.pricing-features li {
+    padding-left: 26px;
+    position: relative;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.pricing-features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--tf-accent);
+    font-weight: 900;
+}
+
+.pricing-feature-off {
+    color: var(--tf-muted);
+}
+
+.pricing-feature-off::before {
+    content: "–" !important;
+    color: var(--tf-muted) !important;
+}
+
+.pricing-cta {
+    width: 100%;
+    margin-top: 28px;
+}
+
+.pricing-footnote {
+    margin: 20px 0 0;
+    color: var(--tf-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
 @media (max-width: 900px) {
 
     .hero-grid,
     .section-heading,
-    .feature-grid {
+    .feature-grid,
+    .pricing-grid {
         grid-template-columns: 1fr;
     }
 

@@ -22,18 +22,17 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 32px;
-    background: rgba(245, 242, 236, 0.88);
-    backdrop-filter: blur(18px);
-    border-bottom: 1px solid var(--tf-border);
+    background: var(--tf-black);
+    border-bottom: 1px solid #1c1c22;
 }
 
 .brand {
     display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
+    align-items: baseline;
+    font-size: 28px;
     font-weight: 950;
     letter-spacing: -0.04em;
+    color: var(--tf-white);
 }
 
 .brand-dot {
@@ -46,18 +45,18 @@
     gap: 24px;
     font-size: 14px;
     font-weight: 850;
-    color: var(--tf-muted);
+    color: #b7b3aa;
 }
 
 .nav a.router-link-active {
-    color: var(--tf-black);
+    color: var(--tf-white);
 }
 
 .login-link {
     padding: 10px 16px;
-    border: 1px solid var(--tf-black);
+    border: 1px solid var(--tf-accent);
     border-radius: 999px;
-    color: var(--tf-black);
+    color: var(--tf-white);
 }
 
 @media (max-width: 760px) {
