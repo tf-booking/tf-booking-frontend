@@ -1,8 +1,7 @@
 <template>
     <header class="app-header">
         <NuxtLink to="/" class="brand">
-            <span class="brand-mark">TF</span>
-            <span>Booking</span>
+            klenda<span class="brand-dot">.</span>
         </NuxtLink>
 
         <nav class="nav">
@@ -37,16 +36,8 @@
     letter-spacing: -0.04em;
 }
 
-.brand-mark {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--tf-black);
-    color: var(--tf-white);
-    font-size: 13px;
-    letter-spacing: -0.02em;
+.brand-dot {
+    color: var(--tf-accent);
 }
 
 .nav {

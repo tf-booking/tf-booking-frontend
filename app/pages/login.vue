@@ -3,8 +3,7 @@
         <div class="login-shell">
             <aside class="brand-panel">
                 <div class="brand-logo">
-                    <span class="brand-mark">TF</span>
-                    <span>Booking</span>
+                    klenda<span class="brand-dot">.</span>
                 </div>
 
                 <div class="brand-copy">
@@ -23,7 +22,7 @@
                     Powered by TF Creative
                 </div>
 
-                <div class="brand-watermark">booking</div>
+                <div class="brand-watermark">klenda</div>
             </aside>
 
             <section class="form-panel">
@@ -200,16 +199,8 @@ const handleLogin = async () => {
     letter-spacing: 0;
 }
 
-.brand-mark {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    background: var(--tf-accent);
-    color: var(--tf-black);
-    font-size: 14px;
-    font-weight: 900;
+.brand-dot {
+    color: var(--tf-accent);
 }
 
 .brand-copy {
@@ -460,11 +451,6 @@ const handleLogin = async () => {
 
     .brand-logo {
         font-size: 16px;
-    }
-
-    .brand-mark {
-        width: 38px;
-        height: 38px;
     }
 
     .brand-copy h2 {

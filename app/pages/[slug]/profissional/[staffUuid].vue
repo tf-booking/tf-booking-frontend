@@ -2,7 +2,7 @@
     <div class="profile-viewport">
         <div class="device">
             <section v-if="isLoading" class="state-screen">
-                <div class="state-mark">TF</div>
+                <div class="state-mark">K</div>
                 <p class="step-count">A carregar</p>
                 <h1>A preparar o perfil...</h1>
             </section>
@@ -268,7 +268,7 @@ const serviceChips = computed(() =>
 useHead(() => ({
     title: staffMember.value && business.value
         ? `${staffMember.value.name} | ${business.value.name}`
-        : 'Profissional | TF Booking',
+        : 'Profissional | Klenda',
 }))
 
 const staffInitials = (name: string) =>

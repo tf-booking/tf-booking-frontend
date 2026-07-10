@@ -2,8 +2,7 @@
     <aside class="sidebar">
         <div class="s-topbar">
             <NuxtLink to="/dashboard" class="s-brand" @click="closeMobileMenu">
-                <span class="s-mark">TF</span>
-                Booking
+                klenda<span class="s-brand-dot">.</span>
             </NuxtLink>
 
             <div class="s-topbar-actions">
@@ -116,7 +115,7 @@ const comingSoon = computed(() => isStaffOnly.value ? [] : ['Marketing'])
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
-const businessName = computed(() => currentBusiness.value?.business_name || 'TF Booking')
+const businessName = computed(() => currentBusiness.value?.business_name || 'Klenda')
 
 const businessRoleLabel = computed(() => {
     const role = currentBusiness.value?.role || ''
@@ -127,7 +126,7 @@ const businessInitials = computed(() => {
     const words = businessName.value.trim().split(/\s+/).filter(Boolean)
 
     if (!words.length) {
-        return 'TF'
+        return 'K'
     }
 
     return words
@@ -226,16 +225,8 @@ watch(
     letter-spacing: 0;
 }
 
-.s-mark {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: var(--tf-accent);
-    color: var(--tf-black);
-    font-size: 12px;
+.s-brand-dot {
+    color: var(--tf-accent);
 }
 
 .s-topbar-actions {

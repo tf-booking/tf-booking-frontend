@@ -3,7 +3,7 @@
         <section class="hero section">
             <div class="container hero-grid">
                 <div class="hero-copy">
-                    <p class="tf-eyebrow">TF Creative · Booking System</p>
+                    <p class="tf-eyebrow">TF Creative · Klenda</p>
 
                     <h1 class="tf-title">
                         Marcações online com presença de marca.
@@ -27,7 +27,7 @@
 
                 <div class="hero-panel">
                     <div class="floating-word word-one">creative</div>
-                    <div class="floating-word word-two">booking</div>
+                    <div class="floating-word word-two">klenda</div>
 
                     <article class="card booking-card">
                         <div class="card-header">

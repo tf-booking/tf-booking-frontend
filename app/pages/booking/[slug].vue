@@ -2,7 +2,7 @@
     <div class="booking-viewport">
         <div class="device">
             <section v-if="isLoadingBusiness" class="screen state-screen">
-                <div class="state-mark">TF</div>
+                <div class="state-mark">K</div>
                 <p class="step-count">A carregar</p>
                 <h2>A preparar a página de marcações...</h2>
             </section>
@@ -24,7 +24,7 @@
                         :alt="business.name"
                     />
                     <div class="hero-overlay"></div>
-                    <div class="hero-brand">TF Booking</div>
+                    <div class="hero-brand">klenda<span style="color:var(--tf-accent)">.</span></div>
                     <div class="hero-title">
                         <h1>{{ business.name }}</h1>
                         <div class="hero-meta">

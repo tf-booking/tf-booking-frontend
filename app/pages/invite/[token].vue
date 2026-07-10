@@ -24,7 +24,7 @@
                     <h1>Junta-te a {{ invite.business_name }}</h1>
                     <p class="invite-copy">
                         {{ invite.staff_name }}, foste convidado para fazeres parte da equipa
-                        de {{ invite.business_name }} no TF Booking ({{ invite.email }}).
+                        de {{ invite.business_name }} na Klenda ({{ invite.email }}).
                     </p>
 
                     <form class="form" @submit.prevent="acceptInvite">
