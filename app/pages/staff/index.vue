@@ -7,9 +7,24 @@
                     <h1>Equipa</h1>
                 </div>
 
-                <button class="btn btn-accent header-new-button" type="button" @click="openCreateStaff">
+                <button
+                    v-if="!(isFree && activeStaffCount >= FREE_PLAN_STAFF_LIMIT)"
+                    class="btn btn-accent header-new-button"
+                    type="button"
+                    @click="openCreateStaff"
+                >
                     + Novo colaborador
                 </button>
+
+                <NuxtLink
+                    v-else
+                    to="/#precos"
+                    class="btn btn-secondary header-new-button pro-locked-button"
+                    title="Disponível no plano Pro"
+                >
+                    <span class="pro-locked-tag">PRO</span>
+                    Adicionar colaborador
+                </NuxtLink>
             </div>
 
             <div v-if="isLoadingBusinesses" class="card empty-card">
@@ -33,6 +48,10 @@
                         </button>
                     </div>
 
+                    <ProLock
+                        :locked="isFree && !editingStaff && activeStaffCount >= FREE_PLAN_STAFF_LIMIT"
+                        message="O plano Grátis permite até 1 colaborador. Atualiza para o Pro para adicionares mais."
+                    >
                     <form class="form" @submit.prevent="saveStaff">
                         <div class="avatar-field">
                             <div class="avatar-preview">
@@ -133,6 +152,7 @@
                             </button>
                         </div>
                     </form>
+                    </ProLock>
                 </article>
 
                 <article class="card list-card">
@@ -437,6 +457,9 @@ type StaffBlock = {
 }
 
 const { apiFetch } = useApi()
+const { isFree } = usePlan()
+
+const FREE_PLAN_STAFF_LIMIT = 1
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -825,6 +848,12 @@ const uploadAvatarIfNeeded = async (staffId: number) => {
 
 const openCreateStaff = async () => {
     resetMessages()
+
+    if (isFree.value && activeStaffCount.value >= FREE_PLAN_STAFF_LIMIT) {
+        errorMessage.value = 'O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.'
+        return
+    }
+
     resetForm()
     isFormOpen.value = true
     await focusForm()
@@ -1086,6 +1115,25 @@ onBeforeUnmount(() => {
 
 .staff-header .tf-eyebrow {
     margin-bottom: 8px;
+}
+
+.pro-locked-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pro-locked-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
 }
 
 .staff-grid {

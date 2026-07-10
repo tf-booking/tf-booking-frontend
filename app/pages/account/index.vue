@@ -94,80 +94,85 @@
                         </div>
 
                         <form class="form" @submit.prevent="saveBusinessProfile">
-                            <!-- capa -->
-                            <div class="photo-block">
-                                <div class="photo-head">
-                                    <div>
-                                        <label class="label">Foto de capa</label>
-                                        <p class="photo-help">A imagem principal, usada como capa da tua página pública.</p>
-                                    </div>
-
-                                    <button class="btn btn-secondary photo-add" type="button" @click="triggerBusinessCoverPicker">
-                                        {{ businessCover ? 'Alterar capa' : 'Escolher capa' }}
-                                    </button>
-
-                                    <input
-                                        ref="businessCoverInputRef"
-                                        class="photo-input"
-                                        type="file"
-                                        accept="image/*"
-                                        @change="handleBusinessCoverInput"
-                                    />
-                                </div>
-
-                                <div v-if="businessCover" class="cover-slot">
-                                    <img :src="businessCover.url" alt="Capa do negócio" />
-                                    <button class="photo-remove" type="button" @click="removeBusinessCover">Remover</button>
-                                </div>
-
-                                <p v-else class="empty-photo-state">Ainda nao escolheste uma foto de capa.</p>
-                            </div>
-
-                            <!-- galeria -->
-                            <div class="photo-block">
-                                <div class="photo-head">
-                                    <div>
-                                        <label class="label">Galeria de fotos</label>
-                                        <p class="photo-help">Aparecem na página pública. Máximo {{ maxBusinessGallery }} fotos.</p>
-                                    </div>
-
-                                    <button
-                                        class="btn btn-secondary photo-add"
-                                        type="button"
-                                        :disabled="businessGallery.length >= maxBusinessGallery"
-                                        @click="triggerBusinessGalleryPicker"
-                                    >
-                                        Adicionar fotos
-                                    </button>
-
-                                    <input
-                                        ref="businessGalleryInputRef"
-                                        class="photo-input"
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        @change="handleBusinessGalleryInput"
-                                    />
-                                </div>
-
-                                <div v-if="businessGallery.length" class="photo-grid">
-                                    <article
-                                        v-for="(photo, index) in businessGallery"
-                                        :key="photo.id"
-                                        class="photo-card"
-                                    >
-                                        <img :src="photo.url" :alt="`Foto ${index + 1}`" />
-                                        <div class="photo-meta">
-                                            <span class="photo-badge">Foto {{ index + 1 }}</span>
-                                            <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(photo.id)">
-                                                Remover
-                                            </button>
+                            <ProLock
+                                :locked="isFree"
+                                message="A personalização do perfil (fotos de capa e galeria) está disponível no plano Pro."
+                            >
+                                <!-- capa -->
+                                <div class="photo-block">
+                                    <div class="photo-head">
+                                        <div>
+                                            <label class="label">Foto de capa</label>
+                                            <p class="photo-help">A imagem principal, usada como capa da tua página pública.</p>
                                         </div>
-                                    </article>
+
+                                        <button class="btn btn-secondary photo-add" type="button" @click="triggerBusinessCoverPicker">
+                                            {{ businessCover ? 'Alterar capa' : 'Escolher capa' }}
+                                        </button>
+
+                                        <input
+                                            ref="businessCoverInputRef"
+                                            class="photo-input"
+                                            type="file"
+                                            accept="image/*"
+                                            @change="handleBusinessCoverInput"
+                                        />
+                                    </div>
+
+                                    <div v-if="businessCover" class="cover-slot">
+                                        <img :src="businessCover.url" alt="Capa do negócio" />
+                                        <button class="photo-remove" type="button" @click="removeBusinessCover">Remover</button>
+                                    </div>
+
+                                    <p v-else class="empty-photo-state">Ainda nao escolheste uma foto de capa.</p>
                                 </div>
 
-                                <p v-else class="empty-photo-state">Ainda nao tens fotos na galeria.</p>
-                            </div>
+                                <!-- galeria -->
+                                <div class="photo-block">
+                                    <div class="photo-head">
+                                        <div>
+                                            <label class="label">Galeria de fotos</label>
+                                            <p class="photo-help">Aparecem na página pública. Máximo {{ maxBusinessGallery }} fotos.</p>
+                                        </div>
+
+                                        <button
+                                            class="btn btn-secondary photo-add"
+                                            type="button"
+                                            :disabled="businessGallery.length >= maxBusinessGallery"
+                                            @click="triggerBusinessGalleryPicker"
+                                        >
+                                            Adicionar fotos
+                                        </button>
+
+                                        <input
+                                            ref="businessGalleryInputRef"
+                                            class="photo-input"
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            @change="handleBusinessGalleryInput"
+                                        />
+                                    </div>
+
+                                    <div v-if="businessGallery.length" class="photo-grid">
+                                        <article
+                                            v-for="(photo, index) in businessGallery"
+                                            :key="photo.id"
+                                            class="photo-card"
+                                        >
+                                            <img :src="photo.url" :alt="`Foto ${index + 1}`" />
+                                            <div class="photo-meta">
+                                                <span class="photo-badge">Foto {{ index + 1 }}</span>
+                                                <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(photo.id)">
+                                                    Remover
+                                                </button>
+                                            </div>
+                                        </article>
+                                    </div>
+
+                                    <p v-else class="empty-photo-state">Ainda nao tens fotos na galeria.</p>
+                                </div>
+                            </ProLock>
 
                             <div>
                                 <label class="label">Nome do negócio</label>
@@ -491,6 +496,7 @@ type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
 
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
+const { isFree } = usePlan()
 
 const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)

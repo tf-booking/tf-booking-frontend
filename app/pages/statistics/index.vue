@@ -40,69 +40,74 @@
             <template v-else>
                 <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-                <div class="kpi-grid">
-                    <article class="kpi kpi-dark">
-                        <p class="kpi-label kpi-label-accent">Marcações</p>
-                        <div class="kpi-value">{{ isLoadingStats ? '—' : statistics.appointments_count }}</div>
-                        <p class="kpi-foot">Não inclui canceladas</p>
-                    </article>
+                <ProLock
+                    :locked="isFree"
+                    message="As estatísticas do negócio estão disponíveis no plano Pro."
+                >
+                    <div class="kpi-grid">
+                        <article class="kpi kpi-dark">
+                            <p class="kpi-label kpi-label-accent">Marcações</p>
+                            <div class="kpi-value">{{ isFree ? '128' : (isLoadingStats ? '—' : statistics.appointments_count) }}</div>
+                            <p class="kpi-foot">Não inclui canceladas</p>
+                        </article>
 
-                    <article class="kpi">
-                        <p class="kpi-label">Volume faturado</p>
-                        <div class="kpi-value">{{ isLoadingStats ? '—' : formatCurrency(statistics.revenue_total) }}</div>
-                        <p class="kpi-foot">Marcações já realizadas</p>
-                    </article>
-                </div>
+                        <article class="kpi">
+                            <p class="kpi-label">Volume faturado</p>
+                            <div class="kpi-value">{{ isFree ? formatCurrency(2140) : (isLoadingStats ? '—' : formatCurrency(statistics.revenue_total)) }}</div>
+                            <p class="kpi-foot">Marcações já realizadas</p>
+                        </article>
+                    </div>
 
-                <div class="statistics-grid">
-                    <article class="card panel">
-                        <div class="panel-head">
-                            <h2>Top serviços</h2>
-                        </div>
+                    <div class="statistics-grid">
+                        <article class="card panel">
+                            <div class="panel-head">
+                                <h2>Top serviços</h2>
+                            </div>
 
-                        <p v-if="isLoadingStats" class="muted-text">A carregar...</p>
+                            <p v-if="isLoadingStats && !isFree" class="muted-text">A carregar...</p>
 
-                        <p v-else-if="statistics.top_services.length === 0" class="muted-text">
-                            Sem marcações neste período.
-                        </p>
+                            <p v-else-if="!isFree && statistics.top_services.length === 0" class="muted-text">
+                                Sem marcações neste período.
+                            </p>
 
-                        <div v-else class="bar-list">
-                            <div v-for="row in statistics.top_services" :key="row.service_uuid" class="bar-row">
-                                <div class="bar-row-top">
-                                    <span class="bar-label">{{ row.service_name }}</span>
-                                    <span class="bar-value">{{ row.count }}</span>
-                                </div>
-                                <div class="bar-track">
-                                    <div class="bar-fill" :style="{ width: barWidth(row.count, maxServiceCount) + '%' }"></div>
+                            <div v-else class="bar-list">
+                                <div v-for="row in (isFree ? demoServiceRows : statistics.top_services)" :key="row.service_uuid" class="bar-row">
+                                    <div class="bar-row-top">
+                                        <span class="bar-label">{{ row.service_name }}</span>
+                                        <span class="bar-value">{{ row.count }}</span>
+                                    </div>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" :style="{ width: barWidth(row.count, isFree ? 69 : maxServiceCount) + '%' }"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </article>
+                        </article>
 
-                    <article class="card panel">
-                        <div class="panel-head">
-                            <h2>Marcações por colaborador</h2>
-                        </div>
+                        <article class="card panel">
+                            <div class="panel-head">
+                                <h2>Marcações por colaborador</h2>
+                            </div>
 
-                        <p v-if="isLoadingStats" class="muted-text">A carregar...</p>
+                            <p v-if="isLoadingStats && !isFree" class="muted-text">A carregar...</p>
 
-                        <p v-else-if="statistics.appointments_by_staff.length === 0" class="muted-text">
-                            Sem marcações neste período.
-                        </p>
+                            <p v-else-if="!isFree && statistics.appointments_by_staff.length === 0" class="muted-text">
+                                Sem marcações neste período.
+                            </p>
 
-                        <div v-else class="bar-list">
-                            <div v-for="row in statistics.appointments_by_staff" :key="row.staff_uuid" class="bar-row">
-                                <div class="bar-row-top">
-                                    <span class="bar-label">{{ row.staff_name }}</span>
-                                    <span class="bar-value">{{ row.count }}</span>
-                                </div>
-                                <div class="bar-track">
-                                    <div class="bar-fill" :style="{ width: barWidth(row.count, maxStaffCount) + '%' }"></div>
+                            <div v-else class="bar-list">
+                                <div v-for="row in (isFree ? demoStaffRows : statistics.appointments_by_staff)" :key="row.staff_uuid" class="bar-row">
+                                    <div class="bar-row-top">
+                                        <span class="bar-label">{{ row.staff_name }}</span>
+                                        <span class="bar-value">{{ row.count }}</span>
+                                    </div>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" :style="{ width: barWidth(row.count, isFree ? 123 : maxStaffCount) + '%' }"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </article>
-                </div>
+                        </article>
+                    </div>
+                </ProLock>
             </template>
         </section>
     </div>
@@ -153,12 +158,24 @@ const emptyStatistics: Statistics = {
 }
 
 const { apiFetch } = useApi()
+const { isFree } = usePlan()
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
 const isLoadingBusinesses = ref(false)
 
 const statistics = ref<Statistics>({ ...emptyStatistics })
+
+const demoServiceRows: StatServiceRow[] = [
+    { service_uuid: 'demo-1', service_name: 'Corte de cabelo', count: 69 },
+    { service_uuid: 'demo-2', service_name: 'Corte + Barba', count: 47 },
+    { service_uuid: 'demo-3', service_name: 'Barba', count: 12 },
+]
+
+const demoStaffRows: StatStaffRow[] = [
+    { staff_uuid: 'demo-1', staff_name: 'Pedro', count: 123 },
+    { staff_uuid: 'demo-2', staff_name: 'Kiko', count: 16 },
+]
 const isLoadingStats = ref(false)
 const errorMessage = ref('')
 
@@ -237,6 +254,10 @@ const loadBusinesses = async () => {
 
 const loadStatistics = async () => {
     if (!selectedBusiness.value || !startDate.value || !endDate.value) {
+        return
+    }
+
+    if (isFree.value) {
         return
     }
 

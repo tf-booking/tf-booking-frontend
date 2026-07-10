@@ -558,6 +558,7 @@ type GoogleCalendarStatus = {
 }
 
 const { apiFetch } = useApi()
+const { isFree } = usePlan()
 const route = useRoute()
 const router = useRouter()
 const { businesses: membershipBusinesses, loadCurrentBusiness } = useCurrentBusiness()
@@ -750,6 +751,10 @@ const googleCalendarButtonLabel = computed(() => {
         return 'Google Calendar ligado'
     }
 
+    if (isFree.value) {
+        return 'Google Calendar (Pro)'
+    }
+
     return 'Conectar Google Calendar'
 })
 
@@ -776,6 +781,7 @@ const isGoogleCalendarButtonDisabled = computed(() => {
         || !googleCalendarStatus.can_connect
         || isLoadingGoogleCalendarStatus.value
         || isConnectingGoogleCalendar.value
+        || (isFree.value && !googleCalendarStatus.is_connected)
     )
 })
 
