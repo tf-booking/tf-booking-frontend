@@ -75,7 +75,7 @@
                     </form>
 
                     <div class="form-footer">
-                        Acesso fornecido pela equipa TF Creative.
+                        Ainda não tens conta? <NuxtLink to="/signup">Criar conta grátis</NuxtLink>
                     </div>
                 </div>
             </section>
@@ -380,8 +380,10 @@ const handleLogin = async () => {
     font-size: 16px;
 }
 
-.form-footer strong {
+.form-footer a {
     color: var(--tf-black);
+    font-weight: 800;
+    text-decoration: underline;
 }
 
 .error-message {
@@ -418,16 +420,11 @@ const handleLogin = async () => {
 
     .brand-copy h2 {
         max-width: 16ch;
-        font-size: clamp(26px, 7vw, 38px);
-        line-height: 1.05;
+        font-size: clamp(24px, 6.4vw, 34px);
+        line-height: 1.08;
     }
 
-    .brand-lede {
-        margin-top: 14px;
-        font-size: 14px;
-        line-height: 1.45;
-    }
-
+    .brand-lede,
     .brand-footer {
         display: none;
     }
@@ -453,12 +450,7 @@ const handleLogin = async () => {
     }
 
     .brand-copy h2 {
-        font-size: clamp(22px, 8vw, 30px);
-    }
-
-    .brand-lede {
-        margin-top: 10px;
-        font-size: 13px;
+        font-size: clamp(20px, 7vw, 26px);
     }
 
     .form-panel {

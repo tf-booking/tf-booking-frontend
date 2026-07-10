@@ -3,6 +3,7 @@ export type BusinessMembership = {
     business_uuid: string
     business_name: string
     business_slug: string
+    business_plan: string
     role: string
     is_active: boolean
     created_at: string

@@ -6,6 +6,10 @@
             </NuxtLink>
 
             <div class="s-topbar-actions">
+                <NuxtLink v-if="showUpgradeBadge" to="/#precos" class="s-upgrade-pill">
+                    Pro
+                </NuxtLink>
+
                 <NotificationBell />
 
                 <button
@@ -100,6 +104,16 @@ const staffItems = [
 ]
 
 const isStaffOnly = computed(() => currentBusiness.value?.role === 'staff')
+
+const showUpgradeBadge = computed(() => {
+    const business = currentBusiness.value
+
+    if (!business || isStaffOnly.value) {
+        return false
+    }
+
+    return business.business_plan !== 'pro'
+})
 
 const items = computed(() => {
     if (isStaffOnly.value) {
@@ -232,6 +246,28 @@ watch(
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.s-upgrade-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--tf-accent);
+    color: var(--tf-black);
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.s-upgrade-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px rgba(215, 255, 62, 0.5);
 }
 
 .s-menu-toggle {
