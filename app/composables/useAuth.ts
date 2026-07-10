@@ -69,6 +69,7 @@ export const useAuth = () => {
         refreshToken,
         isAuthenticated,
         loadTokens,
+        setTokens,
         login,
         logout,
         clearTokens,

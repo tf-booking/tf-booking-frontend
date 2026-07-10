@@ -15,13 +15,13 @@
                     </p>
 
                     <div class="hero-actions">
-                        <NuxtLink to="/dashboard" class="btn btn-accent">
-                            Entrar no dashboard
-                        </NuxtLink>
+                        <a href="#precos" class="btn btn-accent">
+                            Ver preços
+                        </a>
 
-                        <NuxtLink to="/booking/demo" class="btn btn-secondary">
-                            Ver página pública
-                        </NuxtLink>
+                        <a href="#contacto" class="btn btn-secondary">
+                            Contactar
+                        </a>
                     </div>
                 </div>
 
@@ -101,7 +101,7 @@
             </div>
         </section>
 
-        <section class="section pricing-section">
+        <section id="precos" class="section pricing-section">
             <div class="container">
                 <p class="tf-eyebrow">Planos</p>
 
@@ -133,7 +133,7 @@
                             <li class="pricing-feature-off">Notificações SMS</li>
                         </ul>
 
-                        <NuxtLink to="/dashboard" class="btn btn-secondary pricing-cta">
+                        <NuxtLink to="/signup" class="btn btn-secondary pricing-cta">
                             Começar grátis
                         </NuxtLink>
                     </article>
@@ -159,7 +159,7 @@
                             <li>Colaborador extra: +3,99€/mês</li>
                         </ul>
 
-                        <NuxtLink to="/dashboard" class="btn btn-accent pricing-cta">
+                        <NuxtLink to="/signup?plano=pro" class="btn btn-accent pricing-cta">
                             Testar 14 dias grátis
                         </NuxtLink>
                     </article>
@@ -171,8 +171,134 @@
                 </p>
             </div>
         </section>
+
+        <section id="contacto" class="section contact-section">
+            <div class="container contact-grid">
+                <div>
+                    <p class="tf-eyebrow contact-eyebrow">Contacto</p>
+
+                    <h2>Fala com a equipa Klenda.</h2>
+
+                    <p class="contact-copy">
+                        Dúvidas sobre planos, migração de agenda ou funcionalidades à medida
+                        do teu negócio — estamos aqui.
+                    </p>
+
+                    <div class="contact-list">
+                        <div class="contact-row">
+                            <span class="contact-label">Email</span>
+                            <a class="contact-value contact-value-accent" href="mailto:ola@myklenda.com">
+                                ola@myklenda.com
+                            </a>
+                        </div>
+
+                        <div class="contact-row">
+                            <span class="contact-label">Telefone</span>
+                            <a class="contact-value" href="tel:+351900000000">+351 900 000 000</a>
+                        </div>
+
+                        <div class="contact-row">
+                            <span class="contact-label">WhatsApp</span>
+                            <a class="contact-value" href="https://wa.me/351900000000" target="_blank" rel="noopener noreferrer">
+                                +351 900 000 000
+                            </a>
+                        </div>
+
+                        <div class="contact-row">
+                            <span class="contact-label">Instagram</span>
+                            <a class="contact-value" href="https://instagram.com/my.klenda" target="_blank" rel="noopener noreferrer">
+                                @my.klenda
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="contact-form-card" @submit.prevent="handleContactSubmit">
+                    <div class="contact-field">
+                        <label for="contact-name">Nome</label>
+                        <input
+                            id="contact-name"
+                            v-model="contactForm.name"
+                            class="contact-input"
+                            type="text"
+                        />
+                    </div>
+
+                    <div class="contact-field">
+                        <label for="contact-email">Email</label>
+                        <input
+                            id="contact-email"
+                            v-model="contactForm.email"
+                            class="contact-input"
+                            type="text"
+                            inputmode="email"
+                        />
+                    </div>
+
+                    <div class="contact-field">
+                        <label for="contact-message">Mensagem</label>
+                        <textarea
+                            id="contact-message"
+                            v-model="contactForm.message"
+                            class="contact-textarea"
+                        ></textarea>
+                    </div>
+
+                    <p v-if="contactError" class="contact-error">{{ contactError }}</p>
+                    <p v-if="contactSuccess" class="contact-success">{{ contactSuccess }}</p>
+
+                    <button class="btn btn-accent contact-submit" type="submit" :disabled="isSendingContact">
+                        {{ isSendingContact ? 'A enviar...' : 'Enviar mensagem' }}
+                    </button>
+                </form>
+            </div>
+        </section>
     </div>
 </template>
+
+<script setup lang="ts">
+const { apiFetch } = useApi()
+
+const contactForm = reactive({
+    name: '',
+    email: '',
+    message: '',
+})
+
+const isSendingContact = ref(false)
+const contactError = ref('')
+const contactSuccess = ref('')
+
+const handleContactSubmit = async () => {
+    contactError.value = ''
+    contactSuccess.value = ''
+
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+        contactError.value = 'Preenche o nome, o email e a mensagem.'
+        return
+    }
+
+    try {
+        isSendingContact.value = true
+
+        await apiFetch('/public/contact/', {
+            method: 'POST',
+            body: contactForm,
+            auth: false,
+        })
+
+        contactSuccess.value = 'Mensagem enviada! Respondemos em breve.'
+        contactForm.name = ''
+        contactForm.email = ''
+        contactForm.message = ''
+    } catch (error) {
+        console.error(error)
+        contactError.value = 'Não foi possível enviar a mensagem. Tenta novamente.'
+    } finally {
+        isSendingContact.value = false
+    }
+}
+</script>
 
 <style scoped>
 .hero {
@@ -315,9 +441,13 @@
 
 .section-heading p {
     margin: 0;
-    color: #c8c8c8;
+    color: #57544c;
     font-size: 17px;
     line-height: 1.6;
+}
+
+.services-section .section-heading p {
+    color: #c8c8c8;
 }
 
 .feature-grid {
@@ -351,6 +481,7 @@
 }
 
 .pricing-section {
+    scroll-margin-top: 92px;
     padding-bottom: 96px;
 }
 
@@ -483,12 +614,153 @@
     text-align: center;
 }
 
+.contact-section {
+    scroll-margin-top: 92px;
+    padding-bottom: 120px;
+    background: var(--tf-black);
+    color: var(--tf-white);
+}
+
+.contact-eyebrow {
+    color: var(--tf-accent);
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 44px;
+    align-items: center;
+}
+
+.contact-grid h2 {
+    margin: 0;
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: 0.98;
+    letter-spacing: -0.05em;
+}
+
+.contact-copy {
+    margin: 20px 0 0;
+    max-width: 46ch;
+    color: #c8c8c8;
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+.contact-list {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.contact-row:first-child {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.contact-label {
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #857f74;
+}
+
+.contact-value {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--tf-white);
+}
+
+.contact-value-accent {
+    color: var(--tf-accent);
+}
+
+.contact-form-card {
+    padding: 36px;
+    border-radius: 28px;
+    background: #131318;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.contact-field {
+    margin-bottom: 22px;
+}
+
+.contact-field label {
+    display: block;
+    margin-bottom: 10px;
+    font-family: var(--tf-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #857f74;
+}
+
+.contact-input,
+.contact-textarea {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--tf-white);
+    font-family: var(--tf-sans);
+    font-size: 15px;
+}
+
+.contact-input:focus,
+.contact-textarea:focus {
+    outline: none;
+    border-color: var(--tf-accent);
+}
+
+.contact-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.contact-error {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(220, 38, 38, 0.16);
+    color: #fca5a5;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.contact-success {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(34, 197, 94, 0.14);
+    color: #86efac;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.contact-submit {
+    width: 100%;
+}
+
 @media (max-width: 900px) {
 
     .hero-grid,
     .section-heading,
     .feature-grid,
-    .pricing-grid {
+    .pricing-grid,
+    .contact-grid {
         grid-template-columns: 1fr;
     }
 

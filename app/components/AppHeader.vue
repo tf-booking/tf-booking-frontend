@@ -5,8 +5,8 @@
         </NuxtLink>
 
         <nav class="nav">
-            <NuxtLink to="/booking/demo">Página pública</NuxtLink>
-            <NuxtLink to="/dashboard">Dashboard</NuxtLink>
+            <a href="#precos">Preços</a>
+            <a href="#contacto">Contacto</a>
             <NuxtLink to="/login" class="login-link">Entrar</NuxtLink>
         </nav>
     </header>
