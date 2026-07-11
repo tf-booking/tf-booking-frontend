@@ -422,8 +422,24 @@ useHead(() => ({
     bodyAttrs: {
         class: step.value >= 5 ? 'booking-success-lock' : undefined,
     },
-    meta: [{ name: 'robots', content: 'noindex, nofollow' }],
 }))
+
+useSeoMeta({
+    title: () =>
+        business.value
+            ? `${business.value.name}${business.value.city ? ` · ${business.value.city}` : ''} | Klenda`
+            : 'Marcações Online | Klenda',
+    description: () =>
+        business.value
+            ? business.value.description
+                || `Marca já o teu horário em ${business.value.name}${business.value.city ? ` (${business.value.city})` : ''} através da Klenda.`
+            : 'Marca o teu horário online através da Klenda.',
+    ogTitle: () => business.value?.name || 'Klenda',
+    ogDescription: () =>
+        business.value?.description
+        || (business.value ? `Marca já o teu horário em ${business.value.name} através da Klenda.` : undefined),
+    ogImage: () => business.value?.cover_image_url || undefined,
+})
 
 const selectedServiceUuid = ref('')
 const selectedStaffUuid = ref('')

@@ -265,12 +265,17 @@ const serviceChips = computed(() =>
     staffServices.value.slice(0, 6).map((service) => service.name)
 )
 
-useHead(() => ({
-    title: staffMember.value && business.value
-        ? `${staffMember.value.name} | ${business.value.name}`
-        : 'Profissional | Klenda',
-    meta: [{ name: 'robots', content: 'noindex, nofollow' }],
-}))
+useSeoMeta({
+    title: () =>
+        staffMember.value && business.value
+            ? `${staffMember.value.name} | ${business.value.name}`
+            : 'Profissional | Klenda',
+    description: () =>
+        staffMember.value && business.value
+            ? staffMember.value.bio || `Marca já o teu horário com ${staffMember.value.name} em ${business.value.name} através da Klenda.`
+            : undefined,
+    ogImage: () => staffMember.value?.avatar_url || undefined,
+})
 
 const staffInitials = (name: string) =>
     name
