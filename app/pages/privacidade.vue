@@ -54,15 +54,6 @@
                     <li>Cumprir obrigações legais (ex.: faturação).</li>
                 </ul>
 
-                <h2>Com quem partilhamos dados</h2>
-                <p>Não vendemos dados a ninguém. Partilhamos apenas com fornecedores que nos ajudam a operar o serviço:</p>
-                <ul>
-                    <li><strong>Stripe</strong> — processamento de pagamentos da subscrição Pro.</li>
-                    <li><strong>Zoho Mail</strong> — envio dos emails transacionais (confirmações, convites, faturas).</li>
-                    <li><strong>Google</strong> — se ligares a tua conta, para autenticação (Sign-In) e sincronização de marcações com o Google Calendar.</li>
-                    <li><strong>Render e Vercel</strong> — alojamento da aplicação e da base de dados.</li>
-                </ul>
-
                 <h2>Quanto tempo guardamos os dados</h2>
                 <p>
                     Guardamos os dados enquanto a conta estiver ativa. Se pedires o encerramento

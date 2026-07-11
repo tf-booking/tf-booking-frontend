@@ -10,7 +10,7 @@
                     </p>
                 </div>
 
-                <div v-if="!isStaffOnly" class="schedule-header-actions">
+                <div class="schedule-header-actions">
                     <div class="integration-stack">
                         <button
                             class="btn btn-secondary btn-google-calendar"
@@ -21,6 +21,15 @@
                             {{ googleCalendarButtonLabel }}
                         </button>
 
+                        <button
+                            v-if="googleCalendarStatus.is_connected"
+                            class="btn-google-calendar-disconnect"
+                            type="button"
+                            :disabled="isDisconnectingGoogleCalendar"
+                            @click="disconnectGoogleCalendar"
+                        >
+                            {{ isDisconnectingGoogleCalendar ? 'A desligar...' : 'Desligar' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -626,6 +635,7 @@ const isSavingAppointment = ref(false)
 const isSavingAppointmentEdit = ref(false)
 const isLoadingGoogleCalendarStatus = ref(false)
 const isConnectingGoogleCalendar = ref(false)
+const isDisconnectingGoogleCalendar = ref(false)
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -757,14 +767,14 @@ const googleCalendarHint = computed(() => {
     }
 
     if (googleCalendarStatus.is_connected) {
-        return 'Novas marcações passam a ser enviadas para o calendário Google.'
+        return 'As tuas marcações passam a ser enviadas para o teu Google Calendar.'
     }
 
     if (!googleCalendarStatus.can_connect) {
-        return 'Só donos e gestores podem ligar esta integração.'
+        return 'Precisas de ter um perfil de profissional neste negócio para ligar esta integração.'
     }
 
-    return 'Liga o negócio a um calendário Google.'
+    return 'Liga a tua agenda a um calendário Google.'
 })
 
 const isGoogleCalendarButtonDisabled = computed(() => {
@@ -1350,6 +1360,31 @@ const connectGoogleCalendar = async () => {
         errorMessage.value = error?.data?.detail || 'Não foi possível iniciar a ligação ao Google Calendar.'
     } finally {
         isConnectingGoogleCalendar.value = false
+    }
+}
+
+const disconnectGoogleCalendar = async () => {
+    if (!selectedBusiness.value || isDisconnectingGoogleCalendar.value) {
+        return
+    }
+
+    try {
+        isDisconnectingGoogleCalendar.value = true
+        resetMessages()
+
+        await apiFetch(
+            `/businesses/${selectedBusiness.value.uuid}/google-calendar/disconnect/`,
+            { method: 'POST' }
+        )
+
+        googleCalendarStatus.is_connected = false
+        googleCalendarStatus.connected_at = null
+        successMessage.value = 'Google Calendar desligado.'
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível desligar o Google Calendar.'
+    } finally {
+        isDisconnectingGoogleCalendar.value = false
     }
 }
 
@@ -2016,8 +2051,30 @@ onBeforeUnmount(() => {
 }
 
 .integration-stack {
-    display: grid;
+    display: flex;
+    align-items: center;
     gap: 8px;
+}
+
+.btn-google-calendar-disconnect {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: var(--tf-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-google-calendar-disconnect:hover {
+    color: var(--tf-ink);
+}
+
+.btn-google-calendar-disconnect:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 
 .integration-hint {
