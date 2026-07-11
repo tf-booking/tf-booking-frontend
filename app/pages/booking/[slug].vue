@@ -422,6 +422,7 @@ useHead(() => ({
     bodyAttrs: {
         class: step.value >= 5 ? 'booking-success-lock' : undefined,
     },
+    meta: [{ name: 'robots', content: 'noindex, nofollow' }],
 }))
 
 const selectedServiceUuid = ref('')

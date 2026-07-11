@@ -269,6 +269,7 @@ useHead(() => ({
     title: staffMember.value && business.value
         ? `${staffMember.value.name} | ${business.value.name}`
         : 'Profissional | Klenda',
+    meta: [{ name: 'robots', content: 'noindex, nofollow' }],
 }))
 
 const staffInitials = (name: string) =>

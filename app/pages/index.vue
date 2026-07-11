@@ -259,6 +259,46 @@
 </template>
 
 <script setup lang="ts">
+const config = useRuntimeConfig()
+const siteUrl = String(config.public.siteUrl || 'https://www.myklenda.com')
+const pageTitle = 'Klenda · Marcações online para negócios de serviços'
+const pageDescription =
+    'A Klenda (myklenda.com) é a plataforma de marcações online para salões, clínicas e negócios de serviços em Portugal. Cria a tua página de marcações em minutos.'
+const ogImageUrl = `${siteUrl}/icon-512.png`
+
+useSeoMeta({
+    title: pageTitle,
+    description: pageDescription,
+    ogTitle: pageTitle,
+    ogDescription: pageDescription,
+    ogUrl: siteUrl,
+    ogType: 'website',
+    ogImage: ogImageUrl,
+    ogSiteName: 'Klenda',
+    twitterCard: 'summary_large_image',
+    twitterTitle: pageTitle,
+    twitterDescription: pageDescription,
+    twitterImage: ogImageUrl,
+})
+
+useHead({
+    link: [{ rel: 'canonical', href: siteUrl }],
+    script: [
+        {
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'Klenda',
+                alternateName: 'MyKlenda',
+                url: siteUrl,
+                logo: ogImageUrl,
+                description: pageDescription,
+            }),
+        },
+    ],
+})
+
 const { apiFetch } = useApi()
 
 const contactForm = reactive({

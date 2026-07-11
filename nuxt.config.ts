@@ -33,6 +33,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: 'http://127.0.0.1:8000/api',
       googleClientId: '',
+      siteUrl: 'https://www.myklenda.com',
     },
   },
 })
