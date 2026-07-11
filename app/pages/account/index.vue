@@ -782,7 +782,7 @@ const handleGalleryInput = (event: Event) => {
             id: `new-${Date.now()}-${index}`,
             url: URL.createObjectURL(file),
             file,
-            isNew: true,
+            isNew: true as const,
         })),
     ]
 }
@@ -974,7 +974,7 @@ const handleBusinessGalleryInput = (event: Event) => {
             id: `newb-${Date.now()}-${index}`,
             url: URL.createObjectURL(file),
             file,
-            isNew: true,
+            isNew: true as const,
         })),
     ]
 }
