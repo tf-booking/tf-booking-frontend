@@ -51,35 +51,37 @@
                 </span>
             </nav>
 
-            <NuxtLink
-                v-if="showUpgradeBadge"
-                to="/account?tab=plano"
-                class="s-upgrade-pill"
-            >
-                <span class="s-upgrade-pill-tag">PRO</span>
-                Atualizar plano
-            </NuxtLink>
+            <div class="s-bottom">
+                <NuxtLink
+                    v-if="showUpgradeBadge"
+                    to="/account?tab=plano"
+                    class="s-upgrade-pill"
+                >
+                    <span class="s-upgrade-pill-tag">PRO</span>
+                    Atualizar plano
+                </NuxtLink>
 
-            <div
-                class="s-user"
-                :class="{ active: isActive('/account') }"
-                role="button"
-                tabindex="0"
-                title="A minha conta"
-                @click="goToAccount"
-                @keydown.enter="goToAccount"
-                @keydown.space.prevent="goToAccount"
-            >
-                <span class="s-avatar">{{ businessInitials }}</span>
+                <div
+                    class="s-user"
+                    :class="{ active: isActive('/account') }"
+                    role="button"
+                    tabindex="0"
+                    title="A minha conta"
+                    @click="goToAccount"
+                    @keydown.enter="goToAccount"
+                    @keydown.space.prevent="goToAccount"
+                >
+                    <span class="s-avatar">{{ businessInitials }}</span>
 
-                <div class="s-user-info">
-                    <div class="s-user-name">{{ businessName }}</div>
-                    <div class="s-user-plan">{{ businessRoleLabel }}</div>
+                    <div class="s-user-info">
+                        <div class="s-user-name">{{ businessName }}</div>
+                        <div class="s-user-plan">{{ businessRoleLabel }}</div>
+                    </div>
+
+                    <button class="s-logout" type="button" title="Sair" @click.stop="handleLogout">
+                        Sair
+                    </button>
                 </div>
-
-                <button class="s-logout" type="button" title="Sair" @click.stop="handleLogout">
-                    Sair
-                </button>
             </div>
         </div>
     </aside>
@@ -374,11 +376,16 @@ watch(
     color: #b7b3aa;
 }
 
+.s-bottom {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+}
+
 .s-user {
     display: flex;
     align-items: center;
     gap: 11px;
-    margin-top: auto;
     padding: 14px;
     border-radius: 16px;
     background: #17171d;
@@ -533,7 +540,7 @@ watch(
         font-size: 15px;
     }
 
-    .s-user {
+    .s-bottom {
         margin-top: 14px;
     }
 }

@@ -57,6 +57,7 @@ export const useAuth = () => {
 
     const logout = async () => {
         clearTokens()
+        useCurrentBusiness().clearCurrentBusiness()
         await navigateTo('/login')
     }
 

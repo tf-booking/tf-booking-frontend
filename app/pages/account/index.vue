@@ -14,24 +14,24 @@
                 </div>
             </div>
 
-            <div class="tabs">
-                <button
-                    v-for="tab in tabs"
-                    :key="tab.key"
-                    type="button"
-                    class="tab"
-                    :class="{ active: activeTab === tab.key }"
-                    @click="setTab(tab.key)"
-                >
-                    {{ tab.label }}
-                </button>
-            </div>
-
             <div v-if="isLoadingProfile" class="card state-card">
                 A carregar perfil...
             </div>
 
             <template v-else>
+                <div class="tabs">
+                    <button
+                        v-for="tab in tabs"
+                        :key="tab.key"
+                        type="button"
+                        class="tab"
+                        :class="{ active: activeTab === tab.key }"
+                        @click="setTab(tab.key)"
+                    >
+                        {{ tab.label }}
+                    </button>
+                </div>
+
                 <!-- PERFIL -->
                 <div v-show="activeTab === 'perfil'" class="panel">
                     <article class="card form-card">
