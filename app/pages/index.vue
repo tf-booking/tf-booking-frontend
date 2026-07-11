@@ -253,6 +253,8 @@
                 </form>
             </div>
         </section>
+
+        <AppFooter />
     </div>
 </template>
 
