@@ -536,6 +536,7 @@ type MeResponse = {
     last_name: string
     is_staff: boolean
     is_superuser: boolean
+    has_usable_password: boolean
 }
 
 type StaffProfilePhoto = {
@@ -610,6 +611,8 @@ const passwordForm = reactive({
     new_password_confirm: '',
 })
 
+const hasUsablePassword = ref(true)
+
 const fullName = computed(() => {
     const name = `${form.first_name} ${form.last_name}`.trim()
     return name || form.username || 'Utilizador'
@@ -652,7 +655,9 @@ const tabs = computed(() => {
         list.push({ key: 'plano', label: 'Plano' })
     }
 
-    list.push({ key: 'seguranca', label: 'Segurança' })
+    if (hasUsablePassword.value) {
+        list.push({ key: 'seguranca', label: 'Segurança' })
+    }
 
     return list
 })
@@ -690,6 +695,7 @@ const applyProfile = (profile: MeResponse | null) => {
     form.email = profile?.email || ''
     form.first_name = profile?.first_name || ''
     form.last_name = profile?.last_name || ''
+    hasUsablePassword.value = profile?.has_usable_password !== false
 }
 
 const applyProfessionalProfile = (profile: StaffSelfProfileResponse | null) => {
