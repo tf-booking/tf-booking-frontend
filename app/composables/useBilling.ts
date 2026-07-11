@@ -11,7 +11,7 @@ export const useBilling = () => {
         }
     }
 
-    const startCheckout = async () => {
+    const startCheckout = async (interval: 'month' | 'year' = 'month') => {
         const businessUuid = currentBusiness.value?.business_uuid
 
         if (!businessUuid) {
@@ -25,7 +25,7 @@ export const useBilling = () => {
         try {
             const response = await apiFetch<{ url: string }>(
                 `/businesses/${businessUuid}/billing/checkout/`,
-                { method: 'POST' }
+                { method: 'POST', body: { interval } }
             )
             redirectToUrl(response.url)
         } catch (error) {

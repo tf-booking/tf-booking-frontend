@@ -8,15 +8,9 @@
             <div class="pro-lock-card">
                 <span class="pro-lock-tag">PRO</span>
                 <p class="pro-lock-message">{{ message }}</p>
-                <button
-                    type="button"
-                    class="btn btn-accent pro-lock-cta"
-                    :disabled="isRedirecting"
-                    @click="startCheckout"
-                >
-                    {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar para o Pro' }}
-                </button>
-                <p v-if="billingError" class="pro-lock-error">{{ billingError }}</p>
+                <NuxtLink to="/account?tab=plano" class="btn btn-accent pro-lock-cta">
+                    Atualizar para o Pro
+                </NuxtLink>
             </div>
         </div>
     </div>
@@ -29,8 +23,6 @@ withDefaults(defineProps<{
 }>(), {
     message: 'Esta funcionalidade está disponível no plano Pro.',
 })
-
-const { isRedirecting, billingError, startCheckout } = useBilling()
 </script>
 
 <style scoped>
@@ -93,19 +85,5 @@ const { isRedirecting, billingError, startCheckout } = useBilling()
 .pro-lock-cta {
     min-height: 42px;
     padding: 0 20px;
-    border: 0;
-    cursor: pointer;
-}
-
-.pro-lock-cta:disabled {
-    opacity: 0.7;
-    cursor: default;
-}
-
-.pro-lock-error {
-    margin: 0;
-    color: #b3261e;
-    font-size: 12px;
-    font-weight: 600;
 }
 </style>

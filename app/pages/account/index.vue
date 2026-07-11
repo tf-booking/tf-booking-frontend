@@ -413,7 +413,7 @@
                             <template v-if="isPro">
                                 <p class="plan-card-title">O teu negócio está no plano Pro.</p>
                                 <p class="plan-card-copy">
-                                    Subscrição de 19,90€/mês, renovada automaticamente até cancelares.
+                                    Subscrição renovada automaticamente até cancelares.
                                     Gere o método de pagamento, vê faturas ou cancela a qualquer momento.
                                 </p>
                                 <div class="form-actions">
@@ -431,15 +431,39 @@
                             <template v-else>
                                 <p class="plan-card-title">O teu negócio está no plano Grátis.</p>
                                 <p class="plan-card-copy">
-                                    Atualiza para o Pro (19,90€/mês) para desbloqueares estatísticas,
-                                    colaboradores extra, personalização do perfil e integração com o Google Calendar.
+                                    Atualiza para o Pro para desbloqueares estatísticas, colaboradores extra,
+                                    personalização do perfil e integração com o Google Calendar. Preços + IVA.
                                 </p>
+
+                                <div class="plan-interval-grid">
+                                    <button
+                                        class="plan-interval-option"
+                                        :class="{ selected: billingInterval === 'month' }"
+                                        type="button"
+                                        @click="billingInterval = 'month'"
+                                    >
+                                        <span class="plan-interval-name">Mensal</span>
+                                        <span class="plan-interval-price">19,90€<small>/mês + IVA</small></span>
+                                    </button>
+
+                                    <button
+                                        class="plan-interval-option"
+                                        :class="{ selected: billingInterval === 'year' }"
+                                        type="button"
+                                        @click="billingInterval = 'year'"
+                                    >
+                                        <span class="plan-interval-badge">Poupa 20%</span>
+                                        <span class="plan-interval-name">Anual</span>
+                                        <span class="plan-interval-price">191,04€<small>/ano + IVA</small></span>
+                                    </button>
+                                </div>
+
                                 <div class="form-actions">
                                     <button
                                         class="btn btn-accent"
                                         type="button"
                                         :disabled="isRedirecting"
-                                        @click="startCheckout"
+                                        @click="startCheckout(billingInterval)"
                                     >
                                         {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar para o Pro' }}
                                     </button>
@@ -553,6 +577,7 @@ const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
 const { isFree, isPro } = usePlan()
 const { isRedirecting, billingError, startCheckout, openBillingPortal } = useBilling()
+const billingInterval = ref<'month' | 'year'>('month')
 const route = useRoute()
 
 const isLoadingProfile = ref(false)
@@ -1411,6 +1436,65 @@ onMounted(() => {
     color: var(--tf-muted);
     font-size: 14px;
     line-height: 1.5;
+}
+
+.plan-interval-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.plan-interval-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 2px solid var(--tf-border);
+    border-radius: 14px;
+    background: var(--tf-white);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.plan-interval-option.selected {
+    border-color: var(--tf-ink);
+    background: rgba(215, 255, 62, 0.16);
+}
+
+.plan-interval-badge {
+    position: absolute;
+    top: -10px;
+    right: 14px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--tf-black);
+    color: var(--tf-accent);
+    font-family: var(--tf-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.plan-interval-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--tf-muted);
+}
+
+.plan-interval-price {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--tf-ink);
+}
+
+.plan-interval-price small {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tf-muted);
 }
 
 .professional-card {

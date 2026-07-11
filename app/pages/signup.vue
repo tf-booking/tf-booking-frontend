@@ -30,7 +30,7 @@
                     <h1>Criar conta</h1>
 
                     <p class="form-lede">
-                        <span v-if="isProPlan">A começar com o plano Pro · 14 dias grátis.</span>
+                        <span v-if="isProPlan">A começar com o plano Pro.</span>
                         <span v-else>Cria o teu negócio no plano Grátis.</span>
                     </p>
 

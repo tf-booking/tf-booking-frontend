@@ -384,9 +384,9 @@
             tag="PRO"
             :title="proModal.title"
             :message="proModal.message"
-            :confirm-label="isRedirecting ? 'A abrir pagamento...' : 'Atualizar para o Pro'"
+            confirm-to="/account?tab=plano"
+            confirm-label="Atualizar para o Pro"
             cancel-label="Agora não"
-            @confirm="startCheckout"
         />
 
         <ConfirmModal
@@ -479,7 +479,6 @@ type StaffBlock = {
 
 const { apiFetch } = useApi()
 const { isFree } = usePlan()
-const { isRedirecting, startCheckout } = useBilling()
 
 const FREE_PLAN_STAFF_LIMIT = 1
 

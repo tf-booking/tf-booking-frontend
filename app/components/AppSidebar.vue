@@ -6,15 +6,13 @@
             </NuxtLink>
 
             <div class="s-topbar-actions">
-                <button
+                <NuxtLink
                     v-if="showUpgradeBadge"
-                    type="button"
+                    to="/account?tab=plano"
                     class="s-upgrade-mobile-tag"
-                    :disabled="isRedirecting"
-                    @click="startCheckout"
                 >
                     Pro
-                </button>
+                </NuxtLink>
 
                 <NotificationBell />
 
@@ -53,16 +51,14 @@
                 </span>
             </nav>
 
-            <button
+            <NuxtLink
                 v-if="showUpgradeBadge"
-                type="button"
+                to="/account?tab=plano"
                 class="s-upgrade-pill"
-                :disabled="isRedirecting"
-                @click="startCheckout"
             >
                 <span class="s-upgrade-pill-tag">PRO</span>
-                {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar plano' }}
-            </button>
+                Atualizar plano
+            </NuxtLink>
 
             <div
                 class="s-user"
@@ -94,7 +90,6 @@ const route = useRoute()
 const { logout } = useAuth()
 const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 const { startPolling, stopPolling } = useNotifications()
-const { isRedirecting, startCheckout } = useBilling()
 
 const isMobileMenuOpen = ref(false)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
@@ -292,14 +287,6 @@ watch(
 .s-upgrade-pill:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 20px -10px rgba(215, 255, 62, 0.5);
-}
-
-.s-upgrade-pill:disabled,
-.s-upgrade-mobile-tag:disabled {
-    opacity: 0.7;
-    cursor: default;
-    transform: none;
-    box-shadow: none;
 }
 
 .s-upgrade-pill-tag {

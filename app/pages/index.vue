@@ -145,10 +145,10 @@
 
                         <div class="pricing-price">
                             <span class="pricing-amount">19,90€</span>
-                            <span class="pricing-period">/mês</span>
+                            <span class="pricing-period">/mês + IVA</span>
                         </div>
 
-                        <p class="pricing-detail">até 3 colaboradores incluídos</p>
+                        <p class="pricing-detail">até 3 colaboradores incluídos · também disponível anual, com 20% de desconto</p>
 
                         <ul class="pricing-features">
                             <li>Tudo do Grátis</li>
@@ -160,14 +160,14 @@
                         </ul>
 
                         <NuxtLink to="/signup?plano=pro" class="btn btn-accent pricing-cta">
-                            Testar 14 dias grátis
+                            Assinar o Pro
                         </NuxtLink>
                     </article>
                 </div>
 
                 <p class="pricing-footnote">
-                    Colaborador extra: 3,99€/mês por colaborador além dos 3 incluídos.
-                    SMS extra além dos incluídos no Pro: 0,04€/SMS.
+                    Preços + IVA à taxa em vigor. Colaborador extra: 3,99€/mês por colaborador
+                    além dos 3 incluídos. SMS extra além dos incluídos no Pro: 0,04€/SMS.
                 </p>
             </div>
         </section>
