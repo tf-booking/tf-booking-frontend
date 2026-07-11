@@ -157,7 +157,7 @@ const handleSignup = async () => {
 
         setTokens(response)
 
-        await navigateTo('/dashboard')
+        await navigateTo(isProPlan.value ? '/account?tab=plano' : '/dashboard')
     } catch (error: any) {
         console.error(error)
 

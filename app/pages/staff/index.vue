@@ -43,6 +43,10 @@
                         :locked="!editingStaff && isStaffLimitLocked"
                         message="O plano Grátis permite até 1 colaborador. Atualiza para o Pro para adicionares mais."
                     >
+                    <p v-if="!editingStaff && showExtraStaffNotice" class="extra-staff-notice">
+                        Já tens {{ PRO_PLAN_INCLUDED_STAFF }} colaboradores incluídos no Pro.
+                        Este colaborador extra acresce +3,99€/mês (ou equivalente anual) à tua subscrição.
+                    </p>
                     <form class="form" @submit.prevent="saveStaff">
                         <div class="avatar-field">
                             <div class="avatar-preview">
@@ -478,9 +482,10 @@ type StaffBlock = {
 }
 
 const { apiFetch } = useApi()
-const { isFree } = usePlan()
+const { isFree, isPro } = usePlan()
 
 const FREE_PLAN_STAFF_LIMIT = 1
+const PRO_PLAN_INCLUDED_STAFF = 3
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -557,6 +562,7 @@ const dayBlockForm = reactive({
 const activeStaffCount = computed(() => staffMembers.value.filter((staff) => staff.is_active).length)
 const inactiveStaffCount = computed(() => staffMembers.value.length - activeStaffCount.value)
 const isStaffLimitLocked = computed(() => isFree.value && activeStaffCount.value >= FREE_PLAN_STAFF_LIMIT)
+const showExtraStaffNotice = computed(() => isPro.value && activeStaffCount.value >= PRO_PLAN_INCLUDED_STAFF)
 
 const proModal = reactive({
     open: false,
@@ -1203,6 +1209,18 @@ onBeforeUnmount(() => {
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.1em;
+}
+
+.extra-staff-notice {
+    margin: 0 0 18px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(215, 255, 62, 0.16);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-ink);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
 }
 
 .staff-grid {
