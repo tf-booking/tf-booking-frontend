@@ -409,9 +409,30 @@ const ProgressDots = defineComponent({
 
 const slug = computed(() => String(route.params.slug || '').trim())
 
-const business = ref<PublicBusiness | null>(null)
-const isLoadingBusiness = ref(true)
-const businessError = ref('')
+const {
+    data: business,
+    pending: isLoadingBusiness,
+    error: businessFetchError,
+} = useAsyncData<PublicBusiness | null>(
+    () => `public-business-${slug.value}`,
+    () =>
+        slug.value
+            ? apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
+            : Promise.resolve(null),
+    { watch: [slug], lazy: true }
+)
+
+const businessError = computed(() => {
+    if (!slug.value) {
+        return 'Link inválido.'
+    }
+
+    if (businessFetchError.value) {
+        return (businessFetchError.value as any)?.data?.business || 'Não foi possível carregar esta página de marcações.'
+    }
+
+    return ''
+})
 
 const step = ref(0)
 
@@ -683,20 +704,12 @@ const selectSlot = (slot: AvailableSlot) => {
     bookingError.value = ''
 }
 
-const loadPublicBusiness = async () => {
-    if (!slug.value) {
-        business.value = null
-        businessError.value = 'Link inválido.'
-        isLoadingBusiness.value = false
-        return
-    }
-
-    try {
-        isLoadingBusiness.value = true
-        businessError.value = ''
-
-        const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
-        business.value = response
+watch(
+    business,
+    (response) => {
+        if (!response) {
+            return
+        }
 
         resetAvailabilitySelection()
 
@@ -725,14 +738,9 @@ const loadPublicBusiness = async () => {
         } else {
             step.value = fallbackStep
         }
-    } catch (error: any) {
-        console.error(error)
-        business.value = null
-        businessError.value = error?.data?.business || 'Não foi possível carregar esta página de marcações.'
-    } finally {
-        isLoadingBusiness.value = false
-    }
-}
+    },
+    { immediate: true }
+)
 
 const loadAvailableSlots = async () => {
     if (!business.value || !selectedService.value || !hasStaffChoice.value || !selectedDay.value) {
@@ -924,7 +932,6 @@ watch(
 
 watch(slug, () => {
     selectedDay.value = days.value[1]?.iso || days.value[0]?.iso || ''
-    loadPublicBusiness()
 }, { immediate: true })
 </script>
 
