@@ -501,6 +501,7 @@ watch(
 .google-button-slot {
     display: flex;
     justify-content: center;
+    min-height: 44px;
 }
 
 .back-link {

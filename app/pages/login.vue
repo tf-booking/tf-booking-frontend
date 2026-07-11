@@ -428,6 +428,7 @@ onMounted(() => {
 .google-button-slot {
     display: flex;
     justify-content: center;
+    min-height: 44px;
 }
 
 .form-footer {
