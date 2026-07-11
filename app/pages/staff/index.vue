@@ -43,10 +43,6 @@
                         :locked="!editingStaff && isStaffLimitLocked"
                         message="O plano Grátis permite até 1 colaborador. Atualiza para o Pro para adicionares mais."
                     >
-                    <p v-if="!editingStaff && showExtraStaffNotice" class="extra-staff-notice">
-                        Já tens {{ PRO_PLAN_INCLUDED_STAFF }} colaboradores incluídos no Pro.
-                        Este colaborador extra acresce +3,99€/mês (ou equivalente anual) à tua subscrição.
-                    </p>
                     <form class="form" @submit.prevent="saveStaff">
                         <div class="avatar-field">
                             <div class="avatar-preview">
@@ -397,9 +393,9 @@
             v-model:open="confirmModal.open"
             :title="confirmModal.title"
             :message="confirmModal.message"
-            confirm-label="Apagar"
+            :confirm-label="confirmModal.confirmLabel"
             cancel-label="Cancelar"
-            danger
+            :danger="confirmModal.danger"
             @confirm="handleConfirmModalConfirm"
         />
     </div>
@@ -579,6 +575,8 @@ const confirmModal = reactive({
     open: false,
     title: '',
     message: '',
+    confirmLabel: 'Confirmar',
+    danger: false,
     onConfirm: null as (() => void) | null,
 })
 
@@ -1011,6 +1009,20 @@ const saveStaff = async () => {
         return
     }
 
+    if (!editingStaff.value && showExtraStaffNotice.value) {
+        confirmExtraStaffCharge(() => performSaveStaff())
+        return
+    }
+
+    await performSaveStaff()
+}
+
+const performSaveStaff = async () => {
+    if (!selectedBusiness.value) {
+        errorMessage.value = 'Não existe negócio selecionado.'
+        return
+    }
+
     try {
         isSaving.value = true
 
@@ -1110,7 +1122,22 @@ const cancelEdit = () => {
 const confirmDeleteStaff = (staff: StaffMember) => {
     confirmModal.title = 'Apagar colaborador?'
     confirmModal.message = `Tens a certeza que queres apagar "${staff.name}"? Esta ação não pode ser revertida.`
+    confirmModal.confirmLabel = 'Apagar'
+    confirmModal.danger = true
     confirmModal.onConfirm = () => deleteStaff(staff)
+    confirmModal.open = true
+}
+
+const confirmExtraStaffCharge = (onConfirm: () => void) => {
+    confirmModal.title = 'Colaborador extra'
+    confirmModal.message = (
+        `Já tens ${PRO_PLAN_INCLUDED_STAFF} colaboradores incluídos no plano Pro. ` +
+        'Adicionar mais um acresce +3,99€/mês (ou equivalente anual) à tua subscrição, ' +
+        'cobrado agora de forma proporcional e incluído na próxima renovação. Queres continuar?'
+    )
+    confirmModal.confirmLabel = 'Confirmar e continuar'
+    confirmModal.danger = false
+    confirmModal.onConfirm = onConfirm
     confirmModal.open = true
 }
 
@@ -1209,18 +1236,6 @@ onBeforeUnmount(() => {
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.1em;
-}
-
-.extra-staff-notice {
-    margin: 0 0 18px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: rgba(215, 255, 62, 0.16);
-    border: 1px solid var(--tf-border);
-    color: var(--tf-ink);
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.5;
 }
 
 .staff-grid {
