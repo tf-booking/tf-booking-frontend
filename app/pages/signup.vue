@@ -30,26 +30,17 @@
                     <h1>Criar conta</h1>
 
                     <p class="form-lede">
-                        <span v-if="isProPlan">A começar com o plano Pro.</span>
+                        <span v-if="step === 'business'">Falta só o nome do teu negócio.</span>
+                        <span v-else-if="isProPlan">A começar com o plano Pro.</span>
                         <span v-else>Cria o teu negócio no plano Grátis.</span>
                     </p>
 
-                    <form class="form" @submit.prevent="handleSignup">
-                        <div>
-                            <label class="label">Nome do negócio</label>
-                            <input
-                                v-model="form.business_name"
-                                class="input"
-                                type="text"
-                                placeholder="Barbearia Silva"
-                                autocomplete="organization"
-                            />
-                        </div>
-
+                    <!-- PASSO 1: identidade -->
+                    <form v-if="step === 'identity'" class="form" @submit.prevent="handleIdentityStep">
                         <div>
                             <label class="label">O teu nome</label>
                             <input
-                                v-model="form.owner_name"
+                                v-model="identityForm.owner_name"
                                 class="input"
                                 type="text"
                                 placeholder="Carlos Silva"
@@ -60,7 +51,7 @@
                         <div>
                             <label class="label">Email</label>
                             <input
-                                v-model="form.owner_email"
+                                v-model="identityForm.owner_email"
                                 class="input"
                                 type="text"
                                 inputmode="email"
@@ -74,7 +65,7 @@
 
                             <div class="password-field">
                                 <input
-                                    v-model="form.owner_password"
+                                    v-model="identityForm.owner_password"
                                     class="input password-input"
                                     :type="showPassword ? 'text' : 'password'"
                                     placeholder="mínimo 6 caracteres"
@@ -92,8 +83,37 @@
                         </p>
 
                         <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
+                            Continuar →
+                        </button>
+
+                        <template v-if="isGoogleConfigured">
+                            <div class="auth-divider"><span>ou</span></div>
+                            <div ref="googleButtonRef" class="google-button-slot"></div>
+                        </template>
+                    </form>
+
+                    <!-- PASSO 2: nome do negócio -->
+                    <form v-else class="form" @submit.prevent="handleBusinessStep">
+                        <div>
+                            <label class="label">Nome do negócio</label>
+                            <input
+                                v-model="businessName"
+                                class="input"
+                                type="text"
+                                placeholder="Barbearia Silva"
+                                autocomplete="organization"
+                            />
+                        </div>
+
+                        <p v-if="errorMessage" class="error-message">
+                            {{ errorMessage }}
+                        </p>
+
+                        <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
                             {{ isLoading ? 'A criar conta...' : 'Criar a minha conta →' }}
                         </button>
+
+                        <button type="button" class="back-link" @click="step = 'identity'">← Voltar</button>
                     </form>
 
                     <div class="form-footer">
@@ -116,48 +136,110 @@ type SignupResponse = {
     business: { name: string; slug: string }
 }
 
+type GoogleAuthResponse =
+    | { access: string; refresh: string }
+    | { needs_business_name: true; email: string; suggested_owner_name: string }
+
 const route = useRoute()
 const { setTokens } = useAuth()
 const { apiFetch } = useApi()
+const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
 
 const isProPlan = computed(() => route.query.plano === 'pro')
 
-const form = reactive({
-    business_name: '',
+type Step = 'identity' | 'business'
+const step = ref<Step>('identity')
+const mode = ref<'password' | 'google'>('password')
+
+const identityForm = reactive({
     owner_name: '',
     owner_email: '',
     owner_password: '',
 })
 
+const businessName = ref('')
+const googleCredential = ref('')
+
 const isLoading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
+const googleButtonRef = ref<HTMLElement | null>(null)
 
-const handleSignup = async () => {
+const finishSignup = async (response: SignupResponse | GoogleAuthResponse) => {
+    setTokens(response as { access: string; refresh: string })
+    await navigateTo(isProPlan.value ? '/account?tab=plano' : '/dashboard')
+}
+
+const handleIdentityStep = () => {
     errorMessage.value = ''
 
-    if (!form.business_name || !form.owner_name || !form.owner_email || !form.owner_password) {
+    if (!identityForm.owner_name || !identityForm.owner_email || !identityForm.owner_password) {
         errorMessage.value = 'Preenche todos os campos.'
         return
     }
 
-    if (form.owner_password.length < 6) {
+    if (identityForm.owner_password.length < 6) {
         errorMessage.value = 'A palavra-passe tem de ter pelo menos 6 caracteres.'
+        return
+    }
+
+    mode.value = 'password'
+    step.value = 'business'
+}
+
+const handleGoogleCredential = async (credential: string) => {
+    errorMessage.value = ''
+    googleCredential.value = credential
+
+    try {
+        isLoading.value = true
+
+        const response = await submitGoogleCredential(credential)
+
+        if ('needs_business_name' in response) {
+            mode.value = 'google'
+            step.value = 'business'
+            return
+        }
+
+        await finishSignup(response)
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível continuar com o Google. Tenta novamente.'
+    } finally {
+        isLoading.value = false
+    }
+}
+
+const handleBusinessStep = async () => {
+    errorMessage.value = ''
+
+    if (!businessName.value) {
+        errorMessage.value = 'O nome do negócio é obrigatório.'
         return
     }
 
     try {
         isLoading.value = true
 
+        if (mode.value === 'google') {
+            const response = await submitGoogleCredential(googleCredential.value, businessName.value)
+            await finishSignup(response)
+            return
+        }
+
         const response = await apiFetch<SignupResponse>('/public/signup/', {
             method: 'POST',
-            body: form,
+            body: {
+                business_name: businessName.value,
+                owner_name: identityForm.owner_name,
+                owner_email: identityForm.owner_email,
+                owner_password: identityForm.owner_password,
+            },
             auth: false,
         })
 
-        setTokens(response)
-
-        await navigateTo(isProPlan.value ? '/account?tab=plano' : '/dashboard')
+        await finishSignup(response)
     } catch (error: any) {
         console.error(error)
 
@@ -167,6 +249,8 @@ const handleSignup = async () => {
             errorMessage.value = data.owner_email[0]
         } else if (data?.owner_password?.[0]) {
             errorMessage.value = data.owner_password[0]
+        } else if (data?.detail) {
+            errorMessage.value = data.detail
         } else {
             errorMessage.value = 'Não foi possível criar a conta. Tenta novamente.'
         }
@@ -174,6 +258,22 @@ const handleSignup = async () => {
         isLoading.value = false
     }
 }
+
+watch(
+    step,
+    async (value) => {
+        if (value !== 'identity') {
+            return
+        }
+
+        await nextTick()
+
+        if (googleButtonRef.value) {
+            renderGoogleButton(googleButtonRef.value, handleGoogleCredential)
+        }
+    },
+    { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -377,6 +477,46 @@ const handleSignup = async () => {
     font-size: 17px;
     letter-spacing: 0;
     margin-top: 6px;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 6px 0;
+    color: #a9a49a;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e7e0d4;
+}
+
+.google-button-slot {
+    display: flex;
+    justify-content: center;
+}
+
+.back-link {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin-top: 4px;
+    color: #7a756b;
+    font-weight: 800;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.back-link:hover {
+    color: var(--tf-black);
 }
 
 .form-footer {

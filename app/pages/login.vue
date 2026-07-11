@@ -72,6 +72,10 @@
                             {{ isLoading ? 'A entrar...' : 'Entrar no dashboard →' }}
                         </button>
 
+                        <template v-if="isGoogleConfigured">
+                            <div class="auth-divider"><span>ou</span></div>
+                            <div ref="googleButtonRef" class="google-button-slot"></div>
+                        </template>
                     </form>
 
                     <div class="form-footer">
@@ -107,8 +111,9 @@ type MeResponse = {
     }[]
 }
 
-const { login } = useAuth()
+const { login, setTokens } = useAuth()
 const { apiFetch } = useApi()
+const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
 
 const form = reactive({
     username: '',
@@ -118,6 +123,22 @@ const form = reactive({
 const isLoading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
+const googleButtonRef = ref<HTMLElement | null>(null)
+
+const navigateAfterLogin = async () => {
+    const me = await apiFetch<MeResponse>('/me/')
+
+    if (me.is_superuser || me.is_staff) {
+        await navigateTo('/admin')
+        return
+    }
+
+    const hasOwnerOrManagerMembership = me.businesses.some(
+        (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
+    )
+
+    await navigateTo(hasOwnerOrManagerMembership ? '/dashboard' : '/schedule')
+}
 
 const handleLogin = async () => {
     errorMessage.value = ''
@@ -135,23 +156,7 @@ const handleLogin = async () => {
             password: form.password,
         })
 
-        const me = await apiFetch<MeResponse>('/me/')
-
-        if (me.is_superuser || me.is_staff) {
-            await navigateTo('/admin')
-            return
-        }
-
-        const hasOwnerOrManagerMembership = me.businesses.some(
-            (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
-        )
-
-        if (!hasOwnerOrManagerMembership) {
-            await navigateTo('/schedule')
-            return
-        }
-
-        await navigateTo('/dashboard')
+        await navigateAfterLogin()
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Credenciais inválidas ou erro ao entrar.'
@@ -159,6 +164,35 @@ const handleLogin = async () => {
         isLoading.value = false
     }
 }
+
+const handleGoogleCredential = async (credential: string) => {
+    errorMessage.value = ''
+
+    try {
+        isLoading.value = true
+
+        const response = await submitGoogleCredential(credential)
+
+        if ('needs_business_name' in response) {
+            errorMessage.value = 'Não encontrámos nenhuma conta Klenda com este Google. Cria uma conta primeiro.'
+            return
+        }
+
+        setTokens(response)
+        await navigateAfterLogin()
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível entrar com o Google. Tenta novamente.'
+    } finally {
+        isLoading.value = false
+    }
+}
+
+onMounted(() => {
+    if (googleButtonRef.value) {
+        renderGoogleButton(googleButtonRef.value, handleGoogleCredential)
+    }
+})
 </script>
 
 <style scoped>
@@ -370,6 +404,30 @@ const handleLogin = async () => {
     width: 100%;
     font-size: 17px;
     letter-spacing: 0;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 6px 0;
+    color: #a9a49a;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e7e0d4;
+}
+
+.google-button-slot {
+    display: flex;
+    justify-content: center;
 }
 
 .form-footer {
