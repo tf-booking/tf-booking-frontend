@@ -563,7 +563,7 @@ const { apiFetch } = useApi()
 const { isFree } = usePlan()
 const route = useRoute()
 const router = useRouter()
-const { businesses: membershipBusinesses, loadCurrentBusiness } = useCurrentBusiness()
+const { businesses: membershipBusinesses, loadCurrentBusiness, currentUser } = useCurrentBusiness()
 
 const isMobileViewport = import.meta.client && window.innerWidth < 720
 
@@ -1453,8 +1453,12 @@ const loadStaff = async () => {
 
         staffMembers.value = response.results
 
-        if (!selectedStaffId.value && staffMembers.value[0] && staffMembers.value.length > 0) {
-            selectedStaffId.value = staffMembers.value[0].id
+        if (!selectedStaffId.value && staffMembers.value.length > 0) {
+            const ownStaffMember = staffMembers.value.find(
+                (staff) => staff.user === currentUser.value?.id
+            )
+
+            selectedStaffId.value = (ownStaffMember || staffMembers.value[0]!).id
         }
     } catch (error) {
         console.error(error)
