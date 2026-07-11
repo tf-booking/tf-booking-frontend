@@ -456,19 +456,18 @@ onMounted(() => {
 
 @media (max-width: 900px) {
     .login-page {
-        height: 100svh;
-        overflow: hidden;
+        height: auto;
     }
 
     .login-shell {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-        height: 100svh;
+        grid-template-rows: auto auto;
+        height: auto;
+        min-height: 100svh;
     }
 
     .brand-panel {
         min-height: 0;
-        max-height: 36svh;
         padding: 22px 26px 18px;
         gap: 16px;
     }
@@ -490,8 +489,7 @@ onMounted(() => {
 
     .form-panel {
         min-height: 0;
-        height: 100%;
-        overflow-y: auto;
+        height: auto;
         place-items: start center;
         padding: 28px 24px 32px;
     }
@@ -499,7 +497,6 @@ onMounted(() => {
 
 @media (max-width: 520px) {
     .brand-panel {
-        max-height: 32svh;
         padding: 18px 20px 16px;
         gap: 10px;
     }
