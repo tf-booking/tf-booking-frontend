@@ -7,13 +7,13 @@
                 </div>
 
                 <div class="brand-copy">
-                    <p class="brand-eyebrow">Bem-vindo de volta</p>
+                    <p class="brand-eyebrow">Nova palavra-passe</p>
 
-                    <h2>Gere as tuas marcações num só sítio.</h2>
+                    <h2>Define a tua nova password.</h2>
 
                     <p class="brand-lede">
-                        Agenda, serviços, equipa e a origem de cada cliente -
-                        Instagram, Google ou WhatsApp.
+                        Escolhe uma password com pelo menos 6 caracteres para
+                        voltares a aceder à tua conta.
                     </p>
                 </div>
 
@@ -27,66 +27,60 @@
 
             <section class="form-panel">
                 <div class="form-content">
-                    <h1>Entrar</h1>
-
-                    <p class="form-lede">Acede ao painel do teu negócio.</p>
-
-                    <form class="form" @submit.prevent="handleLogin">
-                        <div>
-                            <label class="label">Email</label>
-                            <input
-                                v-model="form.username"
-                                class="input"
-                                type="text"
-                                inputmode="email"
-                                placeholder="geral@estudio.pt"
-                                autocomplete="username"
-                            />
+                    <template v-if="!hasToken">
+                        <h1>Link inválido</h1>
+                        <p class="form-lede">
+                            Este link de recuperação está incompleto ou já foi usado.
+                        </p>
+                        <div class="form-footer">
+                            <NuxtLink to="/recuperar-password">Pedir um novo link</NuxtLink>
                         </div>
+                    </template>
 
-                        <div>
-                            <label class="label">Palavra-passe</label>
+                    <template v-else>
+                        <h1>Nova password</h1>
 
-                            <div class="password-field">
+                        <p class="form-lede">Escolhe a tua nova palavra-passe.</p>
+
+                        <form v-if="!successMessage" class="form" @submit.prevent="handleSubmit">
+                            <div>
+                                <label class="label">Nova password</label>
                                 <input
-                                    v-model="form.password"
-                                    class="input password-input"
-                                    :type="showPassword ? 'text' : 'password'"
-                                    placeholder="••••••••••"
-                                    autocomplete="current-password"
+                                    v-model="newPassword"
+                                    class="input"
+                                    type="password"
+                                    placeholder="Mínimo 6 caracteres"
+                                    autocomplete="new-password"
                                 />
-
-                                <button type="button" class="password-toggle" @click="showPassword = !showPassword">
-                                    {{ showPassword ? 'ocultar' : 'mostrar' }}
-                                </button>
                             </div>
-                        </div>
 
-                        <div class="forgot-row">
-                            <NuxtLink to="/recuperar-password">Esqueceste-te?</NuxtLink>
-                        </div>
+                            <div>
+                                <label class="label">Confirmar nova password</label>
+                                <input
+                                    v-model="newPasswordConfirm"
+                                    class="input"
+                                    type="password"
+                                    placeholder="Repete a nova password"
+                                    autocomplete="new-password"
+                                />
+                            </div>
 
-                        <p v-if="successMessage" class="success-message">
-                            {{ successMessage }}
-                        </p>
+                            <p v-if="errorMessage" class="error-message">
+                                {{ errorMessage }}
+                            </p>
 
-                        <p v-if="errorMessage" class="error-message">
-                            {{ errorMessage }}
-                        </p>
+                            <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
+                                {{ isLoading ? 'A atualizar...' : 'Atualizar password' }}
+                            </button>
+                        </form>
 
-                        <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
-                            {{ isLoading ? 'A entrar...' : 'Entrar no dashboard →' }}
-                        </button>
-
-                        <template v-if="isGoogleConfigured">
-                            <div class="auth-divider"><span>ou</span></div>
-                            <div ref="googleButtonRef" class="google-button-slot"></div>
+                        <template v-else>
+                            <p class="success-message">{{ successMessage }}</p>
+                            <div class="form-footer">
+                                <NuxtLink to="/login">Ir para o login &rarr;</NuxtLink>
+                            </div>
                         </template>
-                    </form>
-
-                    <div class="form-footer">
-                        Ainda não tens conta? <NuxtLink to="/signup">Criar conta grátis</NuxtLink>
-                    </div>
+                    </template>
                 </div>
             </section>
         </div>
@@ -98,109 +92,52 @@ definePageMeta({
     layout: false,
 })
 
-type MeResponse = {
-    id: number
-    username: string
-    email: string
-    first_name: string
-    last_name: string
-    is_staff: boolean
-    is_superuser: boolean
-    businesses: {
-        id: number
-        business_uuid: string
-        business_name: string
-        business_slug: string
-        role: string
-        is_active: boolean
-        created_at: string
-    }[]
-}
-
-const { login, setTokens } = useAuth()
 const { apiFetch } = useApi()
-const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
 const route = useRoute()
 
-const form = reactive({
-    username: '',
-    password: '',
-})
+const token = computed(() => String(route.query.token || '').trim())
+const hasToken = computed(() => Boolean(token.value))
 
+const newPassword = ref('')
+const newPasswordConfirm = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
-const successMessage = ref(route.query.reset === 'success' ? 'Password atualizada. Já podes entrar.' : '')
-const showPassword = ref(false)
-const googleButtonRef = ref<HTMLElement | null>(null)
+const successMessage = ref('')
 
-const navigateAfterLogin = async () => {
-    const me = await apiFetch<MeResponse>('/me/')
+const handleSubmit = async () => {
+    errorMessage.value = ''
 
-    if (me.is_superuser || me.is_staff) {
-        await navigateTo('/admin')
+    if (!newPassword.value || !newPasswordConfirm.value) {
+        errorMessage.value = 'Preenche as duas passwords.'
         return
     }
 
-    const hasOwnerOrManagerMembership = me.businesses.some(
-        (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
-    )
-
-    await navigateTo(hasOwnerOrManagerMembership ? '/dashboard' : '/schedule')
-}
-
-const handleLogin = async () => {
-    errorMessage.value = ''
-
-    if (!form.username || !form.password) {
-        errorMessage.value = 'Preenche o email e a palavra-passe.'
+    if (newPassword.value !== newPasswordConfirm.value) {
+        errorMessage.value = 'As passwords não coincidem.'
         return
     }
 
     try {
         isLoading.value = true
 
-        await login({
-            username: form.username,
-            password: form.password,
+        await apiFetch<{ detail: string }>('/auth/password-reset/confirm/', {
+            method: 'POST',
+            body: {
+                token: token.value,
+                new_password: newPassword.value,
+                new_password_confirm: newPasswordConfirm.value,
+            },
+            auth: false,
         })
 
-        await navigateAfterLogin()
-    } catch (error) {
+        successMessage.value = 'Password atualizada com sucesso. Já podes entrar com a nova password.'
+    } catch (error: any) {
         console.error(error)
-        errorMessage.value = 'Credenciais inválidas ou erro ao entrar.'
+        errorMessage.value = error?.data?.detail || 'Este link é inválido ou já expirou.'
     } finally {
         isLoading.value = false
     }
 }
-
-const handleGoogleCredential = async (credential: string) => {
-    errorMessage.value = ''
-
-    try {
-        isLoading.value = true
-
-        const response = await submitGoogleCredential(credential)
-
-        if ('needs_business_name' in response) {
-            errorMessage.value = 'Não encontrámos nenhuma conta Klenda com este Google. Cria uma conta primeiro.'
-            return
-        }
-
-        setTokens(response)
-        await navigateAfterLogin()
-    } catch (error) {
-        console.error(error)
-        errorMessage.value = 'Não foi possível entrar com o Google. Tenta novamente.'
-    } finally {
-        isLoading.value = false
-    }
-}
-
-onMounted(() => {
-    if (googleButtonRef.value) {
-        renderGoogleButton(googleButtonRef.value, handleGoogleCredential)
-    }
-})
 </script>
 
 <style scoped>
@@ -375,77 +312,11 @@ onMounted(() => {
     font-size: 16px;
 }
 
-.password-field {
-    position: relative;
-}
-
-.password-input {
-    padding-right: 104px;
-}
-
-.password-toggle {
-    position: absolute;
-    top: 50%;
-    right: 22px;
-    transform: translateY(-50%);
-    border: 0;
-    background: transparent;
-    padding: 0;
-    color: #9b9489;
-    font-family: var(--tf-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0;
-    cursor: pointer;
-}
-
-.forgot-row {
-    margin-top: -10px;
-    text-align: right;
-    color: #767166;
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.forgot-row a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.forgot-row a:hover {
-    text-decoration: underline;
-}
-
 .submit-btn {
     min-height: 64px;
     width: 100%;
     font-size: 17px;
     letter-spacing: 0;
-}
-
-.auth-divider {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 6px 0;
-    color: #a9a49a;
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #e7e0d4;
-}
-
-.google-button-slot {
-    display: flex;
-    justify-content: center;
-    min-height: 44px;
 }
 
 .form-footer {
@@ -473,11 +344,12 @@ onMounted(() => {
 
 .success-message {
     margin: 0;
-    padding: 14px 16px;
+    padding: 16px;
     border-radius: 12px;
     background: var(--tf-success-bg);
     color: var(--tf-success-fg);
-    font-weight: 800;
+    font-weight: 700;
+    line-height: 1.5;
 }
 
 @media (max-width: 900px) {
