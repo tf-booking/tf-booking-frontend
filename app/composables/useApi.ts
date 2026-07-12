@@ -1,3 +1,44 @@
+let refreshPromise: Promise<string | null> | null = null
+
+const refreshAccessToken = async (apiBase: string): Promise<string | null> => {
+    if (!import.meta.client) {
+        return null
+    }
+
+    if (!refreshPromise) {
+        refreshPromise = (async () => {
+            const refreshToken = localStorage.getItem('tf_booking_refresh_token')
+
+            if (!refreshToken) {
+                return null
+            }
+
+            try {
+                const response = await $fetch<{ access: string; refresh?: string }>(
+                    `${apiBase}/auth/token/refresh/`,
+                    { method: 'POST', body: { refresh: refreshToken } }
+                )
+
+                localStorage.setItem('tf_booking_access_token', response.access)
+
+                if (response.refresh) {
+                    localStorage.setItem('tf_booking_refresh_token', response.refresh)
+                }
+
+                return response.access
+            } catch {
+                localStorage.removeItem('tf_booking_access_token')
+                localStorage.removeItem('tf_booking_refresh_token')
+                return null
+            }
+        })().finally(() => {
+            refreshPromise = null
+        })
+    }
+
+    return refreshPromise
+}
+
 export const useApi = () => {
     const config = useRuntimeConfig()
     const apiBase = String(config.public.apiBase || 'http://127.0.0.1:8000/api')
@@ -21,13 +62,10 @@ export const useApi = () => {
         const { auth = true, silent = false, headers: optionHeaders, ...fetchOptions } = options
         const token = auth ? getAccessToken() : null
 
-        const headers: Record<string, string> = {
+        const buildHeaders = (accessToken: string | null) => ({
             ...(optionHeaders as Record<string, string> || {}),
-        }
-
-        if (token) {
-            headers.Authorization = `Bearer ${token}`
-        }
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        })
 
         const { start, stop } = useGlobalLoading()
 
@@ -36,10 +74,36 @@ export const useApi = () => {
         }
 
         try {
-            return await $fetch<T>(`${apiBase}${endpoint}`, {
-                ...fetchOptions,
-                headers,
-            })
+            try {
+                return await $fetch<T>(`${apiBase}${endpoint}`, {
+                    ...fetchOptions,
+                    headers: buildHeaders(token),
+                })
+            } catch (error: any) {
+                const status = error?.status || error?.statusCode
+                const canRetry = auth && Boolean(token) && status === 401
+
+                if (!canRetry) {
+                    throw error
+                }
+
+                const newAccessToken = await refreshAccessToken(apiBase)
+
+                if (!newAccessToken) {
+                    if (import.meta.client) {
+                        localStorage.removeItem('tf_booking_access_token')
+                        localStorage.removeItem('tf_booking_refresh_token')
+                        await navigateTo('/login')
+                    }
+
+                    throw error
+                }
+
+                return await $fetch<T>(`${apiBase}${endpoint}`, {
+                    ...fetchOptions,
+                    headers: buildHeaders(newAccessToken),
+                })
+            }
         } finally {
             if (!silent) {
                 stop()
