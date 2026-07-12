@@ -413,7 +413,7 @@ const {
     data: business,
     pending: isLoadingBusiness,
     error: businessFetchError,
-} = useAsyncData<PublicBusiness | null>(
+} = await useAsyncData<PublicBusiness | null>(
     () => `public-business-${slug.value}`,
     () =>
         slug.value
@@ -433,6 +433,14 @@ const businessError = computed(() => {
 
     return ''
 })
+
+if (import.meta.server && businessError.value) {
+    const event = useRequestEvent()
+
+    if (event) {
+        setResponseStatus(event, 404)
+    }
+}
 
 const step = ref(0)
 

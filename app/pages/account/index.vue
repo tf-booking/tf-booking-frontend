@@ -514,6 +514,67 @@
                             </div>
                         </form>
                     </article>
+
+                    <article class="card form-card security-card">
+                        <div class="section-head">
+                            <div>
+                                <p class="section-label">Privacidade</p>
+                                <h2>Os teus dados</h2>
+                            </div>
+                        </div>
+
+                        <p class="security-hint">
+                            Podes descarregar uma cópia dos teus dados a qualquer momento.
+                        </p>
+
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" type="button" :disabled="isExportingData" @click="exportMyData">
+                                {{ isExportingData ? 'A preparar...' : 'Exportar os meus dados' }}
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="card form-card security-card">
+                        <div class="section-head">
+                            <div>
+                                <p class="section-label">Zona perigosa</p>
+                                <h2>Eliminar conta</h2>
+                            </div>
+                        </div>
+
+                        <p class="security-hint">
+                            Isto desativa a tua conta e apaga os teus dados pessoais permanentemente. Não podes ser o único dono de nenhum negócio ativo para continuares.
+                        </p>
+
+                        <p v-if="deleteErrorMessage" class="error-message">{{ deleteErrorMessage }}</p>
+
+                        <div v-if="!isDeleteConfirmOpen" class="form-actions">
+                            <button class="btn btn-danger" type="button" @click="isDeleteConfirmOpen = true">
+                                Eliminar conta
+                            </button>
+                        </div>
+
+                        <template v-else>
+                            <div>
+                                <label class="label">Escreve ELIMINAR para confirmares</label>
+                                <input v-model="deleteConfirmText" class="input" type="text" placeholder="ELIMINAR" />
+                            </div>
+
+                            <div class="form-actions">
+                                <button
+                                    class="btn btn-danger"
+                                    type="button"
+                                    :disabled="deleteConfirmText !== 'ELIMINAR' || isDeletingAccount"
+                                    @click="deleteMyAccount"
+                                >
+                                    {{ isDeletingAccount ? 'A eliminar...' : 'Eliminar definitivamente' }}
+                                </button>
+                                <button class="btn btn-secondary" type="button" @click="cancelDeleteAccount">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </template>
+                    </article>
                 </div>
             </template>
         </section>
@@ -578,6 +639,7 @@ const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
 const { isFree, isPro } = usePlan()
 const { isRedirecting, billingError, startCheckout, openBillingPortal } = useBilling()
+const { logout } = useAuth()
 const billingInterval = ref<'month' | 'year'>('month')
 const route = useRoute()
 
@@ -1166,6 +1228,60 @@ const savePassword = async () => {
         errorMessage.value = formatApiError(error)
     } finally {
         isSavingPassword.value = false
+    }
+}
+
+const isExportingData = ref(false)
+
+const exportMyData = async () => {
+    try {
+        isExportingData.value = true
+
+        const data = await apiFetch('/me/export/')
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'os-meus-dados-klenda.json'
+        link.click()
+        URL.revokeObjectURL(url)
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Nao foi possivel exportar os teus dados. Tenta novamente.'
+    } finally {
+        isExportingData.value = false
+    }
+}
+
+const isDeleteConfirmOpen = ref(false)
+const deleteConfirmText = ref('')
+const deleteErrorMessage = ref('')
+const isDeletingAccount = ref(false)
+
+const cancelDeleteAccount = () => {
+    isDeleteConfirmOpen.value = false
+    deleteConfirmText.value = ''
+    deleteErrorMessage.value = ''
+}
+
+const deleteMyAccount = async () => {
+    if (deleteConfirmText.value !== 'ELIMINAR') {
+        return
+    }
+
+    deleteErrorMessage.value = ''
+
+    try {
+        isDeletingAccount.value = true
+
+        await apiFetch('/me/', { method: 'DELETE' })
+
+        await logout()
+    } catch (error: any) {
+        console.error(error)
+        deleteErrorMessage.value = formatApiError(error)
+    } finally {
+        isDeletingAccount.value = false
     }
 }
 
