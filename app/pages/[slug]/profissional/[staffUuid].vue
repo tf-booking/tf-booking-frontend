@@ -312,7 +312,7 @@ const loadProfile = async () => {
         isLoading.value = true
         errorMessage.value = ''
 
-        const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
+        const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`, { auth: false })
         business.value = response
 
         if (!staffMember.value) {

@@ -417,7 +417,7 @@ const {
     () => `public-business-${slug.value}`,
     () =>
         slug.value
-            ? apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`)
+            ? apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`, { auth: false })
             : Promise.resolve(null),
     { watch: [slug], lazy: true }
 )
@@ -760,7 +760,7 @@ const loadAvailableSlots = async () => {
             endpoint += `&staff=${selectedStaff.value.uuid}`
         }
 
-        const response = await apiFetch<{ slots: AvailableSlot[] }>(endpoint)
+        const response = await apiFetch<{ slots: AvailableSlot[] }>(endpoint, { auth: false })
 
         const minNoticeMs = (business.value.booking_settings?.min_booking_notice_minutes || 0) * 60000
         const earliestAllowed = Date.now() + minNoticeMs
@@ -794,6 +794,7 @@ const confirm = async () => {
 
         await apiFetch('/public/appointments/', {
             method: 'POST',
+            auth: false,
             body: {
                 business_slug: business.value.slug,
                 service_uuid: selectedService.value.uuid,
