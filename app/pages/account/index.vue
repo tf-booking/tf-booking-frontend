@@ -416,6 +416,27 @@
                                     Subscrição renovada automaticamente até cancelares.
                                     Gere o método de pagamento, vê faturas ou cancela a qualquer momento.
                                 </p>
+
+                                <div class="plan-seats-row">
+                                    <div>
+                                        <label class="label">Número de colaboradores</label>
+                                        <select v-model.number="pendingSeats" class="input plan-seats-select">
+                                            <option v-for="seats in staffSlotOptions" :key="seats" :value="seats">
+                                                {{ seats }} colaborador{{ seats > 1 ? 'es' : '' }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        v-if="pendingSeats !== currentBusiness?.business_staff_slots"
+                                        class="btn btn-secondary"
+                                        type="button"
+                                        :disabled="isUpdatingSeats"
+                                        @click="saveSeats"
+                                    >
+                                        {{ isUpdatingSeats ? 'A guardar...' : 'Guardar' }}
+                                    </button>
+                                </div>
+
                                 <div class="form-actions">
                                     <button
                                         class="btn btn-accent"
@@ -443,7 +464,7 @@
                                         @click="billingInterval = 'month'"
                                     >
                                         <span class="plan-interval-name">Mensal</span>
-                                        <span class="plan-interval-price">19,90€<small>/mês + IVA</small></span>
+                                        <span class="plan-interval-price">13,90€<small>/mês + IVA</small></span>
                                     </button>
 
                                     <button
@@ -454,8 +475,21 @@
                                     >
                                         <span class="plan-interval-badge">Poupa 20%</span>
                                         <span class="plan-interval-name">Anual</span>
-                                        <span class="plan-interval-price">191,04€<small>/ano + IVA</small></span>
+                                        <span class="plan-interval-price">133,44€<small>/ano + IVA</small></span>
                                     </button>
+                                </div>
+
+                                <div>
+                                    <label class="label">Número de colaboradores</label>
+                                    <select v-model.number="selectedSeats" class="input plan-seats-select">
+                                        <option v-for="seats in staffSlotOptions" :key="seats" :value="seats">
+                                            {{ seats }} colaborador{{ seats > 1 ? 'es' : '' }}
+                                        </option>
+                                    </select>
+                                    <p class="plan-seats-hint">
+                                        1 colaborador incluído no preço base, cada um a mais soma
+                                        {{ formatEuro(billingInterval === 'year' ? EXTRA_STAFF_PRICE_YEAR : EXTRA_STAFF_PRICE_MONTH) }}€{{ billingInterval === 'year' ? '/ano' : '/mês' }} + IVA.
+                                    </p>
                                 </div>
 
                                 <div class="form-actions">
@@ -463,9 +497,9 @@
                                         class="btn btn-accent"
                                         type="button"
                                         :disabled="isRedirecting"
-                                        @click="startCheckout(billingInterval)"
+                                        @click="startCheckout(billingInterval, selectedSeats)"
                                     >
-                                        {{ isRedirecting ? 'A abrir pagamento...' : 'Atualizar para o Pro' }}
+                                        {{ isRedirecting ? 'A abrir pagamento...' : `Atualizar para o Pro - ${formatEuro(checkoutTotalPrice)}€${billingInterval === 'year' ? '/ano' : '/mês'}` }}
                                     </button>
                                 </div>
                             </template>
@@ -638,10 +672,47 @@ type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
 const { isFree, isPro } = usePlan()
-const { isRedirecting, billingError, startCheckout, openBillingPortal } = useBilling()
+const { isRedirecting, billingError, startCheckout, openBillingPortal, isUpdatingSeats, updateSeats } = useBilling()
 const { logout } = useAuth()
 const billingInterval = ref<'month' | 'year'>('month')
 const route = useRoute()
+
+// Preços apenas para exibição - têm de ser mantidos manualmente em linha com
+// os Prices configurados no Stripe (STRIPE_PRICE_ID_PRO/_ANNUAL e
+// STRIPE_PRICE_ID_EXTRA_STAFF/_ANNUAL no backend).
+const PRO_PLAN_MAX_STAFF = 5
+const BASE_PRICE_MONTH = 13.90
+const BASE_PRICE_YEAR = 133.44
+const EXTRA_STAFF_PRICE_MONTH = 3.99
+const EXTRA_STAFF_PRICE_YEAR = 47.88
+
+const staffSlotOptions = Array.from({ length: PRO_PLAN_MAX_STAFF }, (_, index) => index + 1)
+const selectedSeats = ref(1)
+
+const formatEuro = (value: number) => value.toFixed(2).replace('.', ',')
+
+const checkoutTotalPrice = computed(() => {
+    const base = billingInterval.value === 'year' ? BASE_PRICE_YEAR : BASE_PRICE_MONTH
+    const extraPrice = billingInterval.value === 'year' ? EXTRA_STAFF_PRICE_YEAR : EXTRA_STAFF_PRICE_MONTH
+    return base + (selectedSeats.value - 1) * extraPrice
+})
+
+const pendingSeats = ref(1)
+
+watch(
+    () => currentBusiness.value?.business_staff_slots,
+    (slots) => {
+        pendingSeats.value = slots || 1
+    },
+    { immediate: true }
+)
+
+const saveSeats = async () => {
+    const success = await updateSeats(pendingSeats.value)
+    if (success) {
+        successMessage.value = 'Número de lugares atualizado.'
+    }
+}
 
 const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)
@@ -1616,6 +1687,25 @@ onMounted(() => {
 .plan-interval-price small {
     font-size: 12px;
     font-weight: 600;
+    color: var(--tf-muted);
+}
+
+.plan-seats-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.plan-seats-select {
+    width: auto;
+    min-width: 180px;
+}
+
+.plan-seats-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
     color: var(--tf-muted);
 }
 

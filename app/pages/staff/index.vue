@@ -413,6 +413,7 @@ type Business = {
     name: string
     slug: string
     is_active: boolean
+    staff_slots: number
 }
 
 type Service = {
@@ -481,7 +482,6 @@ const { apiFetch } = useApi()
 const { isFree, isPro } = usePlan()
 
 const FREE_PLAN_STAFF_LIMIT = 1
-const PRO_PLAN_INCLUDED_STAFF = 3
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -557,8 +557,10 @@ const dayBlockForm = reactive({
 
 const activeStaffCount = computed(() => staffMembers.value.filter((staff) => staff.is_active).length)
 const inactiveStaffCount = computed(() => staffMembers.value.length - activeStaffCount.value)
-const isStaffLimitLocked = computed(() => isFree.value && activeStaffCount.value >= FREE_PLAN_STAFF_LIMIT)
-const showExtraStaffNotice = computed(() => isPro.value && activeStaffCount.value >= PRO_PLAN_INCLUDED_STAFF)
+const staffLimit = computed(() =>
+    isPro.value ? (selectedBusiness.value?.staff_slots || 1) : FREE_PLAN_STAFF_LIMIT
+)
+const isStaffLimitLocked = computed(() => activeStaffCount.value >= staffLimit.value)
 
 const proModal = reactive({
     open: false,
@@ -904,7 +906,11 @@ const openCreateStaff = async () => {
     resetMessages()
 
     if (isStaffLimitLocked.value) {
-        showProModal('O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.')
+        showProModal(
+            isPro.value
+                ? `O teu plano Pro permite até ${staffLimit.value} colaborador(es). Aumenta o número de lugares em Conta > Plano para adicionares mais.`
+                : 'O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.'
+        )
         return
     }
 
@@ -1006,11 +1012,6 @@ const saveStaff = async () => {
 
     if (form.services.length === 0) {
         errorMessage.value = 'Seleciona pelo menos um serviço para este colaborador.'
-        return
-    }
-
-    if (!editingStaff.value && showExtraStaffNotice.value) {
-        confirmExtraStaffCharge(() => performSaveStaff())
         return
     }
 
@@ -1125,19 +1126,6 @@ const confirmDeleteStaff = (staff: StaffMember) => {
     confirmModal.confirmLabel = 'Apagar'
     confirmModal.danger = true
     confirmModal.onConfirm = () => deleteStaff(staff)
-    confirmModal.open = true
-}
-
-const confirmExtraStaffCharge = (onConfirm: () => void) => {
-    confirmModal.title = 'Colaborador extra'
-    confirmModal.message = (
-        `Já tens ${PRO_PLAN_INCLUDED_STAFF} colaboradores incluídos no plano Pro. ` +
-        'Adicionar mais um acresce +3,99€/mês (ou equivalente anual) à tua subscrição, ' +
-        'cobrado agora de forma proporcional e incluído na próxima renovação. Queres continuar?'
-    )
-    confirmModal.confirmLabel = 'Confirmar e continuar'
-    confirmModal.danger = false
-    confirmModal.onConfirm = onConfirm
     confirmModal.open = true
 }
 
