@@ -413,6 +413,7 @@ type Business = {
     name: string
     slug: string
     is_active: boolean
+    plan: string
     staff_slots: number
 }
 
@@ -479,7 +480,6 @@ type StaffBlock = {
 }
 
 const { apiFetch } = useApi()
-const { isFree, isPro } = usePlan()
 const { updateSeats, billingError: billingSeatsError } = useBilling()
 
 const FREE_PLAN_STAFF_LIMIT = 1
@@ -488,6 +488,12 @@ const PRO_PLAN_MAX_STAFF = 5
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
 const formCardRef = ref<HTMLElement | null>(null)
+
+// Deriva sempre do selectedBusiness (carregado de fresco em loadBusinesses),
+// nunca do estado global de useCurrentBusiness/usePlan - esse fica em cache
+// entre navegações e pode ficar desatualizado nesta página.
+const isPro = computed(() => selectedBusiness.value?.plan === 'pro')
+const isFree = computed(() => !isPro.value)
 
 const services = ref<Service[]>([])
 const staffMembers = ref<StaffMember[]>([])
