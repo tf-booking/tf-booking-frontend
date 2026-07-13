@@ -480,7 +480,10 @@
                                     >
                                         <span class="plan-interval-badge">Poupa 20%</span>
                                         <span class="plan-interval-name">Anual</span>
-                                        <span class="plan-interval-price">{{ formatEuro(checkoutYearPrice) }}€<small>/ano + IVA</small></span>
+                                        <span class="plan-interval-price">
+                                            <s class="plan-interval-strike">{{ formatEuro(checkoutMonthPrice) }}€</s>
+                                            {{ formatEuro(checkoutYearMonthlyPrice) }}€<small>/mês + IVA</small>
+                                        </span>
                                     </button>
                                 </div>
 
@@ -698,6 +701,7 @@ const formatEuro = (value: number) => value.toFixed(2).replace('.', ',')
 
 const checkoutMonthPrice = computed(() => BASE_PRICE_MONTH + (selectedSeats.value - 1) * EXTRA_STAFF_PRICE_MONTH)
 const checkoutYearPrice = computed(() => BASE_PRICE_YEAR + (selectedSeats.value - 1) * EXTRA_STAFF_PRICE_YEAR)
+const checkoutYearMonthlyPrice = computed(() => checkoutYearPrice.value / 12)
 const checkoutTotalPrice = computed(() => (
     billingInterval.value === 'year' ? checkoutYearPrice.value : checkoutMonthPrice.value
 ))
@@ -1696,6 +1700,14 @@ onMounted(() => {
     font-size: 12px;
     font-weight: 600;
     color: var(--tf-muted);
+}
+
+.plan-interval-strike {
+    margin-right: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tf-muted);
+    text-decoration: line-through;
 }
 
 .plan-price-preview {
