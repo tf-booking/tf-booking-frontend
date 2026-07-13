@@ -67,8 +67,12 @@ export const useBilling = () => {
         }
     }
 
-    const startAddSeatCheckout = async (businessUuidOverride?: string) => {
-        const businessUuid = businessUuidOverride || currentBusiness.value?.business_uuid
+    const startAddSeatCheckout = async (options: {
+        targetStaffSlots?: number
+        origin?: 'staff' | 'account'
+        businessUuidOverride?: string
+    } = {}) => {
+        const businessUuid = options.businessUuidOverride || currentBusiness.value?.business_uuid
 
         if (!businessUuid) {
             billingError.value = 'Não foi possível identificar o teu negócio.'
@@ -81,7 +85,13 @@ export const useBilling = () => {
         try {
             const response = await apiFetch<{ url: string }>(
                 `/businesses/${businessUuid}/billing/checkout/add-seat/`,
-                { method: 'POST' }
+                {
+                    method: 'POST',
+                    body: {
+                        target_staff_slots: options.targetStaffSlots,
+                        origin: options.origin || 'staff',
+                    },
+                }
             )
             redirectToUrl(response.url)
         } catch (error: any) {

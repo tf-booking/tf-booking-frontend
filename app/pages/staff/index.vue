@@ -938,9 +938,12 @@ const openCreateStaff = async () => {
                 'pagares esse valor agora - assim que o pagamento for confirmado, o lugar fica ' +
                 'disponível e podes criar o colaborador.'
             )
-            confirmModal.confirmLabel = 'Ir para a Stripe'
+            confirmModal.confirmLabel = 'Pagar agora'
             confirmModal.danger = false
-            confirmModal.onConfirm = () => startAddSeatCheckout(selectedBusiness.value?.uuid)
+            confirmModal.onConfirm = () => startAddSeatCheckout({
+                origin: 'staff',
+                businessUuidOverride: selectedBusiness.value?.uuid,
+            })
             confirmModal.open = true
             return
         }

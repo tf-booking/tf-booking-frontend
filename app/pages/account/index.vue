@@ -435,10 +435,12 @@
                                         v-if="pendingSeats !== currentBusiness?.business_staff_slots"
                                         class="btn btn-secondary"
                                         type="button"
-                                        :disabled="isUpdatingSeats"
+                                        :disabled="isUpdatingSeats || isRedirecting"
                                         @click="saveSeats"
                                     >
-                                        {{ isUpdatingSeats ? 'A guardar...' : 'Guardar' }}
+                                        {{ isIncreasingSeats
+                                            ? (isRedirecting ? 'A abrir pagamento...' : 'Pagar agora')
+                                            : (isUpdatingSeats ? 'A guardar...' : 'Guardar') }}
                                     </button>
                                 </div>
 
@@ -680,7 +682,7 @@ type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
 const { isFree, isPro } = usePlan()
-const { isRedirecting, billingError, startCheckout, openBillingPortal, isUpdatingSeats, updateSeats } = useBilling()
+const { isRedirecting, billingError, startCheckout, startAddSeatCheckout, openBillingPortal, isUpdatingSeats, updateSeats } = useBilling()
 const { logout } = useAuth()
 const billingInterval = ref<'month' | 'year'>('month')
 const route = useRoute()
@@ -719,7 +721,18 @@ watch(
     { immediate: true }
 )
 
+const isIncreasingSeats = computed(() => pendingSeats.value > (currentBusiness.value?.business_staff_slots || 1))
+
 const saveSeats = async () => {
+    if (isIncreasingSeats.value) {
+        await startAddSeatCheckout({
+            targetStaffSlots: pendingSeats.value,
+            origin: 'account',
+            businessUuidOverride: currentBusiness.value?.business_uuid,
+        })
+        return
+    }
+
     const success = await updateSeats(pendingSeats.value)
     if (success) {
         successMessage.value = 'Número de lugares atualizado.'
@@ -1451,6 +1464,13 @@ onMounted(() => {
                 : 'Pagamento recebido - o plano pode demorar alguns segundos a atualizar.'
         })
     } else if (route.query.billing === 'cancelled') {
+        billingStatusMessage.value = 'Pagamento não foi concluído. Podes tentar novamente quando quiseres.'
+    } else if (route.query.seat_payment === 'success') {
+        billingStatusMessage.value = 'Pagamento confirmado! A atualizar o número de lugares...'
+        loadCurrentBusiness({ force: true }).then(() => {
+            billingStatusMessage.value = 'Número de lugares atualizado.'
+        })
+    } else if (route.query.seat_payment === 'cancelled') {
         billingStatusMessage.value = 'Pagamento não foi concluído. Podes tentar novamente quando quiseres.'
     }
 })
