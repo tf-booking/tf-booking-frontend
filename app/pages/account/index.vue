@@ -417,6 +417,11 @@
                                     Gere o método de pagamento, vê faturas ou cancela a qualquer momento.
                                 </p>
 
+                                <div class="plan-price-preview">
+                                    <span>{{ formatEuro(proPreviewPriceMonth) }}€<small>/mês + IVA</small></span>
+                                    <span>ou {{ formatEuro(proPreviewPriceYear) }}€<small>/ano + IVA</small></span>
+                                </div>
+
                                 <div class="plan-seats-row">
                                     <div>
                                         <label class="label">Número de colaboradores</label>
@@ -698,6 +703,9 @@ const checkoutTotalPrice = computed(() => {
 })
 
 const pendingSeats = ref(1)
+
+const proPreviewPriceMonth = computed(() => BASE_PRICE_MONTH + (pendingSeats.value - 1) * EXTRA_STAFF_PRICE_MONTH)
+const proPreviewPriceYear = computed(() => BASE_PRICE_YEAR + (pendingSeats.value - 1) * EXTRA_STAFF_PRICE_YEAR)
 
 watch(
     () => currentBusiness.value?.business_staff_slots,
@@ -1685,6 +1693,22 @@ onMounted(() => {
 }
 
 .plan-interval-price small {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tf-muted);
+}
+
+.plan-price-preview {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--tf-ink);
+}
+
+.plan-price-preview small {
     font-size: 12px;
     font-weight: 600;
     color: var(--tf-muted);

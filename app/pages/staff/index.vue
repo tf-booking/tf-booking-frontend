@@ -480,8 +480,10 @@ type StaffBlock = {
 
 const { apiFetch } = useApi()
 const { isFree, isPro } = usePlan()
+const { updateSeats, billingError: billingSeatsError } = useBilling()
 
 const FREE_PLAN_STAFF_LIMIT = 1
+const PRO_PLAN_MAX_STAFF = 5
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -906,13 +908,47 @@ const openCreateStaff = async () => {
     resetMessages()
 
     if (isStaffLimitLocked.value) {
+        if (isPro.value && staffLimit.value < PRO_PLAN_MAX_STAFF) {
+            const nextPrice = (13.90 + staffLimit.value * 3.99).toFixed(2).replace('.', ',')
+            confirmModal.title = 'Adicionar colaborador'
+            confirmModal.message = (
+                `Já tens ${staffLimit.value} colaborador(es) no teu plano Pro. Adicionar mais um ` +
+                'acresce +3,99€/mês (ou equivalente anual) à tua subscrição, cobrado agora de ' +
+                `forma proporcional - o próximo mês fica em ${nextPrice}€ + IVA. Queres continuar?`
+            )
+            confirmModal.confirmLabel = 'Confirmar e continuar'
+            confirmModal.danger = false
+            confirmModal.onConfirm = () => buyNextSeatAndOpenCreateStaff()
+            confirmModal.open = true
+            return
+        }
+
         showProModal(
             isPro.value
-                ? `O teu plano Pro permite até ${staffLimit.value} colaborador(es). Aumenta o número de lugares em Conta > Plano para adicionares mais.`
+                ? `O plano Pro permite no máximo ${PRO_PLAN_MAX_STAFF} colaboradores.`
                 : 'O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.'
         )
         return
     }
+
+    resetForm()
+    isFormOpen.value = true
+    await focusForm()
+}
+
+const buyNextSeatAndOpenCreateStaff = async () => {
+    if (!selectedBusiness.value) {
+        return
+    }
+
+    const response = await updateSeats(staffLimit.value + 1, selectedBusiness.value.uuid)
+
+    if (!response) {
+        errorMessage.value = billingSeatsError.value || 'Não foi possível atualizar o número de lugares.'
+        return
+    }
+
+    selectedBusiness.value.staff_slots = response.staff_slots
 
     resetForm()
     isFormOpen.value = true

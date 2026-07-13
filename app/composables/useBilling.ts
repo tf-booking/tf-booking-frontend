@@ -37,12 +37,12 @@ export const useBilling = () => {
 
     const isUpdatingSeats = useState('billing-is-updating-seats', () => false)
 
-    const updateSeats = async (staffSlots: number) => {
-        const businessUuid = currentBusiness.value?.business_uuid
+    const updateSeats = async (staffSlots: number, businessUuidOverride?: string) => {
+        const businessUuid = businessUuidOverride || currentBusiness.value?.business_uuid
 
         if (!businessUuid) {
             billingError.value = 'Não foi possível identificar o teu negócio.'
-            return false
+            return null
         }
 
         billingError.value = ''
@@ -53,15 +53,15 @@ export const useBilling = () => {
                 `/businesses/${businessUuid}/billing/seats/`,
                 { method: 'POST', body: { staff_slots: staffSlots } }
             )
-            if (currentBusiness.value) {
+            if (currentBusiness.value?.business_uuid === businessUuid) {
                 currentBusiness.value.business_staff_slots = response.staff_slots
             }
-            return true
+            return response
         } catch (error: any) {
             console.error('Erro ao atualizar o número de lugares:', error)
             billingError.value =
                 error?.data?.detail || 'Não foi possível atualizar o número de lugares.'
-            return false
+            return null
         } finally {
             isUpdatingSeats.value = false
         }

@@ -31,9 +31,10 @@
                     <li>O plano <strong>Grátis</strong> não tem custo e inclui 1 profissional.</li>
                     <li>
                         O plano <strong>Pro</strong> é uma subscrição recorrente (mensal ou anual)
-                        que se renova automaticamente até seres tu a cancelar. Inclui até 3
-                        colaboradores; cada colaborador adicional acresce um valor fixo à
-                        subscrição, cobrado de forma proporcional assim que o adicionas.
+                        que se renova automaticamente até seres tu a cancelar. Inclui 1
+                        colaborador; podes escolher ter até 5, cada colaborador adicional
+                        acresce um valor fixo à subscrição, cobrado de forma proporcional assim
+                        que o adicionas.
                     </li>
                     <li>Os preços apresentados não incluem IVA, que é acrescentado no checkout.</li>
                     <li>Podes cancelar a subscrição a qualquer momento na tua Conta — o acesso Pro mantém-se até ao fim do período já pago.</li>
