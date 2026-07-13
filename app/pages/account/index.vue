@@ -264,7 +264,7 @@
                     </article>
                 </div>
 
-                <!-- PERFIL PÚBLICO -->
+          
                 <div
                     v-if="professionalProfileState !== 'hidden'"
                     v-show="activeTab === 'publico'"
@@ -469,7 +469,7 @@
                                         @click="billingInterval = 'month'"
                                     >
                                         <span class="plan-interval-name">Mensal</span>
-                                        <span class="plan-interval-price">13,90€<small>/mês + IVA</small></span>
+                                        <span class="plan-interval-price">{{ formatEuro(checkoutMonthPrice) }}€<small>/mês + IVA</small></span>
                                     </button>
 
                                     <button
@@ -480,7 +480,7 @@
                                     >
                                         <span class="plan-interval-badge">Poupa 20%</span>
                                         <span class="plan-interval-name">Anual</span>
-                                        <span class="plan-interval-price">133,44€<small>/ano + IVA</small></span>
+                                        <span class="plan-interval-price">{{ formatEuro(checkoutYearPrice) }}€<small>/ano + IVA</small></span>
                                     </button>
                                 </div>
 
@@ -696,11 +696,11 @@ const selectedSeats = ref(1)
 
 const formatEuro = (value: number) => value.toFixed(2).replace('.', ',')
 
-const checkoutTotalPrice = computed(() => {
-    const base = billingInterval.value === 'year' ? BASE_PRICE_YEAR : BASE_PRICE_MONTH
-    const extraPrice = billingInterval.value === 'year' ? EXTRA_STAFF_PRICE_YEAR : EXTRA_STAFF_PRICE_MONTH
-    return base + (selectedSeats.value - 1) * extraPrice
-})
+const checkoutMonthPrice = computed(() => BASE_PRICE_MONTH + (selectedSeats.value - 1) * EXTRA_STAFF_PRICE_MONTH)
+const checkoutYearPrice = computed(() => BASE_PRICE_YEAR + (selectedSeats.value - 1) * EXTRA_STAFF_PRICE_YEAR)
+const checkoutTotalPrice = computed(() => (
+    billingInterval.value === 'year' ? checkoutYearPrice.value : checkoutMonthPrice.value
+))
 
 const pendingSeats = ref(1)
 
