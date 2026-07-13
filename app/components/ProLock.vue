@@ -9,7 +9,7 @@
                 <span class="pro-lock-tag">PRO</span>
                 <p class="pro-lock-message">{{ message }}</p>
                 <NuxtLink to="/account?tab=plano" class="btn btn-accent pro-lock-cta">
-                    Atualizar para o Pro
+                    {{ ctaLabel }}
                 </NuxtLink>
             </div>
         </div>
@@ -20,8 +20,10 @@
 withDefaults(defineProps<{
     locked: boolean
     message?: string
+    ctaLabel?: string
 }>(), {
     message: 'Esta funcionalidade está disponível no plano Pro.',
+    ctaLabel: 'Atualizar para o Pro',
 })
 </script>
 

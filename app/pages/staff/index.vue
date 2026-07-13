@@ -41,7 +41,8 @@
 
                     <ProLock
                         :locked="!editingStaff && isStaffLimitLocked"
-                        message="O plano Grátis permite até 1 colaborador. Atualiza para o Pro para adicionares mais."
+                        :message="staffLockMessage"
+                        :cta-label="staffLockCtaLabel"
                     >
                     <form class="form" @submit.prevent="saveStaff">
                         <div class="avatar-field">
@@ -569,6 +570,20 @@ const staffLimit = computed(() =>
     isPro.value ? (selectedBusiness.value?.staff_slots || 1) : FREE_PLAN_STAFF_LIMIT
 )
 const isStaffLimitLocked = computed(() => activeStaffCount.value >= staffLimit.value)
+
+const staffLockMessage = computed(() => {
+    if (!isPro.value) {
+        return 'O plano Grátis permite até 1 colaborador. Atualiza para o plano Pro para adicionares mais.'
+    }
+
+    if (staffLimit.value < PRO_PLAN_MAX_STAFF) {
+        return `Já tens ${staffLimit.value} colaborador(es) no teu plano Pro. Aumenta o número de lugares em Conta > Plano para adicionares mais.`
+    }
+
+    return `O plano Pro permite no máximo ${PRO_PLAN_MAX_STAFF} colaboradores.`
+})
+
+const staffLockCtaLabel = computed(() => (isPro.value ? 'Aumentar lugares' : 'Atualizar para o Pro'))
 
 const proModal = reactive({
     open: false,
