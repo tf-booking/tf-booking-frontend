@@ -481,7 +481,8 @@ type StaffBlock = {
 }
 
 const { apiFetch } = useApi()
-const { updateSeats, billingError: billingSeatsError } = useBilling()
+const { startAddSeatCheckout, billingError: billingSeatsError } = useBilling()
+const route = useRoute()
 
 const FREE_PLAN_STAFF_LIMIT = 1
 const PRO_PLAN_MAX_STAFF = 5
@@ -930,16 +931,16 @@ const openCreateStaff = async () => {
 
     if (isStaffLimitLocked.value) {
         if (isPro.value && staffLimit.value < PRO_PLAN_MAX_STAFF) {
-            const nextPrice = (13.90 + staffLimit.value * 3.99).toFixed(2).replace('.', ',')
             confirmModal.title = 'Adicionar colaborador'
             confirmModal.message = (
                 `Já tens ${staffLimit.value} colaborador(es) no teu plano Pro. Adicionar mais um ` +
-                'acresce +3,99€/mês (ou equivalente anual) à tua subscrição, cobrado agora de ' +
-                `forma proporcional - o próximo mês fica em ${nextPrice}€ + IVA. Queres continuar?`
+                'custa +3,99€/mês (ou equivalente anual). Vais ser redirecionado para a Stripe para ' +
+                'pagares esse valor agora - assim que o pagamento for confirmado, o lugar fica ' +
+                'disponível e podes criar o colaborador.'
             )
-            confirmModal.confirmLabel = 'Confirmar e continuar'
+            confirmModal.confirmLabel = 'Ir para a Stripe'
             confirmModal.danger = false
-            confirmModal.onConfirm = () => buyNextSeatAndOpenCreateStaff()
+            confirmModal.onConfirm = () => startAddSeatCheckout(selectedBusiness.value?.uuid)
             confirmModal.open = true
             return
         }
@@ -951,25 +952,6 @@ const openCreateStaff = async () => {
         )
         return
     }
-
-    resetForm()
-    isFormOpen.value = true
-    await focusForm()
-}
-
-const buyNextSeatAndOpenCreateStaff = async () => {
-    if (!selectedBusiness.value) {
-        return
-    }
-
-    const response = await updateSeats(staffLimit.value + 1, selectedBusiness.value.uuid)
-
-    if (!response) {
-        errorMessage.value = billingSeatsError.value || 'Não foi possível atualizar o número de lugares.'
-        return
-    }
-
-    selectedBusiness.value.staff_slots = response.staff_slots
 
     resetForm()
     isFormOpen.value = true
@@ -1233,6 +1215,28 @@ onMounted(async () => {
     await loadBusinesses()
     await loadServices()
     await loadStaff()
+
+    if (route.query.seat_payment === 'success') {
+        if (!isStaffLimitLocked.value) {
+            successMessage.value = 'Pagamento confirmado! O lugar extra já está disponível.'
+            resetForm()
+            isFormOpen.value = true
+            await focusForm()
+        } else {
+            successMessage.value = (
+                'Pagamento confirmado! Pode demorar alguns segundos a atualizar - ' +
+                'atualiza a página se o lugar extra ainda não aparecer disponível.'
+            )
+        }
+    } else if (route.query.seat_payment === 'cancelled') {
+        errorMessage.value = 'Pagamento não foi concluído. Podes tentar novamente quando quiseres.'
+    }
+})
+
+watch(billingSeatsError, (value) => {
+    if (value) {
+        errorMessage.value = value
+    }
 })
 
 onBeforeUnmount(() => {

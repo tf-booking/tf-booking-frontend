@@ -67,6 +67,31 @@ export const useBilling = () => {
         }
     }
 
+    const startAddSeatCheckout = async (businessUuidOverride?: string) => {
+        const businessUuid = businessUuidOverride || currentBusiness.value?.business_uuid
+
+        if (!businessUuid) {
+            billingError.value = 'Não foi possível identificar o teu negócio.'
+            return
+        }
+
+        billingError.value = ''
+        isRedirecting.value = true
+
+        try {
+            const response = await apiFetch<{ url: string }>(
+                `/businesses/${businessUuid}/billing/checkout/add-seat/`,
+                { method: 'POST' }
+            )
+            redirectToUrl(response.url)
+        } catch (error: any) {
+            console.error('Erro ao iniciar o pagamento do lugar extra:', error)
+            billingError.value =
+                error?.data?.detail || 'Não foi possível iniciar o pagamento. Tenta novamente.'
+            isRedirecting.value = false
+        }
+    }
+
     const openBillingPortal = async () => {
         const businessUuid = currentBusiness.value?.business_uuid
 
@@ -95,6 +120,7 @@ export const useBilling = () => {
         isRedirecting,
         billingError,
         startCheckout,
+        startAddSeatCheckout,
         openBillingPortal,
         isUpdatingSeats,
         updateSeats,
