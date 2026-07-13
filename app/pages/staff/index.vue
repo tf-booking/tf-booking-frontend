@@ -120,10 +120,14 @@
                             </p>
                         </div>
 
-                        <label class="toggle-row">
+                        <label v-if="!editingStaff?.is_owner" class="toggle-row">
                             <input v-model="form.is_active" type="checkbox" />
                             <span>Colaborador ativo</span>
                         </label>
+
+                        <p v-else class="services-hint">
+                            O owner do negócio permanece sempre ativo como colaborador.
+                        </p>
 
                         <p v-if="errorMessage" class="error-message">
                             {{ errorMessage }}
@@ -219,7 +223,7 @@
                                     </button>
 
                                     <button
-                                        v-if="staff.access_status !== 'active' && staff.email"
+                                        v-if="!staff.is_owner && staff.is_active && staff.access_status !== 'active' && staff.email"
                                         class="mini-button"
                                         type="button"
                                         :disabled="invitingStaffId === staff.id"
@@ -228,7 +232,7 @@
                                         {{ invitingStaffId === staff.id ? 'A convidar...' : staff.access_status === 'pending' ? 'Reenviar convite' : 'Convidar' }}
                                     </button>
 
-                                    <button class="mini-button danger" type="button" @click="confirmDeleteStaff(staff)">
+                                    <button v-if="!staff.is_owner" class="mini-button danger" type="button" @click="confirmDeleteStaff(staff)">
                                         Apagar
                                     </button>
                                 </div>
@@ -430,7 +434,7 @@ type Service = {
     is_active: boolean
 }
 
-type AccessStatus = 'none' | 'pending' | 'active'
+type AccessStatus = 'none' | 'pending' | 'active' | 'disabled'
 
 type ServiceOverride = {
     service_id: number
@@ -454,6 +458,7 @@ type StaffMember = {
     gallery_image_urls: string[]
     is_active: boolean
     access_status: AccessStatus
+    is_owner: boolean
 }
 
 type WorkingHour = {
@@ -516,6 +521,7 @@ const accessStatusLabels: Record<AccessStatus, string> = {
     none: 'Sem acesso',
     pending: 'Convite enviado',
     active: 'Acesso ativo',
+    disabled: 'Acesso desativado',
 }
 
 const form = reactive({

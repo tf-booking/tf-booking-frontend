@@ -133,6 +133,11 @@ const successMessage = ref(route.query.reset === 'success' ? 'Password atualizad
 const showPassword = ref(false)
 const googleButtonRef = ref<HTMLElement | null>(null)
 
+const loginErrorMessage = (error: any, fallback: string) => {
+    const detail = error?.data?.detail
+    return typeof detail === 'string' && detail ? detail : fallback
+}
+
 const navigateAfterLogin = async () => {
     const me = await apiFetch<MeResponse>('/me/')
 
@@ -167,7 +172,10 @@ const handleLogin = async () => {
         await navigateAfterLogin()
     } catch (error) {
         console.error(error)
-        errorMessage.value = 'Credenciais inválidas ou erro ao entrar.'
+        errorMessage.value = loginErrorMessage(
+            error,
+            'Credenciais inválidas ou erro ao entrar.'
+        )
     } finally {
         isLoading.value = false
     }
@@ -190,7 +198,10 @@ const handleGoogleCredential = async (credential: string) => {
         await navigateAfterLogin()
     } catch (error) {
         console.error(error)
-        errorMessage.value = 'Não foi possível entrar com o Google. Tenta novamente.'
+        errorMessage.value = loginErrorMessage(
+            error,
+            'Não foi possível entrar com o Google. Tenta novamente.'
+        )
     } finally {
         isLoading.value = false
     }
