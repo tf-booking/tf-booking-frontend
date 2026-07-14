@@ -8,6 +8,11 @@
             <nav class="footer-links">
                 <NuxtLink to="/privacidade">Política de Privacidade</NuxtLink>
                 <NuxtLink to="/termos">Termos de Serviço</NuxtLink>
+                <a
+                    href="https://www.livroreclamacoes.pt"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >Livro de Reclamações Eletrónico</a>
                 <a href="mailto:geral@myklenda.com">geral@myklenda.com</a>
             </nav>
 

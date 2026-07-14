@@ -195,13 +195,13 @@
 
                         <div class="contact-row">
                             <span class="contact-label">Telefone</span>
-                            <a class="contact-value" href="tel:+351900000000">+351 900 000 000</a>
+                            <a class="contact-value" href="tel:+351965791299">+351 965 791 299</a>
                         </div>
 
                         <div class="contact-row">
                             <span class="contact-label">WhatsApp</span>
-                            <a class="contact-value" href="https://wa.me/351900000000" target="_blank" rel="noopener noreferrer">
-                                +351 900 000 000
+                            <a class="contact-value" href="https://wa.me/351965791299" target="_blank" rel="noopener noreferrer">
+                                +351 965 791 299
                             </a>
                         </div>
 
