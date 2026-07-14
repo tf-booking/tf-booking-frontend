@@ -231,7 +231,7 @@
                                     <div>
                                         <label class="label">Email</label>
                                         <input v-model="appointmentForm.customer_email" class="input" type="email"
-                                            placeholder="cliente@email.pt" />
+                                            placeholder="cliente@email.pt" required />
                                     </div>
                                 </div>
                             </template>
@@ -1806,8 +1806,11 @@ const saveAppointment = async () => {
         return
     }
 
-    if (!appointmentForm.is_walk_in && (!appointmentForm.customer_name || !appointmentForm.customer_phone)) {
-        errorMessage.value = 'Preenche o nome e telefone do cliente.'
+    if (
+        !appointmentForm.is_walk_in
+        && (!appointmentForm.customer_name || !appointmentForm.customer_phone || !appointmentForm.customer_email)
+    ) {
+        errorMessage.value = 'Preenche o nome, telefone e email do cliente.'
         return
     }
 

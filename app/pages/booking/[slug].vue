@@ -258,7 +258,7 @@
                     <input v-model="customer.phone" class="input mb" type="tel" placeholder="+351 912 345 678" />
 
                     <label class="label">Email</label>
-                    <input v-model="customer.email" class="input" type="email" placeholder="maria@email.pt" />
+                    <input v-model="customer.email" class="input" type="email" placeholder="maria@email.pt" required />
 
                     <div class="summary-card">
                         <p class="summary-eyebrow">Resumo</p>
@@ -273,6 +273,16 @@
                                 selectedStaff?.name }}</span>
                         </div>
                     </div>
+
+                    <label class="terms-row">
+                        <input v-model="acceptedTerms" type="checkbox" required />
+                        <span>
+                            Li e concordo com os
+                            <a href="/termos" target="_blank" rel="noopener noreferrer" @click.stop>Termos e Condições</a>
+                            e a
+                            <a href="/privacidade" target="_blank" rel="noopener noreferrer" @click.stop>Política de Privacidade</a>
+                        </span>
+                    </label>
 
                     <p v-if="bookingError" class="booking-error">{{ bookingError }}</p>
                 </div>
@@ -487,6 +497,8 @@ const customer = reactive({
     email: '',
 })
 
+const acceptedTerms = ref(false)
+
 const selectedService = computed(() =>
     business.value?.services.find((service) => service.uuid === selectedServiceUuid.value) || null
 )
@@ -682,7 +694,9 @@ const canConfirm = computed(() =>
         hasStaffChoice.value &&
         selectedSlotStillAvailable.value &&
         customer.name.trim() &&
-        customer.phone.trim()
+        customer.phone.trim() &&
+        customer.email.trim() &&
+        acceptedTerms.value
     )
 )
 
@@ -837,6 +851,7 @@ const reset = async () => {
     customer.name = ''
     customer.phone = ''
     customer.email = ''
+    acceptedTerms.value = false
     await goTo(0)
 }
 
@@ -1540,6 +1555,29 @@ watch(slug, () => {
     border-top: 1px solid #26262d;
     font-size: 14px;
     color: #b7b3aa;
+}
+
+.terms-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tf-muted);
+}
+
+.terms-row input[type='checkbox'] {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.terms-row a {
+    color: var(--tf-ink);
+    font-weight: 700;
+    text-decoration: underline;
 }
 
 .booking-error {
