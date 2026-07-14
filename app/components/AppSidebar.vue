@@ -44,11 +44,6 @@
                     <span class="s-dot"></span>
                     {{ item.label }}
                 </NuxtLink>
-
-                <span v-for="soon in comingSoon" :key="soon" class="s-link s-link-soon" :title="`${soon} · em breve`">
-                    <span class="s-dot"></span>
-                    {{ soon }}
-                </span>
             </nav>
 
             <div class="s-bottom">
@@ -110,6 +105,7 @@ const ownerOrManagerItems = [
     { label: 'Servicos', to: '/services' },
     { label: 'Equipa', to: '/staff' },
     { label: 'Estatísticas', to: '/statistics', ownerOnly: true },
+    { label: 'Campanhas', to: '/campaigns', ownerOnly: true },
     { label: 'Definições', to: '/business-settings' },
 ]
 
@@ -139,8 +135,6 @@ const items = computed(() => {
 
     return ownerOrManagerItems.filter((item) => !item.ownerOnly || isOwner)
 })
-
-const comingSoon = computed(() => isStaffOnly.value ? [] : ['Marketing'])
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
@@ -364,16 +358,6 @@ watch(
 
 .s-link.active .s-dot {
     background: var(--tf-black);
-}
-
-.s-link-soon {
-    opacity: 0.55;
-    cursor: default;
-}
-
-.s-link-soon:hover {
-    background: transparent;
-    color: #b7b3aa;
 }
 
 .s-bottom {
