@@ -29,9 +29,13 @@
                 <div class="form-content">
                     <h1>Entrar</h1>
 
-                    <p class="form-lede">Acede ao painel do teu negócio.</p>
+                    <p class="form-lede">
+                        <span v-if="step === 'business'">Falta só o nome do teu negócio.</span>
+                        <span v-else>Acede ao painel do teu negócio.</span>
+                    </p>
 
-                    <form class="form" @submit.prevent="handleLogin">
+                    <!-- PASSO 1: credenciais -->
+                    <form v-if="step === 'credentials'" class="form" @submit.prevent="handleLogin">
                         <div>
                             <label class="label">Email</label>
                             <input
@@ -84,7 +88,31 @@
                         </template>
                     </form>
 
-                    <div class="form-footer">
+                    <!-- PASSO 2: primeira vez com esta conta Google - falta criar o negócio -->
+                    <form v-else class="form" @submit.prevent="handleBusinessStep">
+                        <div>
+                            <label class="label">Nome do negócio</label>
+                            <input
+                                v-model="businessName"
+                                class="input"
+                                type="text"
+                                placeholder="Barbearia Silva"
+                                autocomplete="organization"
+                            />
+                        </div>
+
+                        <p v-if="errorMessage" class="error-message">
+                            {{ errorMessage }}
+                        </p>
+
+                        <button class="btn btn-accent submit-btn" type="submit" :disabled="isLoading">
+                            {{ isLoading ? 'A criar negócio...' : 'Criar o meu negócio →' }}
+                        </button>
+
+                        <button type="button" class="back-link" @click="step = 'credentials'">← Voltar</button>
+                    </form>
+
+                    <div v-if="step === 'credentials'" class="form-footer">
                         Ainda não tens conta? <NuxtLink to="/signup">Criar conta grátis</NuxtLink>
                     </div>
                 </div>
@@ -115,6 +143,7 @@ type MeResponse = {
         is_active: boolean
         created_at: string
     }[]
+    pending_invite: { business_name: string; invite_url: string } | null
 }
 
 const { login, setTokens } = useAuth()
@@ -126,6 +155,11 @@ const form = reactive({
     username: '',
     password: '',
 })
+
+type Step = 'credentials' | 'business'
+const step = ref<Step>('credentials')
+const businessName = ref('')
+const googleCredential = ref('')
 
 const isLoading = ref(false)
 const errorMessage = ref('')
@@ -143,6 +177,14 @@ const navigateAfterLogin = async () => {
 
     if (me.is_superuser || me.is_staff) {
         await navigateTo('/admin')
+        return
+    }
+
+    if (me.businesses.length === 0) {
+        // Conta sem nenhum negócio ativo (tipicamente primeiro login com uma
+        // conta Google nova). Se houver um convite de equipa por aceitar,
+        // segue para lá em vez de forçar a criação de um negócio novo.
+        await navigateTo(me.pending_invite ? me.pending_invite.invite_url : '/criar-negocio')
         return
     }
 
@@ -183,6 +225,7 @@ const handleLogin = async () => {
 
 const handleGoogleCredential = async (credential: string) => {
     errorMessage.value = ''
+    googleCredential.value = credential
 
     try {
         isLoading.value = true
@@ -190,7 +233,10 @@ const handleGoogleCredential = async (credential: string) => {
         const response = await submitGoogleCredential(credential)
 
         if ('needs_business_name' in response) {
-            errorMessage.value = 'Não encontrámos nenhuma conta Klenda com este Google. Cria uma conta primeiro.'
+            // Primeira vez que esta conta Google entra na Klenda - ainda não
+            // tem negócio associado, por isso segue para o mesmo passo de
+            // criação de negócio que o signup usa, em vez de travar aqui.
+            step.value = 'business'
             return
         }
 
@@ -207,11 +253,46 @@ const handleGoogleCredential = async (credential: string) => {
     }
 }
 
-onMounted(() => {
-    if (googleButtonRef.value) {
-        renderGoogleButton(googleButtonRef.value, handleGoogleCredential)
+const handleBusinessStep = async () => {
+    errorMessage.value = ''
+
+    if (!businessName.value) {
+        errorMessage.value = 'O nome do negócio é obrigatório.'
+        return
     }
-})
+
+    try {
+        isLoading.value = true
+
+        const response = await submitGoogleCredential(googleCredential.value, businessName.value)
+        setTokens(response as { access: string; refresh: string })
+        await navigateAfterLogin()
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = loginErrorMessage(
+            error,
+            'Não foi possível criar o negócio. Tenta novamente.'
+        )
+    } finally {
+        isLoading.value = false
+    }
+}
+
+watch(
+    step,
+    async (value) => {
+        if (value !== 'credentials') {
+            return
+        }
+
+        await nextTick()
+
+        if (googleButtonRef.value) {
+            renderGoogleButton(googleButtonRef.value, handleGoogleCredential)
+        }
+    },
+    { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -457,6 +538,22 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     min-height: 44px;
+}
+
+.back-link {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin-top: 4px;
+    color: #7a756b;
+    font-weight: 800;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.back-link:hover {
+    color: var(--tf-black);
 }
 
 .form-footer {
