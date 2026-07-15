@@ -571,7 +571,7 @@
                             Podes descarregar uma cópia dos teus dados a qualquer momento.
                         </p>
 
-                        <div class="form-actions">
+                        <div class="form-actions card-actions-spaced">
                             <button class="btn btn-secondary" type="button" :disabled="isExportingData" @click="exportMyData">
                                 {{ isExportingData ? 'A preparar...' : 'Exportar os meus dados' }}
                             </button>
@@ -594,7 +594,7 @@
 
                         <p v-if="deleteErrorMessage" class="error-message">{{ deleteErrorMessage }}</p>
 
-                        <div v-if="!isDeleteConfirmOpen" class="form-actions">
+                        <div v-if="!isDeleteConfirmOpen" class="form-actions card-actions-spaced">
                             <button class="btn btn-danger" type="button" @click="isDeleteConfirmOpen = true">
                                 Eliminar conta
                             </button>
@@ -1642,6 +1642,10 @@ onMounted(() => {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+}
+
+.card-actions-spaced {
+    margin-top: 20px;
 }
 
 .security-card {
