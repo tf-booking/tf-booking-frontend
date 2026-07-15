@@ -408,7 +408,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-    middleware: ['auth', 'owner-or-manager'],
+    middleware: ['auth', 'owner-or-manager', 'first-service'],
     layout: 'backoffice',
 })
 

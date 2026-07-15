@@ -578,20 +578,19 @@
                         </div>
                     </article>
 
-                    <article class="card form-card security-card">
+                    <article class="card form-card security-card security-card-danger">
                         <div class="section-head">
                             <div>
-                                <p class="section-label">Zona perigosa</p>
+                                <p class="section-label section-label-danger">Zona perigosa</p>
                                 <h2>Eliminar conta</h2>
                             </div>
                         </div>
 
-                        <p class="security-hint">
-                            A tua conta fica agendada para eliminação definitiva dentro de 30 dias.
-                            Se entrares outra vez antes disso, a eliminação é cancelada automaticamente
-                            e a conta fica reativada. Não podes ser o único dono de nenhum negócio
-                            ativo para continuares.
-                        </p>
+                        <ul class="danger-list">
+                            <li>A tua conta fica agendada para eliminação definitiva dentro de 30 dias.</li>
+                            <li>Se entrares outra vez antes disso, a eliminação é cancelada e a conta fica reativada automaticamente.</li>
+                            <li>Se fores o único dono de algum negócio, avisamos-te antes de confirmares - esse negócio também pode ficar agendado para eliminação.</li>
+                        </ul>
 
                         <p v-if="deleteErrorMessage" class="error-message">{{ deleteErrorMessage }}</p>
 
@@ -601,11 +600,9 @@
                             </button>
                         </div>
 
-                        <template v-else>
-                            <div>
-                                <label class="label">Escreve ELIMINAR para confirmares</label>
-                                <input v-model="deleteConfirmText" class="input" type="text" placeholder="ELIMINAR" />
-                            </div>
+                        <div v-else class="danger-confirm-box">
+                            <label class="label">Escreve ELIMINAR para confirmares</label>
+                            <input v-model="deleteConfirmText" class="input" type="text" placeholder="ELIMINAR" />
 
                             <div class="form-actions">
                                 <button
@@ -620,8 +617,19 @@
                                     Cancelar
                                 </button>
                             </div>
-                        </template>
+                        </div>
                     </article>
+
+                    <ConfirmModal
+                        v-model:open="isSoleOwnerModalOpen"
+                        tag="Zona perigosa"
+                        title="O teu negócio também vai ser eliminado"
+                        :message="soleOwnerModalMessage"
+                        confirm-label="Sim, eliminar tudo"
+                        cancel-label="Cancelar"
+                        danger
+                        @confirm="confirmDeleteWithBusiness"
+                    />
                 </div>
             </template>
         </section>
@@ -1354,6 +1362,13 @@ const isDeleteConfirmOpen = ref(false)
 const deleteConfirmText = ref('')
 const deleteErrorMessage = ref('')
 const isDeletingAccount = ref(false)
+const isSoleOwnerModalOpen = ref(false)
+const soleOwnerBusinessNames = ref<string[]>([])
+
+const soleOwnerModalMessage = computed(() => {
+    const names = soleOwnerBusinessNames.value.join(', ')
+    return `És o único dono de ${names}. Se continuares, esse negócio - incluindo marcações, clientes e todo o histórico associado - também fica agendado para eliminação definitiva dentro de 30 dias, e uma eventual subscrição Pro ativa é cancelada já (se voltares dentro do prazo, o negócio fica reativado mas no plano Grátis). Tens a certeza que queres continuar?`
+})
 
 const cancelDeleteAccount = () => {
     isDeleteConfirmOpen.value = false
@@ -1361,25 +1376,40 @@ const cancelDeleteAccount = () => {
     deleteErrorMessage.value = ''
 }
 
-const deleteMyAccount = async () => {
-    if (deleteConfirmText.value !== 'ELIMINAR') {
-        return
-    }
-
+const performAccountDeletion = async (confirmBusinessDeletion: boolean) => {
     deleteErrorMessage.value = ''
 
     try {
         isDeletingAccount.value = true
 
-        await apiFetch('/me/', { method: 'DELETE' })
+        const endpoint = confirmBusinessDeletion ? '/me/?confirm_business_deletion=true' : '/me/'
+        await apiFetch(endpoint, { method: 'DELETE' })
 
         await logout()
     } catch (error: any) {
+        if (!confirmBusinessDeletion && error?.data?.code === 'sole_owner_confirmation_required') {
+            soleOwnerBusinessNames.value = error.data.blocking_businesses || []
+            isSoleOwnerModalOpen.value = true
+            return
+        }
+
         console.error(error)
         deleteErrorMessage.value = formatApiError(error)
     } finally {
         isDeletingAccount.value = false
     }
+}
+
+const deleteMyAccount = () => {
+    if (deleteConfirmText.value !== 'ELIMINAR') {
+        return
+    }
+
+    performAccountDeletion(false)
+}
+
+const confirmDeleteWithBusiness = () => {
+    performAccountDeletion(true)
 }
 
 const saveProfessionalProfile = async () => {
@@ -1618,6 +1648,54 @@ onMounted(() => {
     background:
         linear-gradient(180deg, rgba(215, 255, 62, 0.18), rgba(215, 255, 62, 0) 120px),
         var(--tf-white);
+}
+
+.security-card-danger {
+    background:
+        linear-gradient(180deg, rgba(153, 27, 27, 0.1), rgba(153, 27, 27, 0) 120px),
+        var(--tf-white);
+    border-color: #fecaca;
+}
+
+.section-label-danger {
+    color: var(--tf-danger-fg);
+}
+
+.danger-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.danger-list li {
+    position: relative;
+    padding-left: 18px;
+    color: var(--tf-muted);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.danger-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tf-danger-fg);
+}
+
+.danger-confirm-box {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid #fecaca;
+    border-radius: 16px;
+    background: var(--tf-danger-bg);
 }
 
 .plan-card {

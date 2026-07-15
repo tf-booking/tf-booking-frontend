@@ -8,6 +8,14 @@ type LoginPayload = {
     password: string
 }
 
+type NavigateAfterLoginResponse = {
+    is_superuser: boolean
+    is_staff: boolean
+    businesses: { role: string; is_active: boolean }[]
+    pending_invite: { business_name: string; invite_url: string } | null
+    first_service_business: { business_uuid: string; business_name: string } | null
+}
+
 export const useAuth = () => {
     const { apiFetch } = useApi()
 
@@ -65,6 +73,43 @@ export const useAuth = () => {
         return Boolean(accessToken.value)
     })
 
+    /**
+     * Decide para onde enviar quem acabou de se autenticar (login, signup,
+     * ou aceitar um convite/criar negócio) - centralizado aqui porque tem de
+     * dar sempre o mesmo resultado nos vários pontos de entrada (login.vue,
+     * signup.vue, criar-negocio.vue).
+     */
+    const navigateAfterLogin = async () => {
+        const me = await apiFetch<NavigateAfterLoginResponse>('/me/')
+
+        if (me.is_superuser || me.is_staff) {
+            await navigateTo('/admin')
+            return
+        }
+
+        if (me.businesses.length === 0) {
+            // Conta sem nenhum negócio ativo (tipicamente primeiro login com uma
+            // conta Google nova). Se houver um convite de equipa por aceitar,
+            // segue para lá em vez de forçar a criação de um negócio novo.
+            await navigateTo(me.pending_invite ? me.pending_invite.invite_url : '/criar-negocio')
+            return
+        }
+
+        if (me.first_service_business) {
+            // O negócio ainda não tem nenhum serviço - obriga a criar o
+            // primeiro antes de continuar, senão a página pública de
+            // marcações fica sem nada para marcar (ver /criar-servico).
+            await navigateTo('/criar-servico')
+            return
+        }
+
+        const hasOwnerOrManagerMembership = me.businesses.some(
+            (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
+        )
+
+        await navigateTo(hasOwnerOrManagerMembership ? '/dashboard' : '/schedule')
+    }
+
     return {
         accessToken,
         refreshToken,
@@ -74,5 +119,6 @@ export const useAuth = () => {
         login,
         logout,
         clearTokens,
+        navigateAfterLogin,
     }
 }

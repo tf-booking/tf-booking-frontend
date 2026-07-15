@@ -69,8 +69,8 @@
                     <span class="s-avatar">{{ businessInitials }}</span>
 
                     <div class="s-user-info">
-                        <div class="s-user-name">{{ businessName }}</div>
-                        <div class="s-user-plan">{{ businessRoleLabel }}</div>
+                        <div class="s-user-name">Conta</div>
+                        <div class="s-user-plan">{{ businessName }}</div>
                     </div>
 
                     <button class="s-logout" type="button" title="Sair" @click.stop="handleLogout">
@@ -91,12 +91,6 @@ const { startPolling, stopPolling } = useNotifications()
 const isMobileMenuOpen = ref(false)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
 const mobileMenuPanel = ref<HTMLElement | null>(null)
-
-const roleLabels: Record<string, string> = {
-    owner: 'Dono',
-    manager: 'Gestor',
-    staff: 'Colaborador',
-}
 
 const ownerOrManagerItems = [
     { label: 'Painel', to: '/dashboard' },
@@ -139,11 +133,6 @@ const items = computed(() => {
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
 const businessName = computed(() => currentBusiness.value?.business_name || 'Klenda')
-
-const businessRoleLabel = computed(() => {
-    const role = currentBusiness.value?.role || ''
-    return roleLabels[role] || 'Negócio'
-})
 
 const businessInitials = computed(() => {
     const words = businessName.value.trim().split(/\s+/).filter(Boolean)

@@ -266,7 +266,7 @@
 import type { Appointment } from '~/types/schedule'
 
 definePageMeta({
-    middleware: ['auth', 'owner-or-manager'],
+    middleware: ['auth', 'owner-or-manager', 'first-service'],
     layout: 'backoffice',
 })
 

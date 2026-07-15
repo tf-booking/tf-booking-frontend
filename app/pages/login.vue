@@ -126,28 +126,7 @@ definePageMeta({
     layout: false,
 })
 
-type MeResponse = {
-    id: number
-    username: string
-    email: string
-    first_name: string
-    last_name: string
-    is_staff: boolean
-    is_superuser: boolean
-    businesses: {
-        id: number
-        business_uuid: string
-        business_name: string
-        business_slug: string
-        role: string
-        is_active: boolean
-        created_at: string
-    }[]
-    pending_invite: { business_name: string; invite_url: string } | null
-}
-
-const { login, setTokens } = useAuth()
-const { apiFetch } = useApi()
+const { login, setTokens, navigateAfterLogin } = useAuth()
 const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
 const route = useRoute()
 
@@ -170,29 +149,6 @@ const googleButtonRef = ref<HTMLElement | null>(null)
 const loginErrorMessage = (error: any, fallback: string) => {
     const detail = error?.data?.detail
     return typeof detail === 'string' && detail ? detail : fallback
-}
-
-const navigateAfterLogin = async () => {
-    const me = await apiFetch<MeResponse>('/me/')
-
-    if (me.is_superuser || me.is_staff) {
-        await navigateTo('/admin')
-        return
-    }
-
-    if (me.businesses.length === 0) {
-        // Conta sem nenhum negócio ativo (tipicamente primeiro login com uma
-        // conta Google nova). Se houver um convite de equipa por aceitar,
-        // segue para lá em vez de forçar a criação de um negócio novo.
-        await navigateTo(me.pending_invite ? me.pending_invite.invite_url : '/criar-negocio')
-        return
-    }
-
-    const hasOwnerOrManagerMembership = me.businesses.some(
-        (business) => business.is_active && (business.role === 'owner' || business.role === 'manager')
-    )
-
-    await navigateTo(hasOwnerOrManagerMembership ? '/dashboard' : '/schedule')
 }
 
 const handleLogin = async () => {

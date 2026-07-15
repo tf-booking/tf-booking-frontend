@@ -35,7 +35,7 @@ definePageMeta({
 })
 
 const { apiFetch } = useApi()
-const { logout } = useAuth()
+const { logout, navigateAfterLogin } = useAuth()
 
 const name = ref('')
 const isLoading = ref(false)
@@ -57,7 +57,7 @@ const handleSubmit = async () => {
             body: { name: name.value.trim() },
         })
 
-        await navigateTo('/dashboard')
+        await navigateAfterLogin()
     } catch (error: any) {
         console.error(error)
         errorMessage.value = error?.data?.name

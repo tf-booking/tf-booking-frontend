@@ -5,9 +5,9 @@
                 <button class="dp-close" type="button" aria-label="Fechar" @click="close">×</button>
 
                 <div class="dp-header">
-                    <button type="button" class="dp-nav" aria-label="Mês anterior" @click="prevMonth">‹</button>
+                    <button type="button" class="dp-nav" aria-label="Mês anterior" :disabled="!canGoPrevMonth" @click="prevMonth">‹</button>
                     <span class="dp-title">{{ monthLabel }}</span>
-                    <button type="button" class="dp-nav" aria-label="Mês seguinte" @click="nextMonth">›</button>
+                    <button type="button" class="dp-nav" aria-label="Mês seguinte" :disabled="!canGoNextMonth" @click="nextMonth">›</button>
                 </div>
 
                 <div class="dp-weekdays">
@@ -24,7 +24,9 @@
                             'dp-day-muted': !cell.inMonth,
                             'dp-day-selected': cell.iso === selected,
                             'dp-day-today': cell.iso === todayIso && cell.iso !== selected,
+                            'dp-day-disabled': cell.disabled,
                         }"
+                        :disabled="cell.disabled"
                         @click="pick(cell.iso)"
                     >
                         {{ cell.day }}
@@ -32,7 +34,7 @@
                 </div>
 
                 <div class="dp-footer">
-                    <button type="button" class="dp-link" @click="pick(todayIso)">Hoje</button>
+                    <button type="button" class="dp-link" :disabled="isTodayDisabled" @click="pick(todayIso)">Hoje</button>
                 </div>
             </div>
         </div>
@@ -43,6 +45,8 @@
 const props = defineProps<{
     open: boolean
     selected: string
+    minIso?: string
+    maxIso?: string
 }>()
 
 const emit = defineEmits<{
@@ -82,6 +86,10 @@ const monthLabel = computed(() => {
 
 const weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
+const isDisabledIso = (iso: string) => {
+    return Boolean((props.minIso && iso < props.minIso) || (props.maxIso && iso > props.maxIso))
+}
+
 const dayCells = computed(() => {
     const year = viewDate.value.getFullYear()
     const month = viewDate.value.getMonth()
@@ -93,24 +101,60 @@ const dayCells = computed(() => {
     return Array.from({ length: 42 }, (_, index) => {
         const date = new Date(gridStart)
         date.setDate(gridStart.getDate() + index)
+        const iso = formatIso(date)
 
         return {
             day: date.getDate(),
-            iso: formatIso(date),
+            iso,
             inMonth: date.getMonth() === month,
+            disabled: isDisabledIso(iso),
         }
     })
 })
 
+const isTodayDisabled = computed(() => isDisabledIso(todayIso))
+
+const canGoPrevMonth = computed(() => {
+    if (!props.minIso) {
+        return true
+    }
+
+    const minDate = parseIso(props.minIso)
+    return viewDate.value.getFullYear() > minDate.getFullYear()
+        || (viewDate.value.getFullYear() === minDate.getFullYear() && viewDate.value.getMonth() > minDate.getMonth())
+})
+
+const canGoNextMonth = computed(() => {
+    if (!props.maxIso) {
+        return true
+    }
+
+    const maxDate = parseIso(props.maxIso)
+    return viewDate.value.getFullYear() < maxDate.getFullYear()
+        || (viewDate.value.getFullYear() === maxDate.getFullYear() && viewDate.value.getMonth() < maxDate.getMonth())
+})
+
 const prevMonth = () => {
+    if (!canGoPrevMonth.value) {
+        return
+    }
+
     viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() - 1, 1)
 }
 
 const nextMonth = () => {
+    if (!canGoNextMonth.value) {
+        return
+    }
+
     viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + 1, 1)
 }
 
 const pick = (iso: string) => {
+    if (isDisabledIso(iso)) {
+        return
+    }
+
     emit('select', iso)
     emit('update:open', false)
 }
@@ -188,6 +232,16 @@ const close = () => {
     border-color: var(--tf-black);
 }
 
+.dp-nav:disabled,
+.dp-link:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dp-nav:disabled:hover {
+    border-color: var(--tf-border);
+}
+
 .dp-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -232,6 +286,16 @@ const close = () => {
 .dp-day-muted {
     color: var(--tf-muted);
     opacity: 0.5;
+}
+
+.dp-day-disabled {
+    color: var(--tf-muted);
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.dp-day-disabled:hover {
+    background: transparent;
 }
 
 .dp-day-today {

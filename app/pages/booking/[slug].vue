@@ -192,11 +192,34 @@
                 <div class="screen-body">
                     <div class="day-row">
                         <button v-for="day in days" :key="day.iso" type="button" class="day"
-                            :class="{ selected: selectedDay === day.iso }" @click="selectedDay = day.iso">
+                            :class="{ selected: selectedDay === day.iso }" @click="selectDay(day.iso)">
                             <span class="day-name">{{ day.weekday }}</span>
                             <span class="day-num">{{ day.num }}</span>
                         </button>
+
+                        <button type="button" class="day day-calendar" :class="{ selected: isCustomDaySelected }"
+                            aria-label="Escolher outro dia no calendário" @click="isDatePickerOpen = true">
+                            <template v-if="isCustomDaySelected">
+                                <span class="day-name">{{ selectedDayData?.weekday }}</span>
+                                <span class="day-num">{{ selectedDayData?.num }}</span>
+                            </template>
+                            <svg v-else class="day-calendar-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M3 8H17" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M7 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                                <path d="M13 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            </svg>
+                        </button>
                     </div>
+
+                    <DatePickerModal
+                        :open="isDatePickerOpen"
+                        :selected="selectedDay || todayIso"
+                        :min-iso="todayIso"
+                        :max-iso="maxBookableIso"
+                        @update:open="isDatePickerOpen = $event"
+                        @select="selectDay"
+                    />
 
                     <p v-if="isLoadingSlots" class="slot-state">A procurar horários disponíveis...</p>
                     <p v-else-if="slotsError" class="slot-state slot-state-error">{{ slotsError }}</p>
@@ -483,6 +506,7 @@ useSeoMeta({
 const selectedServiceUuid = ref('')
 const selectedStaffUuid = ref('')
 const selectedDay = ref('')
+const isDatePickerOpen = ref(false)
 const availableSlots = ref<AvailableSlot[]>([])
 const selectedSlot = ref<string | null>(null)
 const selectedSlotStartAt = ref<string | null>(null)
@@ -641,6 +665,26 @@ const weekdayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const weekdayLong = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
 const monthShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
+const describeDay = (iso: string) => {
+    const date = new Date(`${iso}T00:00:00`)
+    return {
+        iso,
+        weekday: weekdayShort[date.getDay()],
+        weekdayLong: weekdayLong[date.getDay()],
+        num: String(date.getDate()).padStart(2, '0'),
+        month: monthShort[date.getMonth()],
+    }
+}
+
+const todayIso = new Date().toISOString().slice(0, 10)
+
+const maxBookableIso = computed(() => {
+    const maxHorizonDays = business.value?.booking_settings?.max_booking_horizon_days ?? 4
+    const date = new Date()
+    date.setDate(date.getDate() + Math.max(0, maxHorizonDays))
+    return date.toISOString().slice(0, 10)
+})
+
 const days = computed(() => {
     const base = new Date()
     const maxHorizonDays = business.value?.booking_settings?.max_booking_horizon_days ?? 4
@@ -649,20 +693,21 @@ const days = computed(() => {
     return Array.from({ length: visibleDays }, (_, index) => {
         const date = new Date(base)
         date.setDate(base.getDate() + index)
-        const iso = date.toISOString().slice(0, 10)
-        return {
-            iso,
-            weekday: weekdayShort[date.getDay()],
-            weekdayLong: weekdayLong[date.getDay()],
-            num: String(date.getDate()).padStart(2, '0'),
-            month: monthShort[date.getMonth()],
-        }
+        return describeDay(date.toISOString().slice(0, 10))
     })
 })
 
 const selectedDayData = computed(() =>
-    days.value.find((day) => day.iso === selectedDay.value) || days.value[0]
+    selectedDay.value ? describeDay(selectedDay.value) : days.value[0]
 )
+
+const isCustomDaySelected = computed(() =>
+    Boolean(selectedDay.value) && !days.value.some((day) => day.iso === selectedDay.value)
+)
+
+const selectDay = (iso: string) => {
+    selectedDay.value = iso
+}
 
 const selectedDayLabel = computed(() => {
     const day = selectedDayData.value
@@ -1458,6 +1503,23 @@ watch(slug, () => {
     margin-top: 3px;
     font-size: 20px;
     font-weight: 900;
+}
+
+.day-calendar {
+    flex: 0 0 auto;
+    width: 52px;
+    display: grid;
+    place-items: center;
+}
+
+.day-calendar-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--tf-muted);
+}
+
+.day-calendar.selected .day-calendar-icon {
+    color: var(--tf-accent);
 }
 
 .slot-state {

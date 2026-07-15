@@ -152,7 +152,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-    middleware: ['auth'],
+    middleware: ['auth', 'first-service'],
     layout: 'backoffice',
 })
 

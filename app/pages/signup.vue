@@ -141,7 +141,7 @@ type GoogleAuthResponse =
     | { needs_business_name: true; email: string; suggested_owner_name: string }
 
 const route = useRoute()
-const { setTokens } = useAuth()
+const { setTokens, navigateAfterLogin } = useAuth()
 const { apiFetch } = useApi()
 const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
 
@@ -167,7 +167,16 @@ const googleButtonRef = ref<HTMLElement | null>(null)
 
 const finishSignup = async (response: SignupResponse | GoogleAuthResponse) => {
     setTokens(response as { access: string; refresh: string })
-    await navigateTo(isProPlan.value ? '/account?tab=plano' : '/dashboard')
+
+    if (isProPlan.value) {
+        // Quem veio de uma página de preços já pronto para pagar o Pro segue
+        // direto para o checkout - criar o primeiro serviço pode esperar até
+        // depois de completar o pagamento.
+        await navigateTo('/account?tab=plano')
+        return
+    }
+
+    await navigateAfterLogin()
 }
 
 const handleIdentityStep = () => {
