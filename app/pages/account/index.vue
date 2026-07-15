@@ -38,7 +38,7 @@
                         <div class="section-head">
                             <div>
                                 <p class="section-label">Dados principais</p>
-                                <h2>Informacao pessoal</h2>
+                                <h2>Informaçao pessoal</h2>
                             </div>
                         </div>
 
@@ -518,7 +518,7 @@
                 </div>
 
                 <div v-show="activeTab === 'seguranca'" class="panel">
-                    <article class="card form-card security-card">
+                    <article v-if="hasUsablePassword" class="card form-card security-card">
                         <div class="section-head">
                             <div>
                                 <p class="section-label">Seguranca</p>
@@ -587,7 +587,10 @@
                         </div>
 
                         <p class="security-hint">
-                            Isto desativa a tua conta e apaga os teus dados pessoais permanentemente. Não podes ser o único dono de nenhum negócio ativo para continuares.
+                            A tua conta fica agendada para eliminação definitiva dentro de 30 dias.
+                            Se entrares outra vez antes disso, a eliminação é cancelada automaticamente
+                            e a conta fica reativada. Não podes ser o único dono de nenhum negócio
+                            ativo para continuares.
                         </p>
 
                         <p v-if="deleteErrorMessage" class="error-message">{{ deleteErrorMessage }}</p>
@@ -611,7 +614,7 @@
                                     :disabled="deleteConfirmText !== 'ELIMINAR' || isDeletingAccount"
                                     @click="deleteMyAccount"
                                 >
-                                    {{ isDeletingAccount ? 'A eliminar...' : 'Eliminar definitivamente' }}
+                                    {{ isDeletingAccount ? 'A agendar...' : 'Agendar eliminação' }}
                                 </button>
                                 <button class="btn btn-secondary" type="button" @click="cancelDeleteAccount">
                                     Cancelar
@@ -813,9 +816,7 @@ const tabs = computed(() => {
         list.push({ key: 'plano', label: 'Plano' })
     }
 
-    if (hasUsablePassword.value) {
-        list.push({ key: 'seguranca', label: 'Segurança' })
-    }
+    list.push({ key: 'seguranca', label: 'Segurança' })
 
     return list
 })

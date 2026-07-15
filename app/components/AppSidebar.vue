@@ -102,7 +102,7 @@ const ownerOrManagerItems = [
     { label: 'Painel', to: '/dashboard' },
     { label: 'Agenda', to: '/schedule' },
     { label: 'Clientes', to: '/customers' },
-    { label: 'Servicos', to: '/services' },
+    { label: 'Serviços', to: '/services' },
     { label: 'Equipa', to: '/staff' },
     { label: 'Estatísticas', to: '/statistics', ownerOnly: true },
     { label: 'Campanhas', to: '/campaigns', ownerOnly: true },
