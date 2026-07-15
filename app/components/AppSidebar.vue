@@ -404,6 +404,9 @@ watch(
     font-family: var(--tf-mono);
     font-size: 10px;
     color: #77736a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .s-logout {
