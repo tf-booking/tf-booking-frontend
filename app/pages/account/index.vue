@@ -2102,14 +2102,9 @@ onMounted(() => {
     width: 132px;
     height: 132px;
     border-radius: 50%;
-    overflow: visible;
+    overflow: hidden;
     background: #f1ecdf;
     flex-shrink: 0;
-}
-
-.profile-avatar-frame > .photo-empty-state {
-    overflow: hidden;
-    border-radius: 50%;
 }
 
 .profile-avatar-copy {
@@ -2159,15 +2154,11 @@ onMounted(() => {
 
 .photo-frame-ctl {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 8px;
+    right: 8px;
     z-index: 1;
     display: flex;
     gap: 6px;
-}
-
-.profile-avatar-frame .photo-frame-ctl {
-    transform: translate(35%, -35%);
 }
 
 .photo-frame-ctl button {
