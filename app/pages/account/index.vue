@@ -108,7 +108,7 @@
                                     </p>
                                 </div>
 
-                                <!-- capa + avatar sobreposto -->
+                                <!-- capa -->
                                 <div class="cover-avatar-block">
                                     <div class="cover-frame">
                                         <PhotoPositioner
@@ -122,7 +122,7 @@
                                         />
                                         <div v-if="businessCover" class="photo-frame-ctl">
                                             <button type="button" @click="triggerBusinessCoverPicker">Alterar</button>
-                                            <button type="button" @click="removeBusinessCover">Remover</button>
+                                            <button class="photo-frame-ctl-x" type="button" aria-label="Remover" @click="removeBusinessCover">×</button>
                                         </div>
                                         <button
                                             v-else
@@ -133,23 +133,6 @@
                                             <span class="photo-empty-icon">🖼</span>
                                             <span class="photo-empty-cap">Foto de capa do negócio</span>
                                             <span class="photo-empty-sub">ou escolher ficheiro</span>
-                                        </button>
-                                    </div>
-
-                                    <div class="avatar-frame">
-                                        <img
-                                            v-if="businessCover"
-                                            :src="businessCover.url"
-                                            :style="{ objectPosition: `${businessCover.focalX}% ${businessCover.focalY}%` }"
-                                            alt="Logótipo do negócio"
-                                        />
-                                        <button
-                                            v-else
-                                            class="avatar-frame-empty"
-                                            type="button"
-                                            @click="triggerBusinessCoverPicker"
-                                        >
-                                            Logo
                                         </button>
                                     </div>
 
@@ -188,12 +171,10 @@
                                         >
                                             <template v-if="slot.kind === 'filled'">
                                                 <img :src="slot.photo.url" :alt="`Foto ${slot.index + 1}`" />
+                                                <button class="photo-tile-remove" type="button" aria-label="Remover" @click="removeBusinessGalleryPhoto(slot.photo.id)">×</button>
                                                 <div class="photo-meta photo-meta-v2">
                                                     <button class="photo-promote" type="button" @click="promoteBusinessGalleryPhotoToCover(slot.photo.id)">
                                                         Tornar capa
-                                                    </button>
-                                                    <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(slot.photo.id)">
-                                                        Remover
                                                     </button>
                                                 </div>
                                             </template>
@@ -342,7 +323,7 @@
                                     />
                                     <div v-if="profilePhoto" class="photo-frame-ctl">
                                         <button type="button" @click="triggerProfilePhotoPicker">Alterar</button>
-                                        <button type="button" @click="removeProfilePhoto">Remover</button>
+                                        <button class="photo-frame-ctl-x" type="button" aria-label="Remover" @click="removeProfilePhoto">×</button>
                                     </div>
                                     <button
                                         v-else
@@ -400,12 +381,10 @@
                                     >
                                         <template v-if="slot.kind === 'filled'">
                                             <img :src="slot.photo.url" :alt="`Foto ${slot.index + 1}`" />
+                                            <button class="photo-tile-remove" type="button" aria-label="Remover" @click="removeGalleryPhoto(slot.photo.id)">×</button>
                                             <div class="photo-meta photo-meta-v2">
                                                 <button class="photo-promote" type="button" @click="promoteGalleryPhotoToProfile(slot.photo.id)">
                                                     Tornar foto de perfil
-                                                </button>
-                                                <button class="photo-remove" type="button" @click="removeGalleryPhoto(slot.photo.id)">
-                                                    Remover
                                                 </button>
                                             </div>
                                         </template>
@@ -2095,8 +2074,7 @@ onMounted(() => {
 
 /* ---- capa + avatar sobreposto (negócio) ---- */
 .cover-avatar-block {
-    position: relative;
-    margin-bottom: 56px;
+    margin-bottom: 20px;
 }
 
 .cover-frame {
@@ -2106,37 +2084,6 @@ onMounted(() => {
     border-radius: 20px;
     overflow: hidden;
     background: #f1ecdf;
-}
-
-.avatar-frame {
-    position: absolute;
-    left: 28px;
-    bottom: -40px;
-    width: 104px;
-    height: 104px;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    box-shadow: 0 12px 26px -14px rgba(11, 11, 15, 0.35);
-    overflow: hidden;
-    background: #f1ecdf;
-}
-
-.avatar-frame img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.avatar-frame-empty {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: transparent;
-    color: var(--tf-muted);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
 }
 
 /* ---- foto de perfil + descrição (colaborador) ---- */
@@ -2225,6 +2172,40 @@ onMounted(() => {
 }
 
 .photo-frame-ctl button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.photo-frame-ctl-x {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 15px !important;
+    line-height: 1;
+}
+
+.photo-tile-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.photo-tile-remove:hover {
     background: rgba(0, 0, 0, 0.8);
 }
 
