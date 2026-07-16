@@ -60,6 +60,17 @@
                             <span>Serviços</span>
                         </div>
                     </div>
+
+                    <div v-if="business.gallery_image_urls.length" class="gallery-strip">
+                        <img
+                            v-for="(url, index) in business.gallery_image_urls"
+                            :key="url"
+                            class="gallery-strip-photo"
+                            :src="url"
+                            :alt="`${business.name} - foto ${index + 1}`"
+                            loading="lazy"
+                        />
+                    </div>
                 </div>
 
                 <div class="screen-cta screen-cta--fade">
@@ -1205,6 +1216,29 @@ watch(slug, () => {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--tf-muted);
+}
+
+.gallery-strip {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.gallery-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.gallery-strip-photo {
+    flex: 0 0 auto;
+    width: 130px;
+    height: 96px;
+    border-radius: 14px;
+    object-fit: cover;
+    background: #f1ecdf;
 }
 
 /* ---- shared step chrome ---- */
