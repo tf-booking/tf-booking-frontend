@@ -4,7 +4,15 @@
             <div class="smb-corner"></div>
 
             <div v-for="staff in staffMembers" :key="`head-${staff.id}`" class="smb-head">
-                <span class="smb-head-avatar">{{ initials(staff.name) }}</span>
+                <span class="smb-head-avatar">
+                    <img
+                        v-if="isPro && staff.avatar_url"
+                        :src="staff.avatar_url"
+                        :style="{ objectPosition: staff.avatar_position }"
+                        :alt="staff.name"
+                    />
+                    <template v-else>{{ initials(staff.name) }}</template>
+                </span>
                 <span class="smb-head-name">{{ staff.name }}</span>
             </div>
 
@@ -81,6 +89,7 @@ const props = defineProps<{
     workingHours: WorkingHour[]
     date: string
     slotIntervalMinutes: number
+    isPro: boolean
 }>()
 
 defineEmits<{
@@ -278,6 +287,13 @@ const eventStyle = (startAt: string, endAt: string, colors: { backgroundColor: s
     color: var(--tf-accent);
     font-size: 10px;
     font-weight: 900;
+    overflow: hidden;
+}
+
+.smb-head-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .smb-head-name {

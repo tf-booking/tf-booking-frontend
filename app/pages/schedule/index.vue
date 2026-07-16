@@ -132,6 +132,7 @@
                             :working-hours="mobileWorkingHours"
                             :date="mobileDate"
                             :slot-interval-minutes="slotIntervalMinutes"
+                            :is-pro="isPro"
                             @open-appointment="handleMobileOpenAppointment"
                             @open-block="handleMobileOpenBlock"
                         />
@@ -518,6 +519,7 @@ type Business = {
     name: string
     slug: string
     is_active: boolean
+    plan: string
 }
 
 type Service = {
@@ -606,6 +608,7 @@ const MAX_RECURRENCE_OCCURRENCES = 104
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
+const isPro = computed(() => selectedBusiness.value?.plan === 'pro')
 const slotIntervalMinutes = ref(30)
 
 const services = ref<Service[]>([])

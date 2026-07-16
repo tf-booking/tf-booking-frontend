@@ -120,7 +120,15 @@
                                     </div>
 
                                     <div v-if="businessCover" class="cover-slot">
-                                        <img :src="businessCover.url" alt="Capa do negócio" />
+                                        <PhotoPositioner
+                                            :src="businessCover.url"
+                                            v-model:x="businessCover.focalX"
+                                            v-model:y="businessCover.focalY"
+                                            shape="rect"
+                                            :width="320"
+                                            :height="140"
+                                            alt="Capa do negócio"
+                                        />
                                         <button class="photo-remove" type="button" @click="removeBusinessCover">Remover</button>
                                     </div>
 
@@ -163,9 +171,14 @@
                                             <img :src="photo.url" :alt="`Foto ${index + 1}`" />
                                             <div class="photo-meta">
                                                 <span class="photo-badge">Foto {{ index + 1 }}</span>
-                                                <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(photo.id)">
-                                                    Remover
-                                                </button>
+                                                <div class="photo-actions">
+                                                    <button class="photo-promote" type="button" @click="promoteBusinessGalleryPhotoToCover(photo.id)">
+                                                        Tornar capa
+                                                    </button>
+                                                    <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(photo.id)">
+                                                        Remover
+                                                    </button>
+                                                </div>
                                             </div>
                                         </article>
                                     </div>
@@ -318,7 +331,14 @@
                                 </div>
 
                                 <div v-if="profilePhoto" class="profile-photo-slot">
-                                    <img :src="profilePhoto.url" alt="Foto de perfil" />
+                                    <PhotoPositioner
+                                        :src="profilePhoto.url"
+                                        v-model:x="profilePhoto.focalX"
+                                        v-model:y="profilePhoto.focalY"
+                                        shape="circle"
+                                        :size="96"
+                                        alt="Foto de perfil"
+                                    />
                                     <button class="photo-remove" type="button" @click="removeProfilePhoto">
                                         Remover
                                     </button>
@@ -365,9 +385,14 @@
                                         <img :src="photo.url" :alt="`Foto ${index + 1}`" />
                                         <div class="photo-meta">
                                             <span class="photo-badge">Foto {{ index + 1 }}</span>
-                                            <button class="photo-remove" type="button" @click="removeGalleryPhoto(photo.id)">
-                                                Remover
-                                            </button>
+                                            <div class="photo-actions">
+                                                <button class="photo-promote" type="button" @click="promoteGalleryPhotoToProfile(photo.id)">
+                                                    Tornar foto de perfil
+                                                </button>
+                                                <button class="photo-remove" type="button" @click="removeGalleryPhoto(photo.id)">
+                                                    Remover
+                                                </button>
+                                            </div>
                                         </div>
                                     </article>
                                 </div>
@@ -643,6 +668,26 @@ definePageMeta({
 })
 
 const MAX_PROFILE_PHOTOS = 5
+const MAX_PHOTO_SIZE_MB = 5
+const MAX_PHOTO_SIZE_BYTES = MAX_PHOTO_SIZE_MB * 1024 * 1024
+
+const splitBySize = (files: File[]) => {
+    const accepted: File[] = []
+    const rejected: File[] = []
+
+    for (const file of files) {
+        if (file.size > MAX_PHOTO_SIZE_BYTES) {
+            rejected.push(file)
+        } else {
+            accepted.push(file)
+        }
+    }
+
+    return { accepted, rejected }
+}
+
+const oversizedMessage = (rejected: File[]) =>
+    `Cada foto tem de ter no maximo ${MAX_PHOTO_SIZE_MB}MB. Nao foi possivel adicionar: ${rejected.map((file) => file.name).join(', ')}.`
 
 type MeResponse = {
     id: number
@@ -659,6 +704,9 @@ type StaffProfilePhoto = {
     id: number
     url: string
     position: number
+    is_avatar: boolean
+    focal_x: number
+    focal_y: number
 }
 
 type StaffSelfProfileResponse = {
@@ -679,6 +727,8 @@ type ExistingProfessionalPhoto = {
     id: number
     url: string
     isNew: false
+    focalX: number
+    focalY: number
 }
 
 type NewProfessionalPhoto = {
@@ -686,6 +736,8 @@ type NewProfessionalPhoto = {
     url: string
     file: File
     isNew: true
+    focalX: number
+    focalY: number
 }
 
 type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
@@ -877,11 +929,13 @@ const applyProfessionalProfile = (profile: StaffSelfProfileResponse | null) => {
         id: photo.id,
         url: photo.url,
         isNew: false,
+        focalX: photo.focal_x,
+        focalY: photo.focal_y,
     }))
+    const avatarPhotoIndex = (profile?.photos || []).findIndex((photo) => photo.is_avatar)
 
-    // The first photo (position 0) is the profile photo; the rest is the gallery.
-    profilePhoto.value = photos[0] || null
-    galleryPhotos.value = photos.slice(1)
+    profilePhoto.value = photos[avatarPhotoIndex] ?? null
+    galleryPhotos.value = photos.filter((_, index) => index !== avatarPhotoIndex)
 }
 
 const triggerProfilePhotoPicker = () => {
@@ -897,6 +951,11 @@ const handleProfilePhotoInput = (event: Event) => {
         return
     }
 
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+        errorMessage.value = oversizedMessage([file])
+        return
+    }
+
     if (profilePhoto.value?.isNew) {
         URL.revokeObjectURL(profilePhoto.value.url)
     }
@@ -906,6 +965,8 @@ const handleProfilePhotoInput = (event: Event) => {
         url: URL.createObjectURL(file),
         file,
         isNew: true,
+        focalX: 50,
+        focalY: 50,
     }
 }
 
@@ -915,6 +976,23 @@ const removeProfilePhoto = () => {
     }
 
     profilePhoto.value = null
+}
+
+const promoteGalleryPhotoToProfile = (photoId: string | number) => {
+    const index = galleryPhotos.value.findIndex((photo) => photo.id === photoId)
+
+    if (index === -1) {
+        return
+    }
+
+    const [chosen] = galleryPhotos.value.splice(index, 1)
+    const previousProfilePhoto = profilePhoto.value
+
+    profilePhoto.value = chosen ?? null
+
+    if (previousProfilePhoto) {
+        galleryPhotos.value.splice(index, 0, previousProfilePhoto)
+    }
 }
 
 const triggerGalleryPicker = () => {
@@ -930,6 +1008,12 @@ const handleGalleryInput = (event: Event) => {
         return
     }
 
+    const { accepted, rejected } = splitBySize(files)
+
+    if (rejected.length) {
+        errorMessage.value = oversizedMessage(rejected)
+    }
+
     const remainingSlots = maxGalleryPhotos - galleryPhotos.value.length
 
     if (remainingSlots <= 0) {
@@ -937,11 +1021,11 @@ const handleGalleryInput = (event: Event) => {
         return
     }
 
-    if (files.length > remainingSlots) {
+    if (accepted.length > remainingSlots) {
         errorMessage.value = `So podes adicionar mais ${remainingSlots} foto(s).`
     }
 
-    const acceptedFiles = files.slice(0, remainingSlots)
+    const acceptedFiles = accepted.slice(0, remainingSlots)
 
     galleryPhotos.value = [
         ...galleryPhotos.value,
@@ -950,6 +1034,8 @@ const handleGalleryInput = (event: Event) => {
             url: URL.createObjectURL(file),
             file,
             isNew: true as const,
+            focalX: 50,
+            focalY: 50,
         })),
     ]
 }
@@ -1039,11 +1125,13 @@ const applyBusinessProfile = (data: any) => {
         id: photo.id,
         url: photo.url,
         isNew: false,
+        focalX: photo.focal_x,
+        focalY: photo.focal_y,
     }))
+    const avatarPhotoIndex = (data?.photos || []).findIndex((photo: StaffProfilePhoto) => photo.is_avatar)
 
-    // The first photo (position 0) is the cover; the rest is the gallery.
-    businessCover.value = photos[0] || null
-    businessGallery.value = photos.slice(1)
+    businessCover.value = photos[avatarPhotoIndex] ?? null
+    businessGallery.value = photos.filter((_, index) => index !== avatarPhotoIndex)
 }
 
 const loadBusinessProfile = async () => {
@@ -1091,6 +1179,11 @@ const handleBusinessCoverInput = (event: Event) => {
         return
     }
 
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+        errorMessage.value = oversizedMessage([file])
+        return
+    }
+
     if (businessCover.value?.isNew) {
         URL.revokeObjectURL(businessCover.value.url)
     }
@@ -1100,6 +1193,8 @@ const handleBusinessCoverInput = (event: Event) => {
         url: URL.createObjectURL(file),
         file,
         isNew: true,
+        focalX: 50,
+        focalY: 50,
     }
 }
 
@@ -1109,6 +1204,23 @@ const removeBusinessCover = () => {
     }
 
     businessCover.value = null
+}
+
+const promoteBusinessGalleryPhotoToCover = (photoId: string | number) => {
+    const index = businessGallery.value.findIndex((photo) => photo.id === photoId)
+
+    if (index === -1) {
+        return
+    }
+
+    const [chosen] = businessGallery.value.splice(index, 1)
+    const previousCover = businessCover.value
+
+    businessCover.value = chosen ?? null
+
+    if (previousCover) {
+        businessGallery.value.splice(index, 0, previousCover)
+    }
 }
 
 const triggerBusinessGalleryPicker = () => {
@@ -1124,6 +1236,12 @@ const handleBusinessGalleryInput = (event: Event) => {
         return
     }
 
+    const { accepted, rejected } = splitBySize(files)
+
+    if (rejected.length) {
+        errorMessage.value = oversizedMessage(rejected)
+    }
+
     const remaining = maxBusinessGallery - businessGallery.value.length
 
     if (remaining <= 0) {
@@ -1131,17 +1249,19 @@ const handleBusinessGalleryInput = (event: Event) => {
         return
     }
 
-    if (files.length > remaining) {
+    if (accepted.length > remaining) {
         errorMessage.value = `So podes adicionar mais ${remaining} foto(s).`
     }
 
     businessGallery.value = [
         ...businessGallery.value,
-        ...files.slice(0, remaining).map((file, index) => ({
+        ...accepted.slice(0, remaining).map((file, index) => ({
             id: `newb-${Date.now()}-${index}`,
             url: URL.createObjectURL(file),
             file,
             isNew: true as const,
+            focalX: 50,
+            focalY: 50,
         })),
     ]
 }
@@ -1191,6 +1311,9 @@ const saveBusinessProfile = async () => {
         formData.append('instagram_url', businessForm.instagram_url.trim())
         formData.append('website_url', businessForm.website_url.trim())
         formData.append('is_public', businessForm.is_public ? 'true' : 'false')
+        formData.append('avatar_index', businessCover.value ? '0' : '')
+        formData.append('focal_x', String(businessCover.value?.focalX ?? 50))
+        formData.append('focal_y', String(businessCover.value?.focalY ?? 50))
 
         for (const category of businessForm.categories) {
             formData.append('categories', category)
@@ -1436,6 +1559,9 @@ const saveProfessionalProfile = async () => {
 
         const formData = new FormData()
         formData.append('bio', professionalForm.bio.trim())
+        formData.append('avatar_index', profilePhoto.value ? '0' : '')
+        formData.append('focal_x', String(profilePhoto.value?.focalX ?? 50))
+        formData.append('focal_y', String(profilePhoto.value?.focalY ?? 50))
 
         for (const photo of orderedPhotos) {
             if (photo.isNew) {
@@ -1896,14 +2022,6 @@ onMounted(() => {
     gap: 16px;
 }
 
-.profile-photo-slot img {
-    width: 96px;
-    height: 96px;
-    border-radius: 24px;
-    object-fit: cover;
-    border: 1px solid var(--tf-border);
-}
-
 .photo-add {
     flex-shrink: 0;
 }
@@ -1949,6 +2067,21 @@ onMounted(() => {
     color: var(--tf-muted);
 }
 
+.photo-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.photo-promote {
+    border: 0;
+    background: transparent;
+    color: var(--tf-accent, #2563eb);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
 .photo-remove {
     border: 0;
     background: transparent;
@@ -1971,14 +2104,6 @@ onMounted(() => {
 .cover-slot {
     display: grid;
     gap: 10px;
-}
-
-.cover-slot img {
-    width: 100%;
-    height: 150px;
-    border-radius: 16px;
-    object-fit: cover;
-    border: 1px solid var(--tf-border);
 }
 
 .cover-slot .photo-remove {

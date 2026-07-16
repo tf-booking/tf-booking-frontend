@@ -47,7 +47,15 @@
                     <form class="form" @submit.prevent="saveStaff">
                         <div class="avatar-field">
                             <div class="avatar-preview">
-                                <img v-if="avatarPreviewUrl" class="avatar-preview-image" :src="avatarPreviewUrl" :alt="form.name" />
+                                <PhotoPositioner
+                                    v-if="isPro && avatarPreviewUrl"
+                                    :src="avatarPreviewUrl"
+                                    v-model:x="avatarFocalX"
+                                    v-model:y="avatarFocalY"
+                                    shape="circle"
+                                    :size="64"
+                                    :alt="form.name"
+                                />
                                 <template v-else>{{ staffInitials(form.name) }}</template>
                             </div>
 
@@ -176,9 +184,10 @@
                             <div class="staff-item" :class="{ inactive: !staff.is_active, expanded: expandedStaffId === staff.id }">
                                 <div class="staff-avatar">
                                     <img
-                                        v-if="staff.avatar_url"
+                                        v-if="isPro && staff.avatar_url"
                                         class="staff-avatar-image"
                                         :src="staff.avatar_url"
+                                        :style="{ objectPosition: staff.avatar_position }"
                                         :alt="staff.name"
                                     />
                                     <template v-else>
@@ -455,6 +464,8 @@ type StaffMember = {
     phone: string
     bio: string
     avatar_url: string
+    avatar_position: string
+    avatar_photo_id: number | null
     gallery_image_urls: string[]
     is_active: boolean
     access_status: AccessStatus
@@ -491,6 +502,8 @@ const route = useRoute()
 
 const FREE_PLAN_STAFF_LIMIT = 1
 const PRO_PLAN_MAX_STAFF = 5
+const MAX_PHOTO_SIZE_MB = 5
+const MAX_PHOTO_SIZE_BYTES = MAX_PHOTO_SIZE_MB * 1024 * 1024
 
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
@@ -537,6 +550,11 @@ const form = reactive({
 const avatarInput = ref<HTMLInputElement | null>(null)
 const avatarFile = ref<File | null>(null)
 const avatarPreviewUrl = ref('')
+const avatarFocalX = ref(50)
+const avatarFocalY = ref(50)
+const existingAvatarPhotoId = ref<number | null>(null)
+const loadedAvatarFocalX = ref(50)
+const loadedAvatarFocalY = ref(50)
 
 const weekdays = [
     { value: 0, label: 'Segunda-feira' },
@@ -892,6 +910,19 @@ const resetForm = () => {
     revokeAvatarPreview()
     avatarFile.value = null
     avatarPreviewUrl.value = ''
+    avatarFocalX.value = 50
+    avatarFocalY.value = 50
+    loadedAvatarFocalX.value = 50
+    loadedAvatarFocalY.value = 50
+    existingAvatarPhotoId.value = null
+}
+
+const parseAvatarPosition = (position: string) => {
+    const [x, y] = position.split(' ').map((part) => parseFloat(part))
+    return {
+        x: Number.isFinite(x) ? x : 50,
+        y: Number.isFinite(y) ? y : 50,
+    }
 }
 
 const pickAvatar = () => {
@@ -906,25 +937,45 @@ const pickAvatar = () => {
 const handleAvatarChange = (event: Event) => {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
+    input.value = ''
 
     if (!file) {
+        return
+    }
+
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+        errorMessage.value = `A foto tem de ter no maximo ${MAX_PHOTO_SIZE_MB}MB.`
         return
     }
 
     revokeAvatarPreview()
     avatarFile.value = file
     avatarPreviewUrl.value = URL.createObjectURL(file)
-    input.value = ''
+    avatarFocalX.value = 50
+    avatarFocalY.value = 50
 }
 
 const uploadAvatarIfNeeded = async (staffId: number) => {
-    if (!avatarFile.value) {
+    const hasExistingAvatar = Boolean(existingAvatarPhotoId.value)
+    const repositionedExisting = hasExistingAvatar
+        && !avatarFile.value
+        && (avatarFocalX.value !== loadedAvatarFocalX.value || avatarFocalY.value !== loadedAvatarFocalY.value)
+
+    if (!avatarFile.value && !repositionedExisting) {
         return
     }
 
     const formData = new FormData()
-    formData.append('photos_order', 'new')
-    formData.append('photos', avatarFile.value)
+    formData.append('avatar_index', '0')
+    formData.append('focal_x', String(avatarFocalX.value))
+    formData.append('focal_y', String(avatarFocalY.value))
+
+    if (avatarFile.value) {
+        formData.append('photos_order', 'new')
+        formData.append('photos', avatarFile.value)
+    } else {
+        formData.append('photos_order', String(existingAvatarPhotoId.value))
+    }
 
     await apiFetch(`/staff/${staffId}/photos/`, {
         method: 'PATCH',
@@ -1158,6 +1209,13 @@ const editStaff = (staff: StaffMember) => {
 
     avatarFile.value = null
     avatarPreviewUrl.value = staff.avatar_url || ''
+
+    const focal = parseAvatarPosition(staff.avatar_position || '50% 50%')
+    avatarFocalX.value = focal.x
+    avatarFocalY.value = focal.y
+    loadedAvatarFocalX.value = focal.x
+    loadedAvatarFocalY.value = focal.y
+    existingAvatarPhotoId.value = staff.avatar_photo_id
 
     focusForm()
 }
@@ -1401,12 +1459,6 @@ onBeforeUnmount(() => {
     font-size: 16px;
     font-weight: 900;
     overflow: hidden;
-}
-
-.avatar-preview-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
 }
 
 .avatar-field-actions {

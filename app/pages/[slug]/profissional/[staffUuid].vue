@@ -22,6 +22,7 @@
                             v-if="coverPhoto"
                             class="banner-photo"
                             :src="coverPhoto"
+                            :style="{ objectPosition: business?.cover_position }"
                             :alt="business.name"
                         />
                         <div class="banner-texture"></div>
@@ -33,6 +34,7 @@
                             v-if="avatarPhoto"
                             class="avatar avatar-img"
                             :src="avatarPhoto"
+                            :style="{ objectPosition: staffMember?.avatar_position }"
                             :alt="staffMember.name"
                         />
                         <div v-else class="avatar">{{ staffInitials(staffMember.name) }}</div>
@@ -108,6 +110,7 @@ type PublicStaffMember = {
     name: string
     bio: string
     avatar_url: string
+    avatar_position: string
     gallery_image_urls: string[]
 }
 
@@ -129,6 +132,8 @@ type PublicBusiness = {
     city: string
     website_url: string
     cover_image_url: string
+    cover_position: string
+    is_pro: boolean
     services: PublicService[]
 }
 
@@ -225,7 +230,9 @@ const profileDescription = computed(() =>
 
 const coverPhoto = computed(() => resolveMedia(business.value?.cover_image_url || ''))
 
-const avatarPhoto = computed(() => resolveMedia(staffMember.value?.avatar_url || ''))
+const avatarPhoto = computed(() =>
+    business.value?.is_pro ? resolveMedia(staffMember.value?.avatar_url || '') : ''
+)
 
 const profilePhotos = computed(() => {
     const photos = new Set<string>()

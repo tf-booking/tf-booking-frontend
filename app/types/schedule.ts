@@ -11,6 +11,7 @@ export type StaffMember = {
     phone: string
     bio: string
     avatar_url: string
+    avatar_position: string
     is_active: boolean
 }
 

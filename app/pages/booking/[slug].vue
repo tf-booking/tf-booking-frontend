@@ -21,6 +21,7 @@
                         v-if="business.cover_image_url"
                         class="hero-photo"
                         :src="business.cover_image_url"
+                        :style="{ objectPosition: business.cover_position }"
                         :alt="business.name"
                     />
                     <div class="hero-overlay"></div>
@@ -133,7 +134,13 @@
                                 @click="selectStaff(staff)" @keydown.enter="selectStaff(staff)"
                                 @keydown.space.prevent="selectStaff(staff)">
                                 <div class="staff-avatar">
-                                    {{ staffInitials(staff.name) }}
+                                    <img
+                                        v-if="showStaffAvatarPhoto(staff)"
+                                        :src="staff.avatar_url"
+                                        :style="{ objectPosition: staff.avatar_position }"
+                                        :alt="staff.name"
+                                    />
+                                    <template v-else>{{ staffInitials(staff.name) }}</template>
                                 </div>
 
                                 <div class="staff-copy">
@@ -369,6 +376,7 @@ type PublicStaffMember = {
     name: string
     bio: string
     avatar_url: string
+    avatar_position: string
 }
 
 type PublicService = {
@@ -397,6 +405,8 @@ type PublicBusiness = {
     gallery_image_urls: string[]
     service_count: number
     customer_count: number
+    is_pro: boolean
+    cover_position: string
     services: PublicService[]
     booking_settings: {
         min_booking_notice_minutes: number
@@ -644,6 +654,9 @@ const staffInitials = (name: string) =>
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase() || '')
         .join('')
+
+const showStaffAvatarPhoto = (staff: PublicStaffMember) =>
+    Boolean(business.value?.is_pro && staff.avatar_url)
 
 const formatPrice = (value: string | number) => {
     const amount = Number(value)
@@ -1391,6 +1404,13 @@ watch(slug, () => {
     color: var(--tf-black);
     font-weight: 900;
     font-size: 17px;
+    overflow: hidden;
+}
+
+.staff-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .staff-card.selected .staff-avatar {
