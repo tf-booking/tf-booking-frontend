@@ -50,7 +50,12 @@ let startClientY = 0
 let startX = 50
 let startY = 50
 
-const clamp = (value: number) => Math.min(100, Math.max(0, value))
+// Evita os extremos (0%/100%): nesse limite o corte fica muito agressivo
+// em avatares pequenos (sidebar, seletor de colaborador) mesmo que no
+// editor grande ainda pareça razoável.
+const MIN_POSITION = 8
+const MAX_POSITION = 92
+const clamp = (value: number) => Math.min(MAX_POSITION, Math.max(MIN_POSITION, value))
 
 const startDrag = (event: PointerEvent) => {
     isDragging.value = true

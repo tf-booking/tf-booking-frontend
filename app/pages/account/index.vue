@@ -1625,7 +1625,7 @@ const saveProfessionalProfile = async () => {
         applyProfessionalProfile(response)
         professionalProfileState.value = 'ready'
         successMessage.value = 'Pagina publica atualizada com sucesso.'
-        loadOwnAvatar(currentBusiness.value.business_uuid, { force: true })
+        loadOwnAvatar(currentBusiness.value.business_uuid)
     } catch (error: any) {
         console.error(error)
         errorMessage.value = formatApiError(error)

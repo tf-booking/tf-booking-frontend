@@ -8,17 +8,15 @@ export const useOwnAvatar = () => {
 
     const ownAvatarUrl = useState('own-avatar-url', () => '')
     const ownAvatarPosition = useState('own-avatar-position', () => '50% 50%')
-    const ownAvatarBusinessUuid = useState('own-avatar-business-uuid', () => '')
 
-    const loadOwnAvatar = async (businessUuid: string | undefined | null, options: { force?: boolean } = {}) => {
+    // Sem cache de propósito: isto é um pedido leve, e uma otimização de
+    // cache aqui corria o risco de deixar a sidebar presa num valor antigo
+    // (ou nos valores por omissão, se a primeira tentativa falhasse por
+    // temporização com a autenticação) sem nada para forçar nova tentativa.
+    const loadOwnAvatar = async (businessUuid: string | undefined | null) => {
         if (!businessUuid) {
             ownAvatarUrl.value = ''
             ownAvatarPosition.value = '50% 50%'
-            ownAvatarBusinessUuid.value = ''
-            return
-        }
-
-        if (!options.force && ownAvatarBusinessUuid.value === businessUuid) {
             return
         }
 
@@ -29,11 +27,9 @@ export const useOwnAvatar = () => {
             )
             ownAvatarUrl.value = response.avatar_url || ''
             ownAvatarPosition.value = response.avatar_position || '50% 50%'
-            ownAvatarBusinessUuid.value = businessUuid
         } catch {
             ownAvatarUrl.value = ''
             ownAvatarPosition.value = '50% 50%'
-            ownAvatarBusinessUuid.value = ''
         }
     }
 

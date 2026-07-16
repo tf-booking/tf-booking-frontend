@@ -239,10 +239,6 @@ const avatarPhoto = computed(() =>
 const profilePhotos = computed(() => {
     const photos = new Set<string>()
 
-    if (avatarPhoto.value) {
-        photos.add(avatarPhoto.value)
-    }
-
     for (const url of staffMember.value?.gallery_image_urls || []) {
         const resolved = resolveMedia(url)
 
@@ -420,6 +416,7 @@ watch([slug, staffUuid], () => {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -602,15 +599,16 @@ watch([slug, staffUuid], () => {
 
 .portfolio-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
 }
 
 .portfolio-photo {
     display: block;
     width: 100%;
-    height: auto;
+    aspect-ratio: 1 / 1;
     border-radius: 16px;
+    object-fit: cover;
     background: #ece6d9;
 }
 

@@ -1219,24 +1219,18 @@ watch(slug, () => {
 }
 
 .gallery-strip {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
     margin-top: 20px;
-    padding-bottom: 4px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-
-.gallery-strip::-webkit-scrollbar {
-    display: none;
 }
 
 .gallery-strip-photo {
-    flex: 0 0 auto;
-    width: auto;
-    height: 110px;
-    border-radius: 14px;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    object-fit: cover;
     background: #f1ecdf;
 }
 
