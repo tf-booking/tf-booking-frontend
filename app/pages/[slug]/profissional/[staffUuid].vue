@@ -39,7 +39,9 @@
                         />
                         <div v-else class="avatar">{{ staffInitials(staffMember.name) }}</div>
                     </div>
+                </div>
 
+                <div class="profile-scroll">
                     <div class="profile-head">
                         <h1>{{ staffMember.name }}</h1>
                         <p class="profile-role">{{ profileSubtitle }}</p>
@@ -54,9 +56,7 @@
                             </template>
                         </div>
                     </div>
-                </div>
 
-                <div class="profile-scroll">
                     <div class="profile-about">
                         <p class="profile-bio">{{ profileDescription }}</p>
 
