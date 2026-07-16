@@ -29,8 +29,6 @@
                     <div class="hero-title">
                         <h1>{{ business.name }}</h1>
                         <div class="hero-meta">
-                            <span class="rating">★ 4.9</span>
-                            <span>·</span>
                             <span>{{ primaryCategory }}</span>
                             <span v-if="business.city">·</span>
                             <span v-if="business.city">{{ business.city }}</span>
@@ -1173,11 +1171,6 @@ watch(slug, () => {
     margin-top: 12px;
     font-size: 13px;
     color: #d8d5cd;
-}
-
-.rating {
-    color: var(--tf-accent);
-    font-weight: 800;
 }
 
 .landing-body {
