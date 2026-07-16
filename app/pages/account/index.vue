@@ -106,6 +106,7 @@
                                     <p class="photo-help">
                                         Arrasta uma foto para o quadro para a colocar. Clica e arrasta numa foto já colocada para a reenquadrar.
                                     </p>
+                                    <span v-if="isSyncingBusinessPhotos" class="photo-sync-indicator">A guardar foto...</span>
                                 </div>
 
                                 <!-- capa -->
@@ -320,6 +321,7 @@
                                 <p class="photo-help">
                                     Arrasta a tua foto para o quadro. Clica e arrasta numa foto já colocada para a reenquadrar.
                                 </p>
+                                <span v-if="isSyncingProfessionalPhotos" class="photo-sync-indicator">A guardar foto...</span>
                             </div>
 
                             <!-- Foto de perfil + descrição -->
@@ -821,6 +823,7 @@ const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)
 const isSavingPassword = ref(false)
 const isSavingProfessionalProfile = ref(false)
+const isSyncingProfessionalPhotos = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const professionalProfileState = ref<'hidden' | 'missing' | 'ready'>('hidden')
@@ -1005,6 +1008,8 @@ const handleProfilePhotoInput = (event: Event) => {
         focalX: 50,
         focalY: 50,
     }
+
+    syncProfessionalPhotos()
 }
 
 const removeProfilePhoto = () => {
@@ -1013,6 +1018,7 @@ const removeProfilePhoto = () => {
     }
 
     profilePhoto.value = null
+    syncProfessionalPhotos()
 }
 
 const promoteGalleryPhotoToProfile = (photoId: string | number) => {
@@ -1030,6 +1036,8 @@ const promoteGalleryPhotoToProfile = (photoId: string | number) => {
     if (previousProfilePhoto) {
         galleryPhotos.value.splice(index, 0, previousProfilePhoto)
     }
+
+    syncProfessionalPhotos()
 }
 
 const triggerGalleryPicker = () => {
@@ -1075,6 +1083,8 @@ const handleGalleryInput = (event: Event) => {
             focalY: 50,
         })),
     ]
+
+    syncProfessionalPhotos()
 }
 
 const removeGalleryPhoto = (photoId: string | number) => {
@@ -1089,6 +1099,8 @@ const removeGalleryPhoto = (photoId: string | number) => {
     if (photo?.isNew) {
         URL.revokeObjectURL(photo.url)
     }
+
+    syncProfessionalPhotos()
 }
 
 const loadProfessionalProfile = async () => {
@@ -1115,6 +1127,65 @@ const loadProfessionalProfile = async () => {
     }
 }
 
+// Chamado logo a seguir a cada adicionar/remover/promover foto (não espera
+// pelo botão "Guardar") - envia só os campos de fotos, graças ao
+// partial=True do serializer os restantes campos (bio, etc.) não são
+// tocados. Em caso de erro, volta a carregar do servidor para desfazer a
+// alteração otimista feita localmente.
+const syncProfessionalPhotos = async () => {
+    if (!currentBusiness.value?.business_uuid) {
+        return
+    }
+
+    const orderedPhotos = [
+        ...(profilePhoto.value ? [profilePhoto.value] : []),
+        ...galleryPhotos.value,
+    ]
+
+    if (orderedPhotos.length > MAX_PROFILE_PHOTOS) {
+        errorMessage.value = `Podes ter no maximo ${MAX_PROFILE_PHOTOS} fotos no perfil.`
+        await loadProfessionalProfile()
+        return
+    }
+
+    try {
+        isSyncingProfessionalPhotos.value = true
+        resetMessages()
+
+        const formData = new FormData()
+        formData.append('avatar_index', profilePhoto.value ? '0' : '')
+        formData.append('focal_x', String(profilePhoto.value?.focalX ?? 50))
+        formData.append('focal_y', String(profilePhoto.value?.focalY ?? 50))
+
+        for (const photo of orderedPhotos) {
+            if (photo.isNew) {
+                formData.append('photos_order', 'new')
+                formData.append('photos', photo.file)
+            } else {
+                formData.append('photos_order', String(photo.id))
+            }
+        }
+
+        const response = await apiFetch<StaffSelfProfileResponse>(
+            `/staff/me-profile/?business_uuid=${encodeURIComponent(currentBusiness.value.business_uuid)}`,
+            {
+                method: 'PATCH',
+                body: formData,
+            }
+        )
+
+        applyProfessionalProfile(response)
+        professionalProfileState.value = 'ready'
+        loadOwnAvatar(currentBusiness.value.business_uuid)
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = formatApiError(error)
+        await loadProfessionalProfile()
+    } finally {
+        isSyncingProfessionalPhotos.value = false
+    }
+}
+
 /* ---------------- Perfil do negócio (dono / gestor) ---------------- */
 
 const MAX_BUSINESS_PHOTOS = 12
@@ -1122,6 +1193,7 @@ const maxBusinessGallery = MAX_BUSINESS_PHOTOS - 1
 
 const businessProfileState = ref<'hidden' | 'ready'>('hidden')
 const isSavingBusiness = ref(false)
+const isSyncingBusinessPhotos = ref(false)
 const newCategory = ref('')
 const businessCover = ref<ProfessionalPhoto | null>(null)
 const businessGallery = ref<ProfessionalPhoto[]>([])
@@ -1209,6 +1281,60 @@ const loadBusinessProfile = async () => {
     }
 }
 
+// Chamado logo a seguir a cada adicionar/remover/promover foto do negócio
+// (não espera pelo botão "Guardar") - mesma lógica que syncProfessionalPhotos.
+const syncBusinessPhotos = async () => {
+    if (!currentBusiness.value?.business_uuid) {
+        return
+    }
+
+    const orderedPhotos = [
+        ...(businessCover.value ? [businessCover.value] : []),
+        ...businessGallery.value,
+    ]
+
+    if (orderedPhotos.length > MAX_BUSINESS_PHOTOS) {
+        errorMessage.value = `Podes ter no maximo ${MAX_BUSINESS_PHOTOS} fotos no negocio.`
+        await loadBusinessProfile()
+        return
+    }
+
+    try {
+        isSyncingBusinessPhotos.value = true
+        resetMessages()
+
+        const formData = new FormData()
+        formData.append('avatar_index', businessCover.value ? '0' : '')
+        formData.append('focal_x', String(businessCover.value?.focalX ?? 50))
+        formData.append('focal_y', String(businessCover.value?.focalY ?? 50))
+
+        for (const photo of orderedPhotos) {
+            if (photo.isNew) {
+                formData.append('photos_order', 'new')
+                formData.append('photos', photo.file)
+            } else {
+                formData.append('photos_order', String(photo.id))
+            }
+        }
+
+        const response = await apiFetch<any>(
+            `/businesses/me-business/?business_uuid=${encodeURIComponent(currentBusiness.value.business_uuid)}`,
+            {
+                method: 'PATCH',
+                body: formData,
+            }
+        )
+
+        applyBusinessProfile(response)
+    } catch (error: any) {
+        console.error(error)
+        errorMessage.value = formatApiError(error)
+        await loadBusinessProfile()
+    } finally {
+        isSyncingBusinessPhotos.value = false
+    }
+}
+
 const addCategory = () => {
     const value = newCategory.value.trim()
 
@@ -1253,6 +1379,8 @@ const handleBusinessCoverInput = (event: Event) => {
         focalX: 50,
         focalY: 50,
     }
+
+    syncBusinessPhotos()
 }
 
 const removeBusinessCover = () => {
@@ -1261,6 +1389,7 @@ const removeBusinessCover = () => {
     }
 
     businessCover.value = null
+    syncBusinessPhotos()
 }
 
 const promoteBusinessGalleryPhotoToCover = (photoId: string | number) => {
@@ -1278,6 +1407,8 @@ const promoteBusinessGalleryPhotoToCover = (photoId: string | number) => {
     if (previousCover) {
         businessGallery.value.splice(index, 0, previousCover)
     }
+
+    syncBusinessPhotos()
 }
 
 const triggerBusinessGalleryPicker = () => {
@@ -1321,6 +1452,8 @@ const handleBusinessGalleryInput = (event: Event) => {
             focalY: 50,
         })),
     ]
+
+    syncBusinessPhotos()
 }
 
 const removeBusinessGalleryPhoto = (photoId: string | number) => {
@@ -1335,6 +1468,8 @@ const removeBusinessGalleryPhoto = (photoId: string | number) => {
     if (photo?.isNew) {
         URL.revokeObjectURL(photo.url)
     }
+
+    syncBusinessPhotos()
 }
 
 const saveBusinessProfile = async () => {
@@ -2050,6 +2185,14 @@ onMounted(() => {
     color: var(--tf-muted);
     font-size: 13px;
     font-weight: 700;
+}
+
+.photo-sync-indicator {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--tf-accent);
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .textarea {
