@@ -86,10 +86,18 @@
                                 :src="photo"
                                 :alt="`${staffMember.name} - trabalho ${index + 1}`"
                                 loading="lazy"
+                                @click="openLightbox(index)"
                             />
                         </div>
                     </div>
                 </div>
+
+                <PhotoLightbox
+                    v-model:open="isLightboxOpen"
+                    :photos="profilePhotos"
+                    :index="lightboxIndex"
+                    :alt="staffMember.name"
+                />
 
                 <div class="profile-cta">
                     <NuxtLink class="btn btn-accent block-btn" :to="bookWithStaffPath">
@@ -249,6 +257,14 @@ const profilePhotos = computed(() => {
 
     return Array.from(photos)
 })
+
+const isLightboxOpen = ref(false)
+const lightboxIndex = ref(0)
+
+const openLightbox = (index: number) => {
+    lightboxIndex.value = index
+    isLightboxOpen.value = true
+}
 
 const stats = computed(() => {
     const list: { value: string; label: string }[] = [
@@ -610,6 +626,7 @@ watch([slug, staffUuid], () => {
     border-radius: 16px;
     object-fit: cover;
     background: #ece6d9;
+    cursor: pointer;
 }
 
 .profile-cta {

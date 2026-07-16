@@ -50,17 +50,6 @@
                         {{ business.description || 'Escolhe o serviço, vê os horários disponíveis e confirma a marcação em segundos.' }}
                     </p>
 
-                    <div class="landing-stats">
-                        <div class="stat">
-                            <strong>{{ customerCountLabel }}</strong>
-                            <span>Clientes</span>
-                        </div>
-                        <div class="stat">
-                            <strong>{{ business.service_count }}</strong>
-                            <span>Serviços</span>
-                        </div>
-                    </div>
-
                     <div v-if="business.gallery_image_urls.length" class="gallery-strip">
                         <img
                             v-for="(url, index) in business.gallery_image_urls"
@@ -69,9 +58,17 @@
                             :src="url"
                             :alt="`${business.name} - foto ${index + 1}`"
                             loading="lazy"
+                            @click="openLightbox(index)"
                         />
                     </div>
                 </div>
+
+                <PhotoLightbox
+                    v-model:open="isLightboxOpen"
+                    :photos="business.gallery_image_urls"
+                    :index="lightboxIndex"
+                    :alt="business.name"
+                />
 
                 <div class="screen-cta screen-cta--fade">
                     <button class="btn btn-accent block-btn" type="button" :disabled="bookableServices.length === 0"
@@ -576,15 +573,13 @@ const categoryChips = computed(() => {
     return uniqueNames.length ? uniqueNames : ['Serviços']
 })
 
-const customerCountLabel = computed(() => {
-    const count = business.value?.customer_count || 0
+const isLightboxOpen = ref(false)
+const lightboxIndex = ref(0)
 
-    if (count >= 1000) {
-        return `${(count / 1000).toFixed(1).replace('.0', '')}k`
-    }
-
-    return String(count)
-})
+const openLightbox = (index: number) => {
+    lightboxIndex.value = index
+    isLightboxOpen.value = true
+}
 
 const goTo = async (target: number) => {
     step.value = target
@@ -1189,35 +1184,6 @@ watch(slug, () => {
     color: #4a483f;
 }
 
-.landing-stats {
-    display: flex;
-    gap: 14px;
-}
-
-.stat {
-    flex: 1;
-    padding: 16px;
-    border-radius: 18px;
-    background: #f4f1ea;
-}
-
-.stat strong {
-    display: block;
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: 0;
-}
-
-.stat span {
-    display: block;
-    margin-top: 4px;
-    font-family: var(--tf-mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--tf-muted);
-}
-
 .gallery-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -1232,6 +1198,7 @@ watch(slug, () => {
     border-radius: 16px;
     object-fit: cover;
     background: #f1ecdf;
+    cursor: pointer;
 }
 
 /* ---- shared step chrome ---- */
