@@ -260,6 +260,19 @@
                             </div>
 
                             <div>
+                                <label class="label">Localização exata (link do Google Maps)</label>
+                                <input
+                                    v-model="businessForm.maps_url"
+                                    class="input"
+                                    type="url"
+                                    placeholder="https://maps.app.goo.gl/..."
+                                />
+                                <span class="field-hint">
+                                    No Google Maps, procura a morada, toca em "Partilhar" e cola aqui o link. Vai aparecer um botão "Ver no mapa" na tua página pública.
+                                </span>
+                            </div>
+
+                            <div>
                                 <label class="label">Website</label>
                                 <input v-model="businessForm.website_url" class="input" type="url" placeholder="https://..." />
                             </div>
@@ -1140,6 +1153,7 @@ const businessForm = reactive({
     phone: '',
     address: '',
     city: '',
+    maps_url: '',
     instagram_url: '',
     website_url: '',
     categories: [] as string[],
@@ -1153,6 +1167,7 @@ const applyBusinessProfile = (data: any) => {
     businessForm.phone = data?.phone || ''
     businessForm.address = data?.address || ''
     businessForm.city = data?.city || ''
+    businessForm.maps_url = data?.maps_url || ''
     businessForm.instagram_url = data?.instagram_url || ''
     businessForm.website_url = data?.website_url || ''
     businessForm.categories = Array.isArray(data?.categories) ? [...data.categories] : []
@@ -1350,6 +1365,7 @@ const saveBusinessProfile = async () => {
         formData.append('phone', businessForm.phone.trim())
         formData.append('address', businessForm.address.trim())
         formData.append('city', businessForm.city.trim())
+        formData.append('maps_url', businessForm.maps_url.trim())
         formData.append('instagram_url', businessForm.instagram_url.trim())
         formData.append('website_url', businessForm.website_url.trim())
         formData.append('is_public', businessForm.is_public ? 'true' : 'false')
@@ -2338,6 +2354,13 @@ onMounted(() => {
     color: var(--tf-muted);
     font-size: 12px;
     font-weight: 600;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    color: var(--tf-muted);
+    font-size: 12px;
 }
 
 .switch {

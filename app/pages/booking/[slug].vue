@@ -50,16 +50,44 @@
                         {{ business.description || 'Escolhe o serviço, vê os horários disponíveis e confirma a marcação em segundos.' }}
                     </p>
 
+                    <a
+                        v-if="business.maps_url"
+                        class="maps-link"
+                        :href="business.maps_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        Ver no mapa
+                    </a>
+
                     <div v-if="business.gallery_image_urls.length" class="gallery-strip">
-                        <img
+                        <button
                             v-for="(url, index) in business.gallery_image_urls"
                             :key="url"
-                            class="gallery-strip-photo"
-                            :src="url"
-                            :alt="`${business.name} - foto ${index + 1}`"
-                            loading="lazy"
+                            type="button"
+                            class="gallery-strip-tile"
+                            :aria-label="`Ver foto ${index + 1} em grande`"
                             @click="openLightbox(index)"
-                        />
+                        >
+                            <img
+                                class="gallery-strip-photo"
+                                :src="url"
+                                :alt="`${business.name} - foto ${index + 1}`"
+                                loading="lazy"
+                            />
+                            <span class="gallery-strip-zoom" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    <line x1="11" y1="8" x2="11" y2="14" />
+                                    <line x1="8" y1="11" x2="14" y2="11" />
+                                </svg>
+                            </span>
+                        </button>
                     </div>
                 </div>
 
@@ -404,6 +432,7 @@ type PublicBusiness = {
     phone: string
     address: string
     city: string
+    maps_url: string
     instagram_url: string
     facebook_url: string
     website_url: string
@@ -1184,11 +1213,33 @@ watch(slug, () => {
     color: #4a483f;
 }
 
+.maps-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: -8px 0 20px;
+    color: var(--tf-black);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 .gallery-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 12px;
     margin-top: 20px;
+}
+
+.gallery-strip-tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
 }
 
 .gallery-strip-photo {
@@ -1198,7 +1249,33 @@ watch(slug, () => {
     border-radius: 16px;
     object-fit: cover;
     background: #f1ecdf;
-    cursor: pointer;
+}
+
+.gallery-strip-zoom {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(11, 11, 15, 0.55);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.gallery-strip-tile:hover .gallery-strip-zoom,
+.gallery-strip-tile:focus-visible .gallery-strip-zoom {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .gallery-strip-zoom {
+        opacity: 1;
+        background: rgba(11, 11, 15, 0.4);
+    }
 }
 
 /* ---- shared step chrome ---- */

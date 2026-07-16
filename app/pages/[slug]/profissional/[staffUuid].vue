@@ -79,15 +79,29 @@
                         </div>
 
                         <div class="portfolio-grid">
-                            <img
+                            <button
                                 v-for="(photo, index) in profilePhotos"
                                 :key="`${photo}-${index}`"
-                                class="portfolio-photo"
-                                :src="photo"
-                                :alt="`${staffMember.name} - trabalho ${index + 1}`"
-                                loading="lazy"
+                                type="button"
+                                class="portfolio-tile"
+                                :aria-label="`Ver foto ${index + 1} em grande`"
                                 @click="openLightbox(index)"
-                            />
+                            >
+                                <img
+                                    class="portfolio-photo"
+                                    :src="photo"
+                                    :alt="`${staffMember.name} - trabalho ${index + 1}`"
+                                    loading="lazy"
+                                />
+                                <span class="portfolio-zoom" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="7" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        <line x1="11" y1="8" x2="11" y2="14" />
+                                        <line x1="8" y1="11" x2="14" y2="11" />
+                                    </svg>
+                                </span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -619,6 +633,16 @@ watch([slug, staffUuid], () => {
     gap: 12px;
 }
 
+.portfolio-tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
 .portfolio-photo {
     display: block;
     width: 100%;
@@ -626,7 +650,33 @@ watch([slug, staffUuid], () => {
     border-radius: 16px;
     object-fit: cover;
     background: #ece6d9;
-    cursor: pointer;
+}
+
+.portfolio-zoom {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(11, 11, 15, 0.55);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.portfolio-tile:hover .portfolio-zoom,
+.portfolio-tile:focus-visible .portfolio-zoom {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .portfolio-zoom {
+        opacity: 1;
+        background: rgba(11, 11, 15, 0.4);
+    }
 }
 
 .profile-cta {
