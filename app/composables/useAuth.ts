@@ -82,11 +82,6 @@ export const useAuth = () => {
     const navigateAfterLogin = async () => {
         const me = await apiFetch<NavigateAfterLoginResponse>('/me/')
 
-        if (me.is_superuser || me.is_staff) {
-            await navigateTo('/admin')
-            return
-        }
-
         if (me.businesses.length === 0) {
             // Conta sem nenhum negócio ativo (tipicamente primeiro login com uma
             // conta Google nova). Se houver um convite de equipa por aceitar,
