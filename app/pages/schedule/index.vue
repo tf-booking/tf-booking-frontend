@@ -952,6 +952,30 @@ const resetMessages = () => {
     successMessage.value = ''
 }
 
+const firstErrorMessage = (error: any, fallback: string) => {
+    const data = error?.data
+
+    if (!data) {
+        return fallback
+    }
+
+    if (typeof data.detail === 'string' && data.detail) {
+        return data.detail
+    }
+
+    for (const value of Object.values(data)) {
+        if (Array.isArray(value) && typeof value[0] === 'string' && value[0]) {
+            return value[0]
+        }
+
+        if (typeof value === 'string' && value) {
+            return value
+        }
+    }
+
+    return fallback
+}
+
 const toFullCalendarWeekday = (backendWeekday: number) => {
     return backendWeekday === 6 ? 0 : backendWeekday + 1
 }
@@ -1533,7 +1557,7 @@ const loadAppointments = async () => {
             results: Appointment[]
         }>(endpoint)
 
-        appointments.value = response.results
+        appointments.value = response.results.filter((appointment) => appointment.status !== 'cancelled')
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Não foi possível carregar as marcações.'
@@ -1573,7 +1597,7 @@ const loadMobileDay = async () => {
             ),
         ])
 
-        mobileAppointments.value = appointmentsResponse.results
+        mobileAppointments.value = appointmentsResponse.results.filter((appointment) => appointment.status !== 'cancelled')
         mobileBlocks.value = blocksResponse.results
         mobileWorkingHours.value = workingHoursResponse.results
     } catch (error) {
@@ -1686,7 +1710,7 @@ const saveBlock = async () => {
             await refreshScheduleData()
         } catch (error: any) {
             console.error(error)
-            errorMessage.value = error?.data ? JSON.stringify(error.data) : 'Erro ao guardar bloqueio.'
+            errorMessage.value = firstErrorMessage(error, 'Erro ao guardar bloqueio.')
         } finally {
             isSavingBlock.value = false
         }
@@ -1959,8 +1983,7 @@ const saveAppointmentEdit = async () => {
         await refreshScheduleData()
     } catch (error: any) {
         console.error(error)
-        errorMessage.value = error?.data?.detail
-            || (error?.data ? JSON.stringify(error.data) : 'Não foi possível guardar a marcação.')
+        errorMessage.value = firstErrorMessage(error, 'Não foi possível guardar a marcação.')
     } finally {
         isSavingAppointmentEdit.value = false
     }
@@ -2002,13 +2025,22 @@ onMounted(async () => {
     try {
         await loadCurrentBusiness()
         await loadBusinesses()
-        await loadScheduleSettings()
-        await loadGoogleCalendarStatus()
-        await loadServices()
-        await loadStaff()
-        await loadWorkingHours()
-        await loadBlocks()
-        await loadAppointments()
+
+        // Estas 4 só dependem do negócio selecionado, não umas das outras.
+        await Promise.all([
+            loadScheduleSettings(),
+            loadGoogleCalendarStatus(),
+            loadServices(),
+            loadStaff(),
+        ])
+
+        // Estas 3 dependem do colaborador escolhido (definido dentro de loadStaff).
+        await Promise.all([
+            loadWorkingHours(),
+            loadBlocks(),
+            loadAppointments(),
+        ])
+
         await applyGoogleCalendarFeedbackFromQuery()
     } finally {
         isInitializing.value = false

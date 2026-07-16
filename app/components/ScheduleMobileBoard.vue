@@ -41,28 +41,27 @@
                 ></div>
 
                 <div
-                    v-for="block in blocksByStaff[staff.id] || []"
-                    :key="`block-${block.uuid}`"
-                    class="smb-event"
-                    :style="eventStyle(block.start_at, block.end_at, blockColors)"
-                    @click="$emit('open-block', block)"
-                >
-                    <strong>{{ block.reason || 'Bloqueado' }}</strong>
-                </div>
-
-                <div
-                    v-for="appointment in appointmentsByStaff[staff.id] || []"
-                    :key="`appt-${appointment.uuid}`"
+                    v-for="item in layoutItemsByStaff[staff.id] || []"
+                    :key="item.key"
                     class="smb-event"
                     :style="eventStyle(
-                        appointment.start_at,
-                        appointment.end_at,
-                        getAppointmentColors(appointment, appointment.id === nextAppointmentId)
+                        item.start_at,
+                        item.end_at,
+                        item.type === 'block'
+                            ? blockColors
+                            : getAppointmentColors(item.source as Appointment, (item.source as Appointment).id === nextAppointmentId),
+                        item.column,
+                        item.columnCount
                     )"
-                    @click="$emit('open-appointment', appointment)"
+                    @click="item.type === 'block' ? $emit('open-block', item.source as StaffBlock) : $emit('open-appointment', item.source as Appointment)"
                 >
-                    <strong>{{ appointment.service_name || 'Marcação' }}</strong>
-                    <span>{{ appointment.customer_name }}</span>
+                    <template v-if="item.type === 'block'">
+                        <strong>{{ (item.source as StaffBlock).reason || 'Bloqueado' }}</strong>
+                    </template>
+                    <template v-else>
+                        <strong>{{ (item.source as Appointment).service_name || 'Marcação' }}</strong>
+                        <span>{{ (item.source as Appointment).customer_name }}</span>
+                    </template>
                 </div>
             </div>
 
@@ -144,6 +143,106 @@ const appointmentsByStaff = computed(() => groupByStaff(props.appointments))
 
 const nextAppointmentId = computed(() => findNextAppointmentId(props.appointments))
 
+type LayoutItem = {
+    key: string
+    type: 'block' | 'appointment'
+    start_at: string
+    end_at: string
+    source: StaffBlock | Appointment
+    column: number
+    columnCount: number
+}
+
+// Algoritmo de "sweep": agrupa eventos que se sobrepõem no tempo (mesmo
+// colaborador) em clusters, e dentro de cada cluster atribui uma coluna a
+// cada evento para ficarem lado-a-lado em vez de empilhados uns por cima
+// dos outros (o que tornava alguns impossíveis de clicar).
+const layoutStaffEvents = (blocksForStaff: StaffBlock[], appointmentsForStaff: Appointment[]): LayoutItem[] => {
+    const raw = [
+        ...blocksForStaff.map((block) => ({
+            key: `block-${block.uuid}`,
+            type: 'block' as const,
+            source: block as StaffBlock | Appointment,
+            start_at: block.start_at,
+            end_at: block.end_at,
+            startMinutes: minutesFromMidnight(block.start_at),
+            endMinutes: minutesFromMidnight(block.end_at),
+        })),
+        ...appointmentsForStaff.map((appointment) => ({
+            key: `appt-${appointment.uuid}`,
+            type: 'appointment' as const,
+            source: appointment as StaffBlock | Appointment,
+            start_at: appointment.start_at,
+            end_at: appointment.end_at,
+            startMinutes: minutesFromMidnight(appointment.start_at),
+            endMinutes: minutesFromMidnight(appointment.end_at),
+        })),
+    ].sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes)
+
+    const result: LayoutItem[] = []
+    let group: (typeof raw[number] & { column: number })[] = []
+    let groupEnd = -Infinity
+    let columnEnds: number[] = []
+
+    const flushGroup = () => {
+        if (!group.length) {
+            return
+        }
+
+        const columnCount = Math.max(...group.map((item) => item.column)) + 1
+
+        for (const item of group) {
+            result.push({
+                key: item.key,
+                type: item.type,
+                start_at: item.start_at,
+                end_at: item.end_at,
+                source: item.source,
+                column: item.column,
+                columnCount,
+            })
+        }
+
+        group = []
+    }
+
+    for (const item of raw) {
+        if (item.startMinutes >= groupEnd) {
+            flushGroup()
+            columnEnds = []
+            groupEnd = -Infinity
+        }
+
+        let column = columnEnds.findIndex((end) => item.startMinutes >= end)
+
+        if (column === -1) {
+            column = columnEnds.length
+        }
+
+        columnEnds[column] = item.endMinutes
+        groupEnd = Math.max(groupEnd, item.endMinutes)
+
+        group.push({ ...item, column })
+    }
+
+    flushGroup()
+
+    return result
+}
+
+const layoutItemsByStaff = computed(() => {
+    const map: Record<number, LayoutItem[]> = {}
+
+    for (const staff of props.staffMembers) {
+        map[staff.id] = layoutStaffEvents(
+            blocksByStaff.value[staff.id] || [],
+            appointmentsByStaff.value[staff.id] || [],
+        )
+    }
+
+    return map
+})
+
 const formatDateInput = (date: Date) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -216,16 +315,27 @@ const workingHourStyle = (wh: WorkingHour) => {
     }
 }
 
-const eventStyle = (startAt: string, endAt: string, colors: { backgroundColor: string; borderColor: string; textColor: string }) => {
+const eventStyle = (
+    startAt: string,
+    endAt: string,
+    colors: { backgroundColor: string; borderColor: string; textColor: string },
+    column = 0,
+    columnCount = 1,
+) => {
     const startMinutes = minutesFromMidnight(startAt) - START_HOUR * 60
     const endMinutes = minutesFromMidnight(endAt) - START_HOUR * 60
 
     const clampedStart = Math.max(0, Math.min(startMinutes, (END_HOUR - START_HOUR) * 60))
     const clampedEnd = Math.max(clampedStart, Math.min(endMinutes, (END_HOUR - START_HOUR) * 60))
 
+    const widthPercent = 100 / columnCount
+    const leftPercent = widthPercent * column
+
     return {
         top: `${clampedStart * PX_PER_MINUTE}px`,
         height: `${Math.max(18, (clampedEnd - clampedStart) * PX_PER_MINUTE)}px`,
+        left: `calc(${leftPercent}% + 3px)`,
+        width: `calc(${widthPercent}% - 6px)`,
         background: colors.backgroundColor,
         borderColor: colors.borderColor,
         color: colors.textColor,
@@ -348,8 +458,6 @@ const eventStyle = (startAt: string, endAt: string, colors: { backgroundColor: s
 
 .smb-event {
     position: absolute;
-    left: 3px;
-    right: 3px;
     overflow: hidden;
     padding: 4px 6px;
     border: 1px solid;
