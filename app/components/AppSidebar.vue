@@ -95,7 +95,7 @@ const route = useRoute()
 const { logout } = useAuth()
 const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 const { startPolling, stopPolling } = useNotifications()
-const { apiFetch } = useApi()
+const { ownAvatarUrl: ownerAvatarUrl, ownAvatarPosition: ownerAvatarPosition, loadOwnAvatar } = useOwnAvatar()
 
 const isMobileMenuOpen = ref(false)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
@@ -157,36 +157,13 @@ const businessInitials = computed(() => {
         .toUpperCase()
 })
 
-const ownerAvatarUrl = ref('')
-const ownerAvatarPosition = ref('50% 50%')
-
 const isPro = computed(() => currentBusiness.value?.business_plan === 'pro')
 const showOwnerAvatar = computed(() => isPro.value && Boolean(ownerAvatarUrl.value))
 
-const loadOwnerAvatar = async () => {
-    const businessUuid = currentBusiness.value?.business_uuid
-
-    if (!businessUuid) {
-        ownerAvatarUrl.value = ''
-        return
-    }
-
-    try {
-        const response = await apiFetch<{ avatar_url: string; avatar_position: string }>(
-            `/staff/me-profile/?business_uuid=${encodeURIComponent(businessUuid)}`,
-            { silent: true }
-        )
-        ownerAvatarUrl.value = response.avatar_url || ''
-        ownerAvatarPosition.value = response.avatar_position || '50% 50%'
-    } catch {
-        ownerAvatarUrl.value = ''
-    }
-}
-
 watch(
     () => currentBusiness.value?.business_uuid,
-    () => {
-        loadOwnerAvatar()
+    (businessUuid) => {
+        loadOwnAvatar(businessUuid)
     },
     { immediate: true }
 )

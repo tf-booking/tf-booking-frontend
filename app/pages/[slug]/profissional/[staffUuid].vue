@@ -54,7 +54,9 @@
                             </template>
                         </div>
                     </div>
+                </div>
 
+                <div class="profile-scroll">
                     <div class="profile-about">
                         <p class="profile-bio">{{ profileDescription }}</p>
 
@@ -69,23 +71,23 @@
                             </span>
                         </div>
                     </div>
-                </div>
 
-                <div v-if="profilePhotos.length" class="portfolio">
-                    <div class="portfolio-head">
-                        <span class="portfolio-label">Trabalhos</span>
-                        <span class="portfolio-count">{{ profilePhotos.length }} fotos</span>
-                    </div>
+                    <div v-if="profilePhotos.length" class="portfolio">
+                        <div class="portfolio-head">
+                            <span class="portfolio-label">Trabalhos</span>
+                            <span class="portfolio-count">{{ profilePhotos.length }} fotos</span>
+                        </div>
 
-                    <div class="portfolio-grid">
-                        <img
-                            v-for="(photo, index) in profilePhotos"
-                            :key="`${photo}-${index}`"
-                            class="portfolio-photo"
-                            :src="photo"
-                            :alt="`${staffMember.name} - trabalho ${index + 1}`"
-                            loading="lazy"
-                        />
+                        <div class="portfolio-grid">
+                            <img
+                                v-for="(photo, index) in profilePhotos"
+                                :key="`${photo}-${index}`"
+                                class="portfolio-photo"
+                                :src="photo"
+                                :alt="`${staffMember.name} - trabalho ${index + 1}`"
+                                loading="lazy"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -414,6 +416,13 @@ watch([slug, staffUuid], () => {
     flex-shrink: 0;
 }
 
+.profile-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .banner {
     position: relative;
     height: 190px;
@@ -589,23 +598,19 @@ watch([slug, staffUuid], () => {
 
 .portfolio {
     padding-bottom: 26px;
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .portfolio-grid {
-    column-count: 2;
-    column-gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 .portfolio-photo {
     display: block;
     width: 100%;
-    margin-bottom: 10px;
+    height: auto;
     border-radius: 16px;
-    break-inside: avoid;
     background: #ece6d9;
 }
 

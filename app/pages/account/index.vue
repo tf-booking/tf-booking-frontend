@@ -745,6 +745,7 @@ type ProfessionalPhoto = ExistingProfessionalPhoto | NewProfessionalPhoto
 
 const { apiFetch } = useApi()
 const { currentBusiness, currentUser, loadCurrentBusiness } = useCurrentBusiness()
+const { loadOwnAvatar } = useOwnAvatar()
 const { isFree, isPro } = usePlan()
 const { isRedirecting, billingError, startCheckout, startAddSeatCheckout, openBillingPortal, isUpdatingSeats, updateSeats } = useBilling()
 const { logout } = useAuth()
@@ -1624,6 +1625,7 @@ const saveProfessionalProfile = async () => {
         applyProfessionalProfile(response)
         professionalProfileState.value = 'ready'
         successMessage.value = 'Pagina publica atualizada com sucesso.'
+        loadOwnAvatar(currentBusiness.value.business_uuid, { force: true })
     } catch (error: any) {
         console.error(error)
         errorMessage.value = formatApiError(error)

@@ -1234,10 +1234,9 @@ watch(slug, () => {
 
 .gallery-strip-photo {
     flex: 0 0 auto;
-    width: 130px;
-    height: 96px;
+    width: auto;
+    height: 110px;
     border-radius: 14px;
-    object-fit: cover;
     background: #f1ecdf;
 }
 
