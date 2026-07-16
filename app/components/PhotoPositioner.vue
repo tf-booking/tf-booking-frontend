@@ -2,15 +2,15 @@
     <div
         ref="frameRef"
         class="photo-positioner"
-        :class="[`photo-positioner-${shape}`, { dragging: isDragging }]"
-        :style="{ width: `${width || size}px`, height: `${height || size}px` }"
+        :class="[`photo-positioner-${shape}`, { dragging: isDragging, 'photo-positioner-fill': fill }]"
+        :style="fill ? {} : { width: `${width || size}px`, height: `${height || size}px` }"
         @pointerdown="startDrag"
         @pointermove="onDrag"
         @pointerup="stopDrag"
         @pointercancel="stopDrag"
     >
         <img :src="src" :alt="alt" :style="{ objectPosition: `${x}% ${y}%` }" draggable="false" />
-        <span class="photo-positioner-hint">Arrasta para posicionar</span>
+        <span class="photo-positioner-hint">Arrasta para reposicionar</span>
     </div>
 </template>
 
@@ -24,6 +24,7 @@ const props = withDefaults(
         size?: number
         width?: number
         height?: number
+        fill?: boolean
         alt?: string
     }>(),
     {
@@ -31,6 +32,7 @@ const props = withDefaults(
         size: 140,
         width: 0,
         height: 0,
+        fill: false,
         alt: '',
     }
 )
@@ -97,6 +99,11 @@ const stopDrag = (event: PointerEvent) => {
 
 .photo-positioner-rect {
     border-radius: 12px;
+}
+
+.photo-positioner-fill {
+    width: 100%;
+    height: 100%;
 }
 
 .photo-positioner.dragging {

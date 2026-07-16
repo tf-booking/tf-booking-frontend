@@ -7,7 +7,10 @@
             </div>
 
             <div class="account-user card">
-                <span class="account-user-avatar">{{ userInitials }}</span>
+                <span class="account-user-avatar">
+                    <img v-if="showOwnAvatar" :src="profilePhoto!.url" :style="{ objectPosition: `${profilePhoto!.focalX}% ${profilePhoto!.focalY}%` }" alt="" />
+                    <template v-else>{{ userInitials }}</template>
+                </span>
                 <div class="account-user-copy">
                     <div class="account-user-name">{{ fullName }}</div>
                     <div class="account-user-sub">{{ accountUserSub }}</div>
@@ -98,41 +101,65 @@
                                 :locked="isFree"
                                 message="A personalização do perfil (fotos de capa e galeria) está disponível no plano Pro."
                             >
-                                <!-- capa -->
-                                <div class="photo-block">
-                                    <div class="photo-head">
-                                        <div>
-                                            <label class="label">Foto de capa</label>
-                                            <p class="photo-help">A imagem principal, usada como capa da tua página pública.</p>
-                                        </div>
+                                <div class="photo-section-head">
+                                    <label class="label">Fotos e apresentação</label>
+                                    <p class="photo-help">
+                                        Arrasta uma foto para o quadro para a colocar. Clica e arrasta numa foto já colocada para a reenquadrar.
+                                    </p>
+                                </div>
 
-                                        <button class="btn btn-secondary photo-add" type="button" @click="triggerBusinessCoverPicker">
-                                            {{ businessCover ? 'Alterar capa' : 'Escolher capa' }}
-                                        </button>
-
-                                        <input
-                                            ref="businessCoverInputRef"
-                                            class="photo-input"
-                                            type="file"
-                                            accept="image/*"
-                                            @change="handleBusinessCoverInput"
-                                        />
-                                    </div>
-
-                                    <div v-if="businessCover" class="cover-slot">
+                                <!-- capa + avatar sobreposto -->
+                                <div class="cover-avatar-block">
+                                    <div class="cover-frame">
                                         <PhotoPositioner
+                                            v-if="businessCover"
                                             :src="businessCover.url"
                                             v-model:x="businessCover.focalX"
                                             v-model:y="businessCover.focalY"
                                             shape="rect"
-                                            :width="320"
-                                            :height="140"
+                                            fill
                                             alt="Capa do negócio"
                                         />
-                                        <button class="photo-remove" type="button" @click="removeBusinessCover">Remover</button>
+                                        <div v-if="businessCover" class="photo-frame-ctl">
+                                            <button type="button" @click="triggerBusinessCoverPicker">Alterar</button>
+                                            <button type="button" @click="removeBusinessCover">Remover</button>
+                                        </div>
+                                        <button
+                                            v-else
+                                            class="photo-empty-state"
+                                            type="button"
+                                            @click="triggerBusinessCoverPicker"
+                                        >
+                                            <span class="photo-empty-icon">🖼</span>
+                                            <span class="photo-empty-cap">Foto de capa do negócio</span>
+                                            <span class="photo-empty-sub">ou escolher ficheiro</span>
+                                        </button>
                                     </div>
 
-                                    <p v-else class="empty-photo-state">Ainda nao escolheste uma foto de capa.</p>
+                                    <div class="avatar-frame">
+                                        <img
+                                            v-if="businessCover"
+                                            :src="businessCover.url"
+                                            :style="{ objectPosition: `${businessCover.focalX}% ${businessCover.focalY}%` }"
+                                            alt="Logótipo do negócio"
+                                        />
+                                        <button
+                                            v-else
+                                            class="avatar-frame-empty"
+                                            type="button"
+                                            @click="triggerBusinessCoverPicker"
+                                        >
+                                            Logo
+                                        </button>
+                                    </div>
+
+                                    <input
+                                        ref="businessCoverInputRef"
+                                        class="photo-input"
+                                        type="file"
+                                        accept="image/*"
+                                        @change="handleBusinessCoverInput"
+                                    />
                                 </div>
 
                                 <!-- galeria -->
@@ -140,17 +167,8 @@
                                     <div class="photo-head">
                                         <div>
                                             <label class="label">Galeria de fotos</label>
-                                            <p class="photo-help">Aparecem na página pública. Máximo {{ maxBusinessGallery }} fotos.</p>
+                                            <p class="photo-help">Aparecem na página pública.</p>
                                         </div>
-
-                                        <button
-                                            class="btn btn-secondary photo-add"
-                                            type="button"
-                                            :disabled="businessGallery.length >= maxBusinessGallery"
-                                            @click="triggerBusinessGalleryPicker"
-                                        >
-                                            Adicionar fotos
-                                        </button>
 
                                         <input
                                             ref="businessGalleryInputRef"
@@ -162,28 +180,36 @@
                                         />
                                     </div>
 
-                                    <div v-if="businessGallery.length" class="photo-grid">
+                                    <div class="photo-grid photo-grid-v2">
                                         <article
-                                            v-for="(photo, index) in businessGallery"
-                                            :key="photo.id"
-                                            class="photo-card"
+                                            v-for="slot in businessGallerySlots"
+                                            :key="slot.kind === 'filled' ? slot.photo.id : slot.id"
+                                            class="photo-card photo-card-v2"
                                         >
-                                            <img :src="photo.url" :alt="`Foto ${index + 1}`" />
-                                            <div class="photo-meta">
-                                                <span class="photo-badge">Foto {{ index + 1 }}</span>
-                                                <div class="photo-actions">
-                                                    <button class="photo-promote" type="button" @click="promoteBusinessGalleryPhotoToCover(photo.id)">
+                                            <template v-if="slot.kind === 'filled'">
+                                                <img :src="slot.photo.url" :alt="`Foto ${slot.index + 1}`" />
+                                                <div class="photo-meta photo-meta-v2">
+                                                    <button class="photo-promote" type="button" @click="promoteBusinessGalleryPhotoToCover(slot.photo.id)">
                                                         Tornar capa
                                                     </button>
-                                                    <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(photo.id)">
+                                                    <button class="photo-remove" type="button" @click="removeBusinessGalleryPhoto(slot.photo.id)">
                                                         Remover
                                                     </button>
                                                 </div>
-                                            </div>
+                                            </template>
+
+                                            <button
+                                                v-else
+                                                class="photo-empty-state photo-empty-state-tile"
+                                                type="button"
+                                                :disabled="businessGallery.length >= maxBusinessGallery"
+                                                @click="triggerBusinessGalleryPicker"
+                                            >
+                                                <span class="photo-empty-cap">{{ slot.caption }}</span>
+                                                <span class="photo-empty-sub">ou escolher ficheiro</span>
+                                            </button>
                                         </article>
                                     </div>
-
-                                    <p v-else class="empty-photo-state">Ainda nao tens fotos na galeria.</p>
                                 </div>
                             </ProLock>
 
@@ -296,29 +322,37 @@
                         </div>
 
                         <form v-else class="form" @submit.prevent="saveProfessionalProfile">
-                            <div>
-                                <label class="label">Descricao</label>
-                                <textarea
-                                    v-model="professionalForm.bio"
-                                    class="input textarea"
-                                    placeholder="Fala um pouco sobre o teu trabalho, especialidade e estilo."
-                                />
+                            <div class="photo-section-head">
+                                <p class="photo-help">
+                                    Arrasta a tua foto para o quadro. Clica e arrasta numa foto já colocada para a reenquadrar.
+                                </p>
                             </div>
 
-                            <!-- Foto de perfil (imagem principal) -->
-                            <div class="photo-block">
-                                <div class="photo-head">
-                                    <div>
-                                        <label class="label">Foto de perfil</label>
-                                        <p class="photo-help">A imagem principal que aparece no topo do teu perfil.</p>
+                            <!-- Foto de perfil + descrição -->
+                            <div class="profile-avatar-block">
+                                <div class="profile-avatar-frame">
+                                    <PhotoPositioner
+                                        v-if="profilePhoto"
+                                        :src="profilePhoto.url"
+                                        v-model:x="profilePhoto.focalX"
+                                        v-model:y="profilePhoto.focalY"
+                                        shape="circle"
+                                        fill
+                                        alt="Foto de perfil"
+                                    />
+                                    <div v-if="profilePhoto" class="photo-frame-ctl">
+                                        <button type="button" @click="triggerProfilePhotoPicker">Alterar</button>
+                                        <button type="button" @click="removeProfilePhoto">Remover</button>
                                     </div>
-
                                     <button
-                                        class="btn btn-secondary photo-add"
+                                        v-else
+                                        class="photo-empty-state"
                                         type="button"
                                         @click="triggerProfilePhotoPicker"
                                     >
-                                        {{ profilePhoto ? 'Alterar foto' : 'Escolher foto' }}
+                                        <span class="photo-empty-icon">🖼</span>
+                                        <span class="photo-empty-cap">Foto de perfil</span>
+                                        <span class="photo-empty-sub">ou escolher ficheiro</span>
                                     </button>
 
                                     <input
@@ -330,41 +364,23 @@
                                     />
                                 </div>
 
-                                <div v-if="profilePhoto" class="profile-photo-slot">
-                                    <PhotoPositioner
-                                        :src="profilePhoto.url"
-                                        v-model:x="profilePhoto.focalX"
-                                        v-model:y="profilePhoto.focalY"
-                                        shape="circle"
-                                        :size="96"
-                                        alt="Foto de perfil"
+                                <div class="profile-avatar-copy">
+                                    <label class="label">Descrição</label>
+                                    <textarea
+                                        v-model="professionalForm.bio"
+                                        class="input textarea"
+                                        placeholder="Fala um pouco sobre o teu trabalho, especialidade e estilo."
                                     />
-                                    <button class="photo-remove" type="button" @click="removeProfilePhoto">
-                                        Remover
-                                    </button>
                                 </div>
-
-                                <p v-else class="empty-photo-state">
-                                    Ainda nao escolheste uma foto de perfil.
-                                </p>
                             </div>
 
                             <!-- Fotos da pagina publica (galeria) -->
                             <div class="photo-block">
                                 <div class="photo-head">
                                     <div>
-                                        <label class="label">Fotos da pagina</label>
-                                        <p class="photo-help">Aparecem na galeria do teu perfil publico. Maximo {{ maxGalleryPhotos }} fotos.</p>
+                                        <label class="label">Fotos da página</label>
+                                        <p class="photo-help">Aparecem na galeria do teu perfil público.</p>
                                     </div>
-
-                                    <button
-                                        class="btn btn-secondary photo-add"
-                                        type="button"
-                                        :disabled="galleryPhotos.length >= maxGalleryPhotos"
-                                        @click="triggerGalleryPicker"
-                                    >
-                                        Adicionar fotos
-                                    </button>
 
                                     <input
                                         ref="galleryInputRef"
@@ -376,30 +392,36 @@
                                     />
                                 </div>
 
-                                <div v-if="galleryPhotos.length" class="photo-grid">
+                                <div class="photo-grid photo-grid-v2">
                                     <article
-                                        v-for="(photo, index) in galleryPhotos"
-                                        :key="photo.id"
-                                        class="photo-card"
+                                        v-for="slot in profileGallerySlots"
+                                        :key="slot.kind === 'filled' ? slot.photo.id : slot.id"
+                                        class="photo-card photo-card-v2"
                                     >
-                                        <img :src="photo.url" :alt="`Foto ${index + 1}`" />
-                                        <div class="photo-meta">
-                                            <span class="photo-badge">Foto {{ index + 1 }}</span>
-                                            <div class="photo-actions">
-                                                <button class="photo-promote" type="button" @click="promoteGalleryPhotoToProfile(photo.id)">
+                                        <template v-if="slot.kind === 'filled'">
+                                            <img :src="slot.photo.url" :alt="`Foto ${slot.index + 1}`" />
+                                            <div class="photo-meta photo-meta-v2">
+                                                <button class="photo-promote" type="button" @click="promoteGalleryPhotoToProfile(slot.photo.id)">
                                                     Tornar foto de perfil
                                                 </button>
-                                                <button class="photo-remove" type="button" @click="removeGalleryPhoto(photo.id)">
+                                                <button class="photo-remove" type="button" @click="removeGalleryPhoto(slot.photo.id)">
                                                     Remover
                                                 </button>
                                             </div>
-                                        </div>
+                                        </template>
+
+                                        <button
+                                            v-else
+                                            class="photo-empty-state photo-empty-state-tile"
+                                            type="button"
+                                            :disabled="galleryPhotos.length >= maxGalleryPhotos"
+                                            @click="triggerGalleryPicker"
+                                        >
+                                            <span class="photo-empty-cap">{{ slot.caption }}</span>
+                                            <span class="photo-empty-sub">ou escolher ficheiro</span>
+                                        </button>
                                     </article>
                                 </div>
-
-                                <p v-else class="empty-photo-state">
-                                    Ainda nao tens fotos na pagina.
-                                </p>
                             </div>
 
                             <p class="security-hint">
@@ -815,6 +837,24 @@ const profilePhotoInputRef = ref<HTMLInputElement | null>(null)
 const galleryInputRef = ref<HTMLInputElement | null>(null)
 const maxGalleryPhotos = MAX_PROFILE_PHOTOS - 1
 
+const PROFILE_GALLERY_SUGGESTIONS = ['Trabalho 1', 'Trabalho 2', 'Trabalho 3', 'Trabalho 4']
+
+const profileGallerySlots = computed(() => {
+    const filled = galleryPhotos.value.map((photo, index) => ({ kind: 'filled' as const, photo, index }))
+    // Só um quadro vazio de cada vez (não a capacidade toda) - o input de
+    // ficheiro aceita seleção múltipla, por isso continua a dar para
+    // adicionar várias fotos de uma vez a partir desse único quadro.
+    const empty = filled.length < maxGalleryPhotos
+        ? [{
+            kind: 'empty' as const,
+            id: 'empty-next',
+            caption: PROFILE_GALLERY_SUGGESTIONS[filled.length % PROFILE_GALLERY_SUGGESTIONS.length],
+        }]
+        : []
+
+    return [...filled, ...empty]
+})
+
 const form = reactive({
     username: '',
     email: '',
@@ -851,6 +891,10 @@ const userInitials = computed(() => {
         .map((token) => token.charAt(0).toUpperCase())
         .join('')
 })
+
+const showOwnAvatar = computed(() =>
+    currentBusiness.value?.business_plan === 'pro' && Boolean(profilePhoto.value)
+)
 
 type AccountTab = 'perfil' | 'negocio' | 'publico' | 'plano' | 'seguranca'
 
@@ -1088,6 +1132,24 @@ const isSavingBusiness = ref(false)
 const newCategory = ref('')
 const businessCover = ref<ProfessionalPhoto | null>(null)
 const businessGallery = ref<ProfessionalPhoto[]>([])
+
+const BUSINESS_GALLERY_SUGGESTIONS = ['Espaço', 'Equipa', 'Trabalho recente', 'Produtos', 'Ambiente', 'Detalhe']
+
+const businessGallerySlots = computed(() => {
+    const filled = businessGallery.value.map((photo, index) => ({ kind: 'filled' as const, photo, index }))
+    // Só um quadro vazio de cada vez (não a capacidade toda) - o input de
+    // ficheiro aceita seleção múltipla, por isso continua a dar para
+    // adicionar várias fotos de uma vez a partir desse único quadro.
+    const empty = filled.length < maxBusinessGallery
+        ? [{
+            kind: 'empty' as const,
+            id: 'empty-next',
+            caption: BUSINESS_GALLERY_SUGGESTIONS[filled.length % BUSINESS_GALLERY_SUGGESTIONS.length],
+        }]
+        : []
+
+    return [...filled, ...empty]
+})
 const businessCoverInputRef = ref<HTMLInputElement | null>(null)
 const businessGalleryInputRef = ref<HTMLInputElement | null>(null)
 
@@ -1670,6 +1732,13 @@ onMounted(() => {
     font-size: 20px;
     font-weight: 900;
     letter-spacing: -0.03em;
+    overflow: hidden;
+}
+
+.account-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .account-user-copy {
@@ -1760,7 +1829,7 @@ onMounted(() => {
 
 .two-columns {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
 }
 
@@ -2016,61 +2085,195 @@ onMounted(() => {
     gap: 16px;
 }
 
-.profile-photo-slot {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.photo-add {
-    flex-shrink: 0;
-}
-
 .photo-input {
     display: none;
 }
 
-.photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+.photo-section-head {
+    margin-bottom: 4px;
 }
 
-.photo-card {
+/* ---- capa + avatar sobreposto (negócio) ---- */
+.cover-avatar-block {
+    position: relative;
+    margin-bottom: 56px;
+}
+
+.cover-frame {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    border-radius: 20px;
     overflow: hidden;
-    border: 1px solid var(--tf-border);
-    border-radius: 18px;
-    background: #faf7ef;
+    background: #f1ecdf;
 }
 
-.photo-card img {
+.avatar-frame {
+    position: absolute;
+    left: 28px;
+    bottom: -40px;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    border: 4px solid #fff;
+    box-shadow: 0 12px 26px -14px rgba(11, 11, 15, 0.35);
+    overflow: hidden;
+    background: #f1ecdf;
+}
+
+.avatar-frame img {
     display: block;
     width: 100%;
-    aspect-ratio: 1 / 1;
+    height: 100%;
     object-fit: cover;
 }
 
-.photo-meta {
+.avatar-frame-empty {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ---- foto de perfil + descrição (colaborador) ---- */
+.profile-avatar-block {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+
+.profile-avatar-frame {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f1ecdf;
+    flex-shrink: 0;
+}
+
+.profile-avatar-copy {
+    flex: 1;
+    min-width: 220px;
+}
+
+/* ---- estados vazio / controlo de substituir foto ---- */
+.photo-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    border: 1px dashed var(--tf-border);
+    background: transparent;
+    color: var(--tf-muted);
+    text-align: center;
+    cursor: pointer;
+}
+
+.photo-empty-icon {
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+.photo-empty-cap {
+    max-width: 90%;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--tf-black);
+}
+
+.photo-empty-sub {
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.photo-empty-state-tile {
+    border-radius: 16px;
+}
+
+.photo-frame-ctl {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    display: flex;
+    gap: 6px;
+}
+
+.photo-frame-ctl button {
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.photo-frame-ctl button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* ---- galeria (grelha responsiva v2) ---- */
+.photo-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.photo-card-v2 {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #f1ecdf;
+}
+
+.photo-card-v2 img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-meta-v2 {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 10px;
+    background: linear-gradient(to top, rgba(11, 11, 15, 0.65), transparent);
 }
 
-.photo-badge {
-    font-family: var(--tf-mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--tf-muted);
+.photo-meta-v2 .photo-promote,
+.photo-meta-v2 .photo-remove {
+    font-size: 11px;
 }
 
-.photo-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.photo-meta-v2 .photo-promote {
+    color: var(--tf-accent);
+}
+
+.photo-meta-v2 .photo-remove {
+    color: #ffb4b4;
 }
 
 .photo-promote {
@@ -2089,25 +2292,6 @@ onMounted(() => {
     font-size: 12px;
     font-weight: 800;
     cursor: pointer;
-}
-
-.empty-photo-state {
-    margin: 0;
-    padding: 18px;
-    border: 1px dashed var(--tf-border);
-    border-radius: 16px;
-    color: var(--tf-muted);
-    font-weight: 700;
-}
-
-/* ---- business: cover, categories, visibility toggle ---- */
-.cover-slot {
-    display: grid;
-    gap: 10px;
-}
-
-.cover-slot .photo-remove {
-    justify-self: start;
 }
 
 .cat-chips {

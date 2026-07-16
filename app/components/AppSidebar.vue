@@ -67,7 +67,12 @@
                     @keydown.space.prevent="goToAccount"
                 >
                     <span class="s-avatar">
-                        <img v-if="showOwnerAvatar" :src="ownerAvatarUrl" alt="" />
+                        <img
+                            v-if="showOwnerAvatar"
+                            :src="ownerAvatarUrl"
+                            :style="{ objectPosition: ownerAvatarPosition }"
+                            alt=""
+                        />
                         <template v-else>{{ businessInitials }}</template>
                     </span>
 
@@ -153,6 +158,7 @@ const businessInitials = computed(() => {
 })
 
 const ownerAvatarUrl = ref('')
+const ownerAvatarPosition = ref('50% 50%')
 
 const isPro = computed(() => currentBusiness.value?.business_plan === 'pro')
 const showOwnerAvatar = computed(() => isPro.value && Boolean(ownerAvatarUrl.value))
@@ -166,11 +172,12 @@ const loadOwnerAvatar = async () => {
     }
 
     try {
-        const response = await apiFetch<{ avatar_url: string }>(
+        const response = await apiFetch<{ avatar_url: string; avatar_position: string }>(
             `/staff/me-profile/?business_uuid=${encodeURIComponent(businessUuid)}`,
             { silent: true }
         )
         ownerAvatarUrl.value = response.avatar_url || ''
+        ownerAvatarPosition.value = response.avatar_position || '50% 50%'
     } catch {
         ownerAvatarUrl.value = ''
     }
