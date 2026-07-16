@@ -16,7 +16,7 @@
             </section>
 
             <section v-else class="profile">
-                <div class="profile-scroll">
+                <div class="profile-top">
                     <div class="banner">
                         <img
                             v-if="coverPhoto"
@@ -69,23 +69,23 @@
                             </span>
                         </div>
                     </div>
+                </div>
 
-                    <div v-if="profilePhotos.length" class="portfolio">
-                        <div class="portfolio-head">
-                            <span class="portfolio-label">Trabalhos</span>
-                            <span class="portfolio-count">{{ profilePhotos.length }} fotos</span>
-                        </div>
+                <div v-if="profilePhotos.length" class="portfolio">
+                    <div class="portfolio-head">
+                        <span class="portfolio-label">Trabalhos</span>
+                        <span class="portfolio-count">{{ profilePhotos.length }} fotos</span>
+                    </div>
 
-                        <div class="portfolio-grid">
-                            <img
-                                v-for="(photo, index) in profilePhotos"
-                                :key="`${photo}-${index}`"
-                                class="portfolio-photo"
-                                :src="photo"
-                                :alt="`${staffMember.name} - trabalho ${index + 1}`"
-                                loading="lazy"
-                            />
-                        </div>
+                    <div class="portfolio-grid">
+                        <img
+                            v-for="(photo, index) in profilePhotos"
+                            :key="`${photo}-${index}`"
+                            class="portfolio-photo"
+                            :src="photo"
+                            :alt="`${staffMember.name} - trabalho ${index + 1}`"
+                            loading="lazy"
+                        />
                     </div>
                 </div>
 
@@ -341,13 +341,13 @@ watch([slug, staffUuid], () => {
 
 <style scoped>
 .profile-viewport {
-    min-height: 100svh;
+    height: 100svh;
     background: #fdfcf9;
 }
 
 .device {
     width: 100%;
-    min-height: 100svh;
+    height: 100svh;
     background: #fdfcf9;
 }
 
@@ -407,11 +407,11 @@ watch([slug, staffUuid], () => {
 .profile {
     display: flex;
     flex-direction: column;
-    min-height: 100svh;
+    height: 100%;
 }
 
-.profile-scroll {
-    flex: 1;
+.profile-top {
+    flex-shrink: 0;
 }
 
 .banner {
@@ -589,6 +589,10 @@ watch([slug, staffUuid], () => {
 
 .portfolio {
     padding-bottom: 26px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .portfolio-grid {
@@ -606,6 +610,8 @@ watch([slug, staffUuid], () => {
 }
 
 .profile-cta {
+    flex-shrink: 0;
+    margin-top: auto;
     position: sticky;
     bottom: 0;
     padding: 16px 24px 26px;
@@ -631,14 +637,17 @@ watch([slug, staffUuid], () => {
 
     .device {
         width: min(460px, 100%);
-        min-height: 0;
+        height: auto;
         border: 1px solid #d9d2c2;
         border-radius: 34px;
         box-shadow: 0 40px 90px -44px rgba(11, 11, 15, 0.5);
         overflow: hidden;
     }
 
-    .profile,
+    .profile {
+        height: min(820px, calc(100svh - 64px));
+    }
+
     .state-screen {
         min-height: min(820px, calc(100svh - 64px));
     }
