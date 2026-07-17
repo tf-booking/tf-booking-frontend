@@ -60,7 +60,7 @@
             <div class="dashboard-grid">
                 <article class="card panel">
                     <div class="panel-head">
-                        <h2>Próximas marcações</h2>
+                        <h2>Marcações do Dia</h2>
                         <NuxtLink to="/schedule" class="panel-link">ver agenda →</NuxtLink>
                     </div>
 

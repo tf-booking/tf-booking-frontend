@@ -33,6 +33,21 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'exceljs',
+        '@fullcalendar/vue3',
+        '@fullcalendar/daygrid',
+        '@fullcalendar/timegrid',
+        '@fullcalendar/interaction',
+        '@fullcalendar/core/locales/pt',
+      ],
+    },
+  },
+
   runtimeConfig: {
     public: {
       apiBase: 'http://127.0.0.1:8000/api',

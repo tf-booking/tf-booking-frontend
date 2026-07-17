@@ -25,6 +25,14 @@
                         <button type="button" class="mini-action" @click="applyPreset('last-month')">
                             Mês passado
                         </button>
+                        <button
+                            type="button"
+                            class="mini-action"
+                            :disabled="isFree || isLoadingStats || isExporting || !selectedBusiness"
+                            @click="exportToExcel"
+                        >
+                            {{ isExporting ? 'A exportar...' : 'Exportar Excel' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -281,6 +289,181 @@ const loadStatistics = async () => {
     }
 }
 
+type ExportAppointment = {
+    uuid: string
+    start_at: string
+    staff_member_name: string
+    customer_name: string
+    service_name: string
+    final_price: string
+    status: string
+}
+
+const isExporting = ref(false)
+
+const loadAllAppointments = async () => {
+    const rows: ExportAppointment[] = []
+    let page = 1
+
+    while (true) {
+        const params = new URLSearchParams({
+            business: String(selectedBusiness.value!.id),
+            start_date: startDate.value,
+            end_date: endDate.value,
+            page: String(page),
+        })
+
+        const response = await apiFetch<{
+            next: string | null
+            results: ExportAppointment[]
+        }>(`/appointments/?${params.toString()}`)
+
+        rows.push(...response.results)
+
+        if (!response.next) {
+            return rows
+        }
+
+        page += 1
+    }
+}
+
+const exportToExcel = async () => {
+    if (!selectedBusiness.value || isFree.value || isExporting.value) {
+        return
+    }
+
+    try {
+        isExporting.value = true
+        errorMessage.value = ''
+
+        const [{ default: ExcelJS }, allAppointments] = await Promise.all([
+            import('exceljs'),
+            loadAllAppointments(),
+        ])
+
+        const appointments = allAppointments.filter(
+            (appointment) => appointment.status !== 'cancelled'
+        )
+
+        const formatDate = new Intl.DateTimeFormat('pt-PT', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        })
+
+        const BLACK = 'FF0B0B0F'
+        const ACCENT = 'FFD7FF3E'
+        const BORDER = 'FFE6E1D5'
+        const STRIPE = 'FFF7F5EF'
+        const MUTED = 'FF6F6A5E'
+
+        const workbook = new ExcelJS.Workbook()
+        const sheet = workbook.addWorksheet('Reservas', {
+            views: [{ state: 'frozen', ySplit: 4 }],
+        })
+
+        sheet.columns = [
+            { width: 20 },
+            { width: 26 },
+            { width: 26 },
+            { width: 30 },
+            { width: 14 },
+        ]
+
+        // Cabeçalho do documento
+        sheet.mergeCells('A1:E1')
+        const titleCell = sheet.getCell('A1')
+        titleCell.value = `Reservas — ${selectedBusiness.value.name}`
+        titleCell.font = { name: 'Calibri', size: 16, bold: true, color: { argb: BLACK } }
+        sheet.getRow(1).height = 28
+
+        sheet.mergeCells('A2:E2')
+        const periodCell = sheet.getCell('A2')
+        periodCell.value = `Período: ${startDate.value} a ${endDate.value} · ${appointments.length} reservas`
+        periodCell.font = { name: 'Calibri', size: 11, italic: true, color: { argb: MUTED } }
+        sheet.getRow(2).height = 18
+
+        // Cabeçalho da tabela
+        const headerRow = sheet.getRow(4)
+        headerRow.values = ['Data', 'Colaborador', 'Cliente', 'Serviço', 'Valor']
+        headerRow.height = 24
+        headerRow.eachCell((cell) => {
+            cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLACK } }
+            cell.alignment = { vertical: 'middle' }
+            cell.border = {
+                bottom: { style: 'medium', color: { argb: ACCENT } },
+            }
+        })
+
+        // Linhas de dados
+        appointments.forEach((appointment, index) => {
+            const row = sheet.getRow(5 + index)
+            row.values = [
+                formatDate.format(new Date(appointment.start_at)),
+                appointment.staff_member_name,
+                appointment.customer_name,
+                appointment.service_name,
+                Number(appointment.final_price || 0),
+            ]
+            row.height = 18
+
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                cell.font = { name: 'Calibri', size: 11, color: { argb: BLACK } }
+                cell.alignment = { vertical: 'middle' }
+                cell.border = {
+                    bottom: { style: 'thin', color: { argb: BORDER } },
+                }
+
+                if (index % 2 === 1) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STRIPE } }
+                }
+
+                if (colNumber === 5) {
+                    cell.numFmt = '#,##0.00" €"'
+                }
+            })
+        })
+
+        // Linha de total
+        const totalRow = sheet.getRow(5 + appointments.length)
+        totalRow.getCell(4).value = 'Total'
+        totalRow.getCell(5).value = {
+            formula: `SUM(E5:E${4 + Math.max(appointments.length, 1)})`,
+            result: appointments.reduce(
+                (sum, appointment) => sum + Number(appointment.final_price || 0),
+                0
+            ),
+        }
+        totalRow.height = 22
+        ;[4, 5].forEach((colNumber) => {
+            const cell = totalRow.getCell(colNumber)
+            cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: BLACK } }
+            cell.alignment = { vertical: 'middle' }
+            cell.border = { top: { style: 'medium', color: { argb: BLACK } } }
+        })
+        totalRow.getCell(5).numFmt = '#,##0.00" €"'
+
+        sheet.autoFilter = { from: 'A4', to: 'E4' }
+
+        const buffer = await workbook.xlsx.writeBuffer()
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `reservas_${selectedBusiness.value.slug}_${startDate.value}_${endDate.value}.xlsx`
+        link.click()
+        URL.revokeObjectURL(url)
+    } catch (error) {
+        console.error(error)
+        errorMessage.value = 'Não foi possível exportar as reservas.'
+    } finally {
+        isExporting.value = false
+    }
+}
+
 watch([startDate, endDate], () => {
     loadStatistics()
 })
@@ -473,6 +656,12 @@ onMounted(async () => {
 
 .mini-action:hover {
     box-shadow: 0 12px 26px -14px rgba(11, 11, 15, 0.3);
+}
+
+.mini-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .muted-text {
