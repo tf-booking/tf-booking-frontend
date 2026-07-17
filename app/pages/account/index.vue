@@ -326,38 +326,41 @@
 
                             <!-- Foto de perfil + descrição -->
                             <div class="profile-avatar-block">
-                                <div class="profile-avatar-frame">
-                                    <PhotoPositioner
-                                        v-if="profilePhoto"
-                                        :src="profilePhoto.url"
-                                        v-model:x="profilePhoto.focalX"
-                                        v-model:y="profilePhoto.focalY"
-                                        shape="circle"
-                                        fill
-                                        alt="Foto de perfil"
-                                    />
+                                <div class="profile-avatar-shell">
+                                    <div class="profile-avatar-frame">
+                                        <PhotoPositioner
+                                            v-if="profilePhoto"
+                                            :src="profilePhoto.url"
+                                            v-model:x="profilePhoto.focalX"
+                                            v-model:y="profilePhoto.focalY"
+                                            shape="circle"
+                                            fill
+                                            alt="Foto de perfil"
+                                        />
+                                        <button
+                                            v-else
+                                            class="photo-empty-state"
+                                            type="button"
+                                            @click="triggerProfilePhotoPicker"
+                                        >
+                                            <span class="photo-empty-icon">🖼</span>
+                                            <span class="photo-empty-cap">Foto de perfil</span>
+                                            <span class="photo-empty-sub">ou escolher ficheiro</span>
+                                        </button>
+
+                                        <input
+                                            ref="profilePhotoInputRef"
+                                            class="photo-input"
+                                            type="file"
+                                            accept="image/*"
+                                            @change="handleProfilePhotoInput"
+                                        />
+                                    </div>
+
                                     <div v-if="profilePhoto" class="photo-frame-ctl">
                                         <button type="button" @click="triggerProfilePhotoPicker">Alterar</button>
                                         <button class="photo-frame-ctl-x" type="button" aria-label="Remover" @click="removeProfilePhoto">×</button>
                                     </div>
-                                    <button
-                                        v-else
-                                        class="photo-empty-state"
-                                        type="button"
-                                        @click="triggerProfilePhotoPicker"
-                                    >
-                                        <span class="photo-empty-icon">🖼</span>
-                                        <span class="photo-empty-cap">Foto de perfil</span>
-                                        <span class="photo-empty-sub">ou escolher ficheiro</span>
-                                    </button>
-
-                                    <input
-                                        ref="profilePhotoInputRef"
-                                        class="photo-input"
-                                        type="file"
-                                        accept="image/*"
-                                        @change="handleProfilePhotoInput"
-                                    />
                                 </div>
 
                                 <div class="profile-avatar-copy">
@@ -2256,14 +2259,20 @@ onMounted(() => {
     margin-bottom: 22px;
 }
 
-.profile-avatar-frame {
+.profile-avatar-shell {
     position: relative;
     width: 132px;
     height: 132px;
+    flex-shrink: 0;
+}
+
+.profile-avatar-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     overflow: hidden;
     background: #f1ecdf;
-    flex-shrink: 0;
 }
 
 .profile-avatar-copy {
