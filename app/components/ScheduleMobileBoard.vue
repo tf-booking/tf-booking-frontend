@@ -32,6 +32,7 @@
                 :key="`col-${staff.id}`"
                 class="smb-column"
                 :style="{ height: `${totalHeight}px`, '--smb-slot-height': `${slotHeightPx}px` }"
+                @click.self="(event) => handleColumnClick(event, staff.id)"
             >
                 <div
                     v-for="wh in workingHoursByStaff[staff.id] || []"
@@ -91,9 +92,10 @@ const props = defineProps<{
     isPro: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
     'open-appointment': [appointment: Appointment]
     'open-block': [block: StaffBlock]
+    'create-at': [payload: { staffId: number; time: string }]
 }>()
 
 const START_HOUR = 7
@@ -340,6 +342,28 @@ const eventStyle = (
         borderColor: colors.borderColor,
         color: colors.textColor,
     }
+}
+
+// Clicar numa área vazia da coluna (não num evento já existente, por isso o
+// listener usa `.self`) calcula a que hora corresponde essa posição e avisa
+// o pai para abrir a modal de criar já com essa hora preenchida.
+const handleColumnClick = (event: MouseEvent, staffId: number) => {
+    const column = event.currentTarget as HTMLElement
+    const rect = column.getBoundingClientRect()
+    const offsetMinutes = (event.clientY - rect.top) / PX_PER_MINUTE
+
+    const interval = props.slotIntervalMinutes > 0 ? props.slotIntervalMinutes : 30
+    const maxMinutes = (END_HOUR - START_HOUR) * 60 - interval
+    const roundedMinutes = Math.min(
+        Math.max(0, Math.round(offsetMinutes / interval) * interval),
+        Math.max(0, maxMinutes)
+    )
+
+    const hour = START_HOUR + Math.floor(roundedMinutes / 60)
+    const minute = roundedMinutes % 60
+    const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+
+    emit('create-at', { staffId, time })
 }
 </script>
 

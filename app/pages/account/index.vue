@@ -273,6 +273,20 @@
                                 </span>
                             </div>
 
+            <div>
+                                <label class="label">NIF (opcional)</label>
+                                <input
+                                    v-model="businessForm.nif"
+                                    class="input"
+                                    type="text"
+                                    inputmode="numeric"
+                                    placeholder="123456789"
+                                />
+                                <span class="field-hint">
+                                    Usado para emitir a fatura da subscrição em nome da tua empresa. Sem NIF, a fatura sai como consumidor final.
+                                </span>
+                            </div>
+
                             <div>
                                 <label class="label">Website</label>
                                 <input v-model="businessForm.website_url" class="input" type="url" placeholder="https://..." />
@@ -1229,6 +1243,7 @@ const businessForm = reactive({
     address: '',
     city: '',
     maps_url: '',
+    nif: '',
     instagram_url: '',
     website_url: '',
     categories: [] as string[],
@@ -1243,6 +1258,7 @@ const applyBusinessProfile = (data: any) => {
     businessForm.address = data?.address || ''
     businessForm.city = data?.city || ''
     businessForm.maps_url = data?.maps_url || ''
+    businessForm.nif = data?.nif || ''
     businessForm.instagram_url = data?.instagram_url || ''
     businessForm.website_url = data?.website_url || ''
     businessForm.categories = Array.isArray(data?.categories) ? [...data.categories] : []
@@ -1504,6 +1520,7 @@ const saveBusinessProfile = async () => {
         formData.append('address', businessForm.address.trim())
         formData.append('city', businessForm.city.trim())
         formData.append('maps_url', businessForm.maps_url.trim())
+        formData.append('nif', businessForm.nif.trim())
         formData.append('instagram_url', businessForm.instagram_url.trim())
         formData.append('website_url', businessForm.website_url.trim())
         formData.append('is_public', businessForm.is_public ? 'true' : 'false')

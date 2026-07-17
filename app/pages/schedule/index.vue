@@ -135,6 +135,7 @@
                             :is-pro="isPro"
                             @open-appointment="handleMobileOpenAppointment"
                             @open-block="handleMobileOpenBlock"
+                            @create-at="handleMobileCreateAt"
                         />
                     </div>
                 </div>
@@ -1667,6 +1668,36 @@ const handleMobileCreate = () => {
 
     selectedStaffId.value = staffMembers.value[0]!.id
     openNewAppointmentModal()
+}
+
+// Clicar num horário vazio da agenda mobile (ScheduleMobileBoard) abre a
+// mesma modal de escolha (Marcação/Bloqueio), já com a hora clicada
+// preenchida - equivalente ao que "handleCalendarSelect" já fazia no desktop.
+const handleMobileCreateAt = ({ staffId, time }: { staffId: number; time: string }) => {
+    resetMessages()
+
+    selectedStaffId.value = staffId
+
+    const interval = slotIntervalMinutes.value > 0 ? slotIntervalMinutes.value : 30
+    const [hour, minute] = time.split(':').map(Number)
+    const endTotalMinutes = (hour ?? 0) * 60 + (minute ?? 0) + interval
+    const endTime = `${String(Math.floor(endTotalMinutes / 60)).padStart(2, '0')}:${String(endTotalMinutes % 60).padStart(2, '0')}`
+
+    modalRange.value = {
+        start: toDateTimePayload(mobileDate.value, time),
+        end: toDateTimePayload(mobileDate.value, endTime),
+        startDate: mobileDate.value,
+        startTime: time,
+        endDate: mobileDate.value,
+        endTime,
+    }
+
+    resetAppointmentForm()
+    resetBlockForm()
+    fillFormsFromModalRange()
+
+    modalStep.value = 'choice'
+    isModalOpen.value = true
 }
 
 const saveBlock = async () => {
