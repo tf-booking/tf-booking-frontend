@@ -84,14 +84,17 @@
                                 :key="`${photo}-${index}`"
                                 type="button"
                                 class="portfolio-tile"
+                                :style="portfolioTileStyle(index)"
                                 :aria-label="`Ver foto ${index + 1} em grande`"
                                 @click="openLightbox(index)"
                             >
                                 <img
+                                    :ref="(el) => setPortfolioImageEl(el as Element | null, index)"
                                     class="portfolio-photo"
                                     :src="photo"
                                     :alt="`${staffMember.name} - trabalho ${index + 1}`"
                                     loading="lazy"
+                                    @load="onPortfolioImageLoad(index)"
                                 />
                                 <span class="portfolio-zoom" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -279,6 +282,8 @@ const openLightbox = (index: number) => {
     lightboxIndex.value = index
     isLightboxOpen.value = true
 }
+
+const { setImageEl: setPortfolioImageEl, onImageLoad: onPortfolioImageLoad, tileStyle: portfolioTileStyle } = useMasonryLayout()
 
 const stats = computed(() => {
     const list: { value: string; label: string }[] = [
@@ -629,7 +634,8 @@ watch([slug, staffUuid], () => {
 
 .portfolio-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-auto-rows: 10px;
     gap: 12px;
 }
 
@@ -646,7 +652,7 @@ watch([slug, staffUuid], () => {
 .portfolio-photo {
     display: block;
     width: 100%;
-    aspect-ratio: 1 / 1;
+    height: auto;
     border-radius: 16px;
     object-fit: cover;
     background: #ece6d9;

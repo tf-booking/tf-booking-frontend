@@ -68,14 +68,17 @@
                             :key="url"
                             type="button"
                             class="gallery-strip-tile"
+                            :style="galleryTileStyle(index)"
                             :aria-label="`Ver foto ${index + 1} em grande`"
                             @click="openLightbox(index)"
                         >
                             <img
+                                :ref="(el) => setGalleryImageEl(el as Element | null, index)"
                                 class="gallery-strip-photo"
                                 :src="url"
                                 :alt="`${business.name} - foto ${index + 1}`"
                                 loading="lazy"
+                                @load="onGalleryImageLoad(index)"
                             />
                             <span class="gallery-strip-zoom" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -607,6 +610,8 @@ const openLightbox = (index: number) => {
     lightboxIndex.value = index
     isLightboxOpen.value = true
 }
+
+const { setImageEl: setGalleryImageEl, onImageLoad: onGalleryImageLoad, tileStyle: galleryTileStyle } = useMasonryLayout()
 
 const goTo = async (target: number) => {
     step.value = target
@@ -1220,7 +1225,8 @@ watch(slug, () => {
 
 .gallery-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-auto-rows: 10px;
     gap: 12px;
     margin-top: 20px;
 }
@@ -1238,7 +1244,7 @@ watch(slug, () => {
 .gallery-strip-photo {
     display: block;
     width: 100%;
-    aspect-ratio: 1 / 1;
+    height: auto;
     border-radius: 16px;
     object-fit: cover;
     background: #f1ecdf;
