@@ -185,7 +185,12 @@
                                     <div class="staff-meta">
                                         {{ staff.bio?.trim() || 'Disponível para este serviço.' }}
                                     </div>
-                                    <NuxtLink class="staff-profile-link" :to="staffProfilePath(staff)" @click.stop>
+                                    <NuxtLink
+                                        v-if="business?.is_pro"
+                                        class="staff-profile-link"
+                                        :to="staffProfilePath(staff)"
+                                        @click.stop
+                                    >
                                         Ver perfil →
                                     </NuxtLink>
                                 </div>

@@ -353,6 +353,15 @@ const loadProfile = async () => {
         errorMessage.value = ''
 
         const response = await apiFetch<PublicBusiness>(`/public/businesses/${encodeURIComponent(slug.value)}/`, { auth: false })
+
+        if (!response.is_pro) {
+            // Perfil público é uma funcionalidade Pro - mesmo sabendo o URL
+            // direto, um negócio no plano Grátis não deve conseguir mostrá-lo.
+            business.value = null
+            errorMessage.value = 'Esta página não está disponível.'
+            return
+        }
+
         business.value = response
 
         if (!staffMember.value) {

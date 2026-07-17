@@ -326,6 +326,10 @@
                             </div>
                         </div>
 
+                        <ProLock
+                            :locked="isFree"
+                            message="A página pública do colaborador está disponível no plano Pro."
+                        >
                         <div v-if="professionalProfileState === 'missing'" class="state-card inline-state-card">
                             Este utilizador nao tem um perfil profissional associado ao negocio atual.
                         </div>
@@ -448,6 +452,7 @@
                                 </button>
                             </div>
                         </form>
+                        </ProLock>
                     </article>
                 </div>
 
