@@ -109,6 +109,7 @@ const ownerOrManagerItems = [
     { label: 'Equipa', to: '/staff' },
     { label: 'Estatísticas', to: '/statistics', ownerOnly: true },
     { label: 'Campanhas', to: '/campaigns', ownerOnly: true },
+    { label: 'Apoio', to: '/support' },
     { label: 'Definições', to: '/business-settings' },
 ]
 
