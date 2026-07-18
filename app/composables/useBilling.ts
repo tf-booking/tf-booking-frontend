@@ -11,6 +11,28 @@ export const useBilling = () => {
         }
     }
 
+    // `window.location.href` sai da SPA para a Stripe (Checkout/Billing
+    // Portal). Se o utilizador voltar pelo gesto/botão "recuar" do telemóvel
+    // em vez de um link, o browser pode restaurar esta página do bfcache tal
+    // como ficou - sem voltar a correr onMounted - deixando isRedirecting
+    // preso a `true` e o botão bloqueado para sempre. O evento `pageshow`
+    // com `persisted: true` é o único sinal fiável desse caso.
+    if (import.meta.client) {
+        const resetOnBfcacheRestore = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                isRedirecting.value = false
+            }
+        }
+
+        onMounted(() => {
+            window.addEventListener('pageshow', resetOnBfcacheRestore)
+        })
+
+        onUnmounted(() => {
+            window.removeEventListener('pageshow', resetOnBfcacheRestore)
+        })
+    }
+
     const startCheckout = async (interval: 'month' | 'year' = 'month', staffSlots = 1) => {
         const businessUuid = currentBusiness.value?.business_uuid
 
