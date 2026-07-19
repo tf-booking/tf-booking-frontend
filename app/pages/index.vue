@@ -130,7 +130,6 @@
                             <li>Notificações por email</li>
                             <li class="pricing-feature-off">Personalização do perfil</li>
                             <li class="pricing-feature-off">Estatísticas do negócio</li>
-                            <li class="pricing-feature-off">Notificações SMS</li>
                         </ul>
 
                         <NuxtLink to="/signup" class="btn btn-secondary pricing-cta">
@@ -155,7 +154,6 @@
                             <li>Perfil 100% personalizável</li>
                             <li>Estatísticas do negócio</li>
                             <li>Integração Google Calendar</li>
-                            <li>100 SMS de lembrete incluídos/mês</li>
                             <li>Colaborador extra: +3,99€/mês</li>
                         </ul>
 
@@ -167,8 +165,7 @@
 
                 <p class="pricing-footnote">
                     Preços + IVA à taxa em vigor. O plano Pro inclui 1 colaborador; cada
-                    colaborador extra (até 5 no total) acresce 3,99€/mês. SMS extra além dos
-                    incluídos no Pro: 0,04€/SMS.
+                    colaborador extra (até 5 no total) acresce 3,99€/mês.
                 </p>
             </div>
         </section>
