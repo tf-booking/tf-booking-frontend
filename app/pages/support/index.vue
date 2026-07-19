@@ -110,7 +110,7 @@ definePageMeta({
 const { apiFetch } = useApi()
 const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 
-const supportEmail = 'geral@myklenda.com'
+const supportEmail = 'suporte@myklenda.com'
 
 const faqItems = [
     {
