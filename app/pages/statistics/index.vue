@@ -346,6 +346,25 @@ const exportToExcel = async () => {
             (appointment) => appointment.status !== 'cancelled'
         )
 
+        const statusLabels: Record<string, string> = {
+            pending: 'Pendente',
+            confirmed: 'Confirmada',
+            completed: 'Concluída',
+            no_show: 'Não apareceu',
+        }
+
+        // Mesma regra do "Volume faturado" das estatísticas: só conta valor
+        // uma marcação confirmada/concluída que já aconteceu. Pendentes,
+        // futuras e "não apareceu" ficam a 0 para o total do Excel bater
+        // certo com o ecrã.
+        const now = Date.now()
+        const realizedValue = (appointment: ExportAppointment) => {
+            const happened = new Date(appointment.start_at).getTime() <= now
+            const counts = appointment.status === 'confirmed' || appointment.status === 'completed'
+
+            return happened && counts ? Number(appointment.final_price || 0) : 0
+        }
+
         const formatDate = new Intl.DateTimeFormat('pt-PT', {
             dateStyle: 'short',
             timeStyle: 'short',
@@ -367,17 +386,18 @@ const exportToExcel = async () => {
             { width: 26 },
             { width: 26 },
             { width: 30 },
+            { width: 16 },
             { width: 14 },
         ]
 
         // Cabeçalho do documento
-        sheet.mergeCells('A1:E1')
+        sheet.mergeCells('A1:F1')
         const titleCell = sheet.getCell('A1')
         titleCell.value = `Reservas — ${selectedBusiness.value.name}`
         titleCell.font = { name: 'Calibri', size: 16, bold: true, color: { argb: BLACK } }
         sheet.getRow(1).height = 28
 
-        sheet.mergeCells('A2:E2')
+        sheet.mergeCells('A2:F2')
         const periodCell = sheet.getCell('A2')
         periodCell.value = `Período: ${startDate.value} a ${endDate.value} · ${appointments.length} reservas`
         periodCell.font = { name: 'Calibri', size: 11, italic: true, color: { argb: MUTED } }
@@ -385,7 +405,7 @@ const exportToExcel = async () => {
 
         // Cabeçalho da tabela
         const headerRow = sheet.getRow(4)
-        headerRow.values = ['Data', 'Colaborador', 'Cliente', 'Serviço', 'Valor']
+        headerRow.values = ['Data', 'Colaborador', 'Cliente', 'Serviço', 'Estado', 'Valor']
         headerRow.height = 24
         headerRow.eachCell((cell) => {
             cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
@@ -404,7 +424,8 @@ const exportToExcel = async () => {
                 appointment.staff_member_name,
                 appointment.customer_name,
                 appointment.service_name,
-                Number(appointment.final_price || 0),
+                statusLabels[appointment.status] || appointment.status,
+                realizedValue(appointment),
             ]
             row.height = 18
 
@@ -419,7 +440,7 @@ const exportToExcel = async () => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STRIPE } }
                 }
 
-                if (colNumber === 5) {
+                if (colNumber === 6) {
                     cell.numFmt = '#,##0.00" €"'
                 }
             })
@@ -427,24 +448,24 @@ const exportToExcel = async () => {
 
         // Linha de total
         const totalRow = sheet.getRow(5 + appointments.length)
-        totalRow.getCell(4).value = 'Total'
-        totalRow.getCell(5).value = {
-            formula: `SUM(E5:E${4 + Math.max(appointments.length, 1)})`,
+        totalRow.getCell(5).value = 'Total faturado'
+        totalRow.getCell(6).value = {
+            formula: `SUM(F5:F${4 + Math.max(appointments.length, 1)})`,
             result: appointments.reduce(
-                (sum, appointment) => sum + Number(appointment.final_price || 0),
+                (sum, appointment) => sum + realizedValue(appointment),
                 0
             ),
         }
         totalRow.height = 22
-        ;[4, 5].forEach((colNumber) => {
+        ;[5, 6].forEach((colNumber) => {
             const cell = totalRow.getCell(colNumber)
             cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: BLACK } }
             cell.alignment = { vertical: 'middle' }
             cell.border = { top: { style: 'medium', color: { argb: BLACK } } }
         })
-        totalRow.getCell(5).numFmt = '#,##0.00" €"'
+        totalRow.getCell(6).numFmt = '#,##0.00" €"'
 
-        sheet.autoFilter = { from: 'A4', to: 'E4' }
+        sheet.autoFilter = { from: 'A4', to: 'F4' }
 
         const buffer = await workbook.xlsx.writeBuffer()
         const blob = new Blob([buffer], {

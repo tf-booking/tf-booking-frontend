@@ -934,9 +934,11 @@ const confirm = async () => {
     } catch (error: any) {
         console.error(error)
         const data = error?.data
+        // Os erros de campo do DRF vêm como listas de mensagens.
+        const firstError = (value: unknown) => (Array.isArray(value) ? value[0] : value)
         bookingError.value =
-            data?.start_at ||
-            data?.customer_phone ||
+            firstError(data?.start_at) ||
+            firstError(data?.customer_phone) ||
             data?.non_field_errors?.[0] ||
             'Não foi possível confirmar a marcação. Escolhe outro horário ou tenta novamente.'
     } finally {

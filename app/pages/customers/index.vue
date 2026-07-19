@@ -57,7 +57,10 @@
 
                         <div class="customer-main">
                             <div class="customer-topline">
-                                <strong>{{ customer.name }}</strong>
+                                <span class="customer-name-wrap">
+                                    <strong>{{ customer.name }}</strong>
+                                    <small v-if="customer.is_blocked" class="status-pill blocked">Bloqueado</small>
+                                </span>
                                 <span class="customer-visits">{{ customer.appointments_count }} marcações</span>
                             </div>
 
@@ -97,6 +100,7 @@
                         <small class="status-pill" :class="{ inactive: isInactive(selectedCustomer) }">
                             {{ isInactive(selectedCustomer) ? 'Cliente inativo' : 'Cliente ativo' }}
                         </small>
+                        <small v-if="selectedCustomer.is_blocked" class="status-pill blocked">Bloqueado</small>
                     </div>
 
                     <div class="modal-tabs">
@@ -121,8 +125,30 @@
                     <div v-if="detailTab === 'overview'" class="customer-overview">
                         <template v-if="!isEditing">
                             <div class="overview-actions">
+                                <button
+                                    v-if="selectedCustomer.is_blocked"
+                                    class="btn btn-secondary"
+                                    type="button"
+                                    :disabled="isTogglingBlock"
+                                    @click="setBlocked(false)"
+                                >
+                                    {{ isTogglingBlock ? 'A desbloquear...' : 'Desbloquear' }}
+                                </button>
+
+                                <button
+                                    v-else
+                                    class="btn-danger"
+                                    type="button"
+                                    :disabled="isTogglingBlock"
+                                    @click="showBlockConfirm = true"
+                                >
+                                    Bloquear cliente
+                                </button>
+
                                 <button class="btn btn-secondary" type="button" @click="startEdit">Editar</button>
                             </div>
+
+                            <p v-if="blockErrorMessage" class="error-message">{{ blockErrorMessage }}</p>
 
                             <section class="info-block">
                                 <p class="block-label">Informação pessoal</p>
@@ -259,6 +285,16 @@
                 </div>
             </div>
         </Teleport>
+
+        <ConfirmModal
+            v-model:open="showBlockConfirm"
+            tag="Bloquear"
+            title="Bloquear cliente?"
+            :message="`${selectedCustomer?.name || 'Este cliente'} deixa de poder fazer marcações online neste negócio. As marcações já existentes mantêm-se.`"
+            confirm-label="Bloquear cliente"
+            danger
+            @confirm="setBlocked(true)"
+        />
     </div>
 </template>
 
@@ -290,6 +326,7 @@ type Customer = {
     source: string
     notes: string
     accepts_marketing: boolean
+    is_blocked: boolean
     appointments_count: number
     completed_count: number
     cancelled_count: number
@@ -331,6 +368,41 @@ const editForm = reactive({
     notes: '',
     accepts_marketing: false,
 })
+
+const isTogglingBlock = ref(false)
+const showBlockConfirm = ref(false)
+const blockErrorMessage = ref('')
+
+const setBlocked = async (value: boolean) => {
+    if (!selectedCustomer.value || isTogglingBlock.value) {
+        return
+    }
+
+    try {
+        isTogglingBlock.value = true
+        blockErrorMessage.value = ''
+
+        const updated = await apiFetch<Customer>(`/customers/${selectedCustomer.value.uuid}/`, {
+            method: 'PATCH',
+            body: { is_blocked: value },
+        })
+
+        selectedCustomer.value = { ...selectedCustomer.value, is_blocked: updated.is_blocked }
+
+        const index = customers.value.findIndex((customer) => customer.uuid === updated.uuid)
+
+        if (index !== -1) {
+            customers.value[index] = { ...customers.value[index], is_blocked: updated.is_blocked }
+        }
+    } catch (error) {
+        console.error(error)
+        blockErrorMessage.value = value
+            ? 'Não foi possível bloquear o cliente. Tenta novamente.'
+            : 'Não foi possível desbloquear o cliente. Tenta novamente.'
+    } finally {
+        isTogglingBlock.value = false
+    }
+}
 
 const appointments = ref<Appointment[]>([])
 const isLoadingAppointments = ref(false)
@@ -523,6 +595,7 @@ const openCustomer = (customer: Customer) => {
     selectedCustomer.value = customer
     detailTab.value = 'overview'
     isEditing.value = false
+    blockErrorMessage.value = ''
     appointments.value = []
     loadedAppointmentsFor.value = ''
 }
@@ -530,6 +603,7 @@ const openCustomer = (customer: Customer) => {
 const closeCustomer = () => {
     selectedCustomer.value = null
     isEditing.value = false
+    blockErrorMessage.value = ''
 }
 
 const loadAppointmentsForCustomer = async () => {
@@ -739,6 +813,13 @@ onMounted(async () => {
     min-width: 0;
 }
 
+.customer-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
 .customer-item strong {
     display: block;
     min-width: 0;
@@ -873,6 +954,11 @@ onMounted(async () => {
     color: #b42318;
 }
 
+.status-pill.blocked {
+    background: #b42318;
+    color: #fff;
+}
+
 .modal-tabs {
     display: flex;
     gap: 8px;
@@ -901,6 +987,7 @@ onMounted(async () => {
 .overview-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     margin-bottom: 8px;
 }
 
