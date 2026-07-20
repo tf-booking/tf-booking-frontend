@@ -4,7 +4,7 @@
             <div class="container legal-container">
                 <p class="tf-eyebrow">Legal</p>
                 <h1 class="tf-title legal-title">Política de Privacidade</h1>
-                <p class="legal-updated">Última atualização: 11 de julho de 2026</p>
+                <p class="legal-updated">Última atualização: 20 de julho de 2026</p>
 
                 <p>
                     Esta política explica que dados a Klenda recolhe, para que os usa, e quais
@@ -53,6 +53,34 @@
                     <li>Responder a pedidos de suporte enviados por email.</li>
                     <li>Cumprir obrigações legais (ex.: faturação).</li>
                 </ul>
+
+                <h2>Dados da tua Conta Google</h2>
+                <p>
+                    Se ligares a integração com o Google Calendar, a Klenda acede apenas ao
+                    âmbito <strong>calendar.events</strong> da tua conta Google — o suficiente
+                    para criar, atualizar e apagar eventos no calendário que escolheres, um por
+                    cada marcação feita na Klenda. Não lemos outros eventos do teu calendário,
+                    não acedemos ao Gmail, Drive ou a qualquer outro produto Google.
+                </p>
+                <p>
+                    <strong>Com quem partilhamos estes dados:</strong> não partilhamos, vendemos
+                    nem cedemos dados da tua Conta Google (nem em bruto, nem agregados ou
+                    anonimizados) a terceiros, redes de publicidade ou serviços de análise. Estes
+                    dados são usados exclusivamente pelos sistemas da Klenda para sincronizar as
+                    tuas marcações com o teu calendário. Podem ser acedidos por colaboradores da
+                    Klenda apenas quando necessário para dar suporte técnico ou cumprir uma
+                    obrigação legal.
+                </p>
+                <p>
+                    Podes desligar esta integração a qualquer momento nas definições da conta —
+                    ao fazê-lo, revogamos o acesso e apagamos os eventos que a Klenda tinha criado
+                    no teu Google Calendar.
+                </p>
+                <p>
+                    O uso que a Klenda faz da informação recebida das APIs da Google cumpre a
+                    <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>,
+                    incluindo os requisitos de Limited Use.
+                </p>
 
                 <h2>Quanto tempo guardamos os dados</h2>
                 <p>
