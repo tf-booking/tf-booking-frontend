@@ -10,19 +10,14 @@ export type AppointmentColors = {
 }
 
 export const getAppointmentColors = (appointment: AppointmentLike, isNext: boolean): AppointmentColors => {
-    const isPending = appointment.status === 'pending'
-    const isInactive = appointment.status === 'cancelled' || appointment.status === 'no_show'
+    const isNoShow = appointment.status === 'no_show'
 
-    if (isInactive) {
+    if (isNoShow) {
         return { backgroundColor: '#f0ece2', borderColor: '#d8d1c3', textColor: '#8a857a' }
     }
 
     if (isNext) {
         return { backgroundColor: '#d7ff3e', borderColor: '#c2e800', textColor: '#0b0b0f' }
-    }
-
-    if (isPending) {
-        return { backgroundColor: '#ffffff', borderColor: '#0b0b0f', textColor: '#0b0b0f' }
     }
 
     return { backgroundColor: '#0b0b0f', borderColor: '#0b0b0f', textColor: '#ffffff' }
@@ -39,7 +34,7 @@ export const findNextAppointmentId = (appointments: AppointmentWithStart[]): num
     let candidate: AppointmentWithStart | null = null
 
     for (const appointment of appointments) {
-        if (appointment.status !== 'confirmed' && appointment.status !== 'pending') {
+        if (appointment.status !== 'confirmed') {
             continue
         }
 

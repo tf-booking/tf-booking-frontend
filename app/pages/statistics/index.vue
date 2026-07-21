@@ -342,25 +342,20 @@ const exportToExcel = async () => {
             loadAllAppointments(),
         ])
 
-        const appointments = allAppointments.filter(
-            (appointment) => appointment.status !== 'cancelled'
-        )
+        const appointments = allAppointments
 
         const statusLabels: Record<string, string> = {
-            pending: 'Pendente',
             confirmed: 'Confirmada',
-            completed: 'Concluída',
             no_show: 'Não apareceu',
         }
 
         // Mesma regra do "Volume faturado" das estatísticas: só conta valor
-        // uma marcação confirmada/concluída que já aconteceu. Pendentes,
-        // futuras e "não apareceu" ficam a 0 para o total do Excel bater
-        // certo com o ecrã.
+        // uma marcação confirmada que já aconteceu. Futuras e "não apareceu"
+        // ficam a 0 para o total do Excel bater certo com o ecrã.
         const now = Date.now()
         const realizedValue = (appointment: ExportAppointment) => {
             const happened = new Date(appointment.start_at).getTime() <= now
-            const counts = appointment.status === 'confirmed' || appointment.status === 'completed'
+            const counts = appointment.status === 'confirmed'
 
             return happened && counts ? Number(appointment.final_price || 0) : 0
         }

@@ -37,7 +37,7 @@
                 <article class="kpi kpi-dark">
                     <p class="kpi-label kpi-label-accent">Marcações hoje</p>
                     <div class="kpi-value">{{ dashboardKpis.appointments_today }}</div>
-                    <p class="kpi-foot">{{ dashboardKpis.pending_today }} por confirmar</p>
+                    <p class="kpi-foot">{{ dashboardKpis.no_show_today }} não apareceu</p>
                 </article>
 
                 <article class="kpi">
@@ -85,8 +85,8 @@
                                 {{ appointment.source }}
                             </span>
 
-                            <span class="status" :class="appointment.confirmed ? 'ok' : 'pending'">
-                                {{ appointment.confirmed ? 'Confirmada' : 'Por confirmar' }}
+                            <span class="status ok">
+                                Confirmada
                             </span>
                         </div>
                     </div>
@@ -179,7 +179,7 @@ type DashboardTopSource = {
 
 type DashboardKpis = {
     appointments_today: number
-    pending_today: number
+    no_show_today: number
     revenue_today: string
     revenue_yesterday: string
     revenue_change_percent: number | null
@@ -197,7 +197,6 @@ type DashboardAppointment = {
     source_key: string
     status: string
     status_label: string
-    confirmed: boolean
 }
 
 type DashboardOrigin = {
@@ -245,7 +244,7 @@ const copyMessage = ref('')
 
 const emptyKpis: DashboardKpis = {
     appointments_today: 0,
-    pending_today: 0,
+    no_show_today: 0,
     revenue_today: '0.00',
     revenue_yesterday: '0.00',
     revenue_change_percent: null,

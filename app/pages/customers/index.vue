@@ -192,8 +192,8 @@
                                         <span>Completas</span>
                                     </div>
                                     <div class="stat-box">
-                                        <strong>{{ selectedCustomer.cancelled_count }}</strong>
-                                        <span>Canceladas</span>
+                                        <strong>{{ selectedCustomer.no_show_count }}</strong>
+                                        <span>Não apareceu</span>
                                     </div>
                                 </div>
                             </section>
@@ -270,7 +270,7 @@
                                             <strong>{{ appt.service_name }}</strong>
                                             <span>{{ formatDateTime(appt.start_at) }} · {{ appt.staff_member_name }}</span>
                                         </div>
-                                        <small class="status-pill" :class="{ inactive: appt.status === 'cancelled' }">
+                                        <small class="status-pill" :class="{ inactive: appt.status === 'no_show' }">
                                             {{ appointmentStatusLabels[appt.status] || appt.status }}
                                         </small>
                                     </div>
@@ -329,7 +329,7 @@ type Customer = {
     is_blocked: boolean
     appointments_count: number
     completed_count: number
-    cancelled_count: number
+    no_show_count: number
     total_spent: string | number | null
     last_visit_at: string | null
     next_appointment_at: string | null
@@ -410,10 +410,7 @@ const appointmentsError = ref('')
 const loadedAppointmentsFor = ref('')
 
 const appointmentStatusLabels: Record<string, string> = {
-    pending: 'Pendente',
     confirmed: 'Confirmada',
-    cancelled: 'Cancelada',
-    completed: 'Concluída',
     no_show: 'Não apareceu',
 }
 
@@ -421,7 +418,7 @@ const upcomingAppointments = computed(() => {
     const now = Date.now()
 
     return appointments.value
-        .filter((appt) => ['pending', 'confirmed'].includes(appt.status) && new Date(appt.start_at).getTime() >= now)
+        .filter((appt) => appt.status === 'confirmed' && new Date(appt.start_at).getTime() >= now)
         .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 })
 

@@ -442,12 +442,6 @@
                                     placeholder="Observações internas..." />
                             </div>
 
-                            <div v-if="appointmentEditForm.status === 'cancelled'">
-                                <label class="label">Motivo do cancelamento</label>
-                                <input v-model="appointmentEditForm.cancellation_reason" class="input" type="text"
-                                    placeholder="Motivo do cancelamento..." />
-                            </div>
-
                             <div class="form-actions">
                                 <button class="btn btn-accent" type="submit" :disabled="isSavingAppointmentEdit">
                                     {{ isSavingAppointmentEdit ? 'A guardar...' : 'Guardar alterações' }}
@@ -598,10 +592,7 @@ const monthNamesPt = [
 const weekdayAbbrPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 const appointmentStatusLabels: Record<string, string> = {
-    pending: 'Pendente',
     confirmed: 'Confirmada',
-    cancelled: 'Cancelada',
-    completed: 'Concluída',
     no_show: 'Não apareceu',
 }
 
@@ -687,7 +678,6 @@ const appointmentEditForm = reactive({
     end_time: '',
     discount_amount: '',
     notes: '',
-    cancellation_reason: '',
 })
 
 const selectedStaff = computed(() => {
@@ -1558,7 +1548,7 @@ const loadAppointments = async () => {
             results: Appointment[]
         }>(endpoint)
 
-        appointments.value = response.results.filter((appointment) => appointment.status !== 'cancelled')
+        appointments.value = response.results
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Não foi possível carregar as marcações.'
@@ -1598,7 +1588,7 @@ const loadMobileDay = async () => {
             ),
         ])
 
-        mobileAppointments.value = appointmentsResponse.results.filter((appointment) => appointment.status !== 'cancelled')
+        mobileAppointments.value = appointmentsResponse.results
         mobileBlocks.value = blocksResponse.results
         mobileWorkingHours.value = workingHoursResponse.results
     } catch (error) {
@@ -1962,7 +1952,6 @@ const editAppointmentFromDetail = () => {
     appointmentEditForm.end_time = end.time
     appointmentEditForm.discount_amount = modalAppointment.value.discount_amount || ''
     appointmentEditForm.notes = modalAppointment.value.notes || ''
-    appointmentEditForm.cancellation_reason = modalAppointment.value.cancellation_reason || ''
 
     modalStep.value = 'appointment-edit'
 }
@@ -2002,7 +1991,6 @@ const saveAppointmentEdit = async () => {
                 start_at: startAt,
                 end_at: endAt,
                 notes: appointmentEditForm.notes,
-                cancellation_reason: appointmentEditForm.cancellation_reason,
                 ...(isOwnerOrManager.value
                     ? { discount_amount: Number(appointmentEditForm.discount_amount) || 0 }
                     : {}),
