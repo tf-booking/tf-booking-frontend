@@ -97,7 +97,8 @@ const { currentBusiness, loadCurrentBusiness } = useCurrentBusiness()
 const { startPolling, stopPolling } = useNotifications()
 const { ownAvatarUrl: ownerAvatarUrl, ownAvatarPosition: ownerAvatarPosition, loadOwnAvatar } = useOwnAvatar()
 
-const isMobileMenuOpen = ref(false)
+const activeMobilePanel = useState<'notifications' | 'sidebar-menu' | null>('active-mobile-panel', () => null)
+const isMobileMenuOpen = computed(() => activeMobilePanel.value === 'sidebar-menu')
 const mobileMenuToggle = ref<HTMLElement | null>(null)
 const mobileMenuPanel = ref<HTMLElement | null>(null)
 
@@ -170,11 +171,13 @@ watch(
 )
 
 const closeMobileMenu = () => {
-    isMobileMenuOpen.value = false
+    if (activeMobilePanel.value === 'sidebar-menu') {
+        activeMobilePanel.value = null
+    }
 }
 
 const toggleMobileMenu = () => {
-    isMobileMenuOpen.value = !isMobileMenuOpen.value
+    activeMobilePanel.value = isMobileMenuOpen.value ? null : 'sidebar-menu'
 }
 
 const isTargetInside = (element: HTMLElement | null, target: EventTarget | null) => {

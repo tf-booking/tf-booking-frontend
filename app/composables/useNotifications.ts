@@ -10,6 +10,7 @@ export type NotificationItem = {
     business_name: string
     appointment_uuid: string | null
     appointment_start_at: string | null
+    appointment_staff_member: number | null
 }
 
 type NotificationListResponse = {

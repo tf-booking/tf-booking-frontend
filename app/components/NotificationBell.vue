@@ -54,7 +54,7 @@
                                     type="button"
                                     class="nb-item"
                                     :class="`nb-item-${notification.notification_type}`"
-                                    @click="markAsRead(notification.id)"
+                                    @click="handleNotificationClick(notification)"
                                 >
                                     <span class="nb-item-top">
                                         <strong>{{ notification.title }}</strong>
@@ -86,6 +86,8 @@
 </template>
 
 <script setup lang="ts">
+import type { NotificationItem } from '~/composables/useNotifications'
+
 const {
     notifications,
     unreadCount,
@@ -98,7 +100,10 @@ const {
     markAllAsRead,
 } = useNotifications()
 
-const isOpen = ref(false)
+const router = useRouter()
+
+const activeMobilePanel = useState<'notifications' | 'sidebar-menu' | null>('active-mobile-panel', () => null)
+const isOpen = computed(() => activeMobilePanel.value === 'notifications')
 const toggleRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
@@ -125,7 +130,7 @@ const updatePanelPosition = () => {
 }
 
 const toggleOpen = () => {
-    isOpen.value = !isOpen.value
+    activeMobilePanel.value = isOpen.value ? null : 'notifications'
 
     if (isOpen.value) {
         loadNotifications()
@@ -134,7 +139,35 @@ const toggleOpen = () => {
 }
 
 const closePanel = () => {
-    isOpen.value = false
+    if (activeMobilePanel.value === 'notifications') {
+        activeMobilePanel.value = null
+    }
+}
+
+const handleNotificationClick = (notification: NotificationItem) => {
+    markAsRead(notification.id)
+
+    if (!notification.appointment_uuid || !notification.appointment_start_at) {
+        return
+    }
+
+    closePanel()
+
+    const startDate = new Date(notification.appointment_start_at)
+    const year = startDate.getFullYear()
+    const month = String(startDate.getMonth() + 1).padStart(2, '0')
+    const day = String(startDate.getDate()).padStart(2, '0')
+
+    router.push({
+        path: '/schedule',
+        query: {
+            date: `${year}-${month}-${day}`,
+            appointment: notification.appointment_uuid,
+            ...(notification.appointment_staff_member
+                ? { staff: String(notification.appointment_staff_member) }
+                : {}),
+        },
+    })
 }
 
 const formatRelativeTime = (iso: string) => {

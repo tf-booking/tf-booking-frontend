@@ -2033,13 +2033,102 @@ watch(isMobileLayout, (mobile) => {
     }
 })
 
+const consumeNotificationTargetQuery = () => {
+    const dateFromQuery = typeof route.query.date === 'string' ? route.query.date : ''
+    const appointmentUuidFromQuery = typeof route.query.appointment === 'string' ? route.query.appointment : ''
+    const staffIdFromQuery = typeof route.query.staff === 'string' ? Number(route.query.staff) : null
+
+    return {
+        date: dateFromQuery,
+        appointmentUuid: appointmentUuidFromQuery,
+        staffId: staffIdFromQuery && !Number.isNaN(staffIdFromQuery) ? staffIdFromQuery : null,
+    }
+}
+
+const waitForCalendarApi = async (maxAttempts = 20) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const api = getCalendarApi()
+
+        if (api) {
+            return api
+        }
+
+        await nextTick()
+    }
+
+    return null
+}
+
+const openAppointmentFromNotification = (appointmentUuid: string) => {
+    const tryOpen = (list: Appointment[]) => {
+        const match = list.find((appointment) => appointment.uuid === appointmentUuid)
+
+        if (!match) {
+            return false
+        }
+
+        modalAppointment.value = match
+        modalStep.value = 'appointment-detail'
+        isModalOpen.value = true
+
+        const nextQuery = { ...route.query }
+        delete nextQuery.date
+        delete nextQuery.appointment
+        delete nextQuery.staff
+        router.replace({ query: nextQuery })
+
+        return true
+    }
+
+    const targetList = isMobileLayout.value ? mobileAppointments : appointments
+
+    if (tryOpen(targetList.value)) {
+        return
+    }
+
+    const stopWatchingAppointments = watch(targetList, (list) => {
+        if (tryOpen(list)) {
+            stopWatchingAppointments()
+        }
+    })
+}
+
+const goToNotificationTarget = async () => {
+    const { date, appointmentUuid } = consumeNotificationTargetQuery()
+
+    if (!date && !appointmentUuid) {
+        return
+    }
+
+    if (isMobileLayout.value) {
+        if (date && date !== mobileDate.value) {
+            mobileDate.value = date
+            await loadMobileDay()
+        }
+    } else if (date) {
+        const api = await waitForCalendarApi()
+        setCalendarView('timeGridDay')
+        api?.gotoDate(date)
+    }
+
+    if (appointmentUuid) {
+        openAppointmentFromNotification(appointmentUuid)
+    }
+}
+
 onMounted(async () => {
     resetBlockForm()
     resetAppointmentForm()
 
-    mobileDate.value = todayDate()
+    const { date: dateFromQuery, staffId: staffIdFromQuery } = consumeNotificationTargetQuery()
+
+    mobileDate.value = dateFromQuery || todayDate()
     updateIsMobileLayout()
     window.addEventListener('resize', updateIsMobileLayout)
+
+    if (staffIdFromQuery) {
+        selectedStaffId.value = staffIdFromQuery
+    }
 
     try {
         await loadCurrentBusiness()
@@ -2068,6 +2157,9 @@ onMounted(async () => {
     if (isMobileLayout.value) {
         await loadMobileDay()
     }
+
+    await nextTick()
+    await goToNotificationTarget()
 })
 
 onBeforeUnmount(() => {
