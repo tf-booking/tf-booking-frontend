@@ -465,7 +465,7 @@ watch(
     .sidebar {
         position: sticky;
         top: 0;
-        z-index: 80;
+        z-index: 260;
         width: 100%;
         height: auto;
         min-height: 62px;

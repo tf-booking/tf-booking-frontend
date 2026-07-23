@@ -2094,17 +2094,22 @@ const openAppointmentFromNotification = (appointmentUuid: string) => {
 }
 
 const goToNotificationTarget = async () => {
-    const { date, appointmentUuid } = consumeNotificationTargetQuery()
+    const { date, appointmentUuid, staffId } = consumeNotificationTargetQuery()
 
     if (!date && !appointmentUuid) {
         return
     }
 
+    if (staffId && staffId !== selectedStaffId.value && staffMembers.value.some((staff) => staff.id === staffId)) {
+        selectedStaffId.value = staffId
+        await Promise.all([loadWorkingHours(), loadBlocks(), loadAppointments()])
+    }
+
     if (isMobileLayout.value) {
         if (date && date !== mobileDate.value) {
             mobileDate.value = date
-            await loadMobileDay()
         }
+        await loadMobileDay()
     } else if (date) {
         const api = await waitForCalendarApi()
         setCalendarView('timeGridDay')
@@ -2115,6 +2120,20 @@ const goToNotificationTarget = async () => {
         openAppointmentFromNotification(appointmentUuid)
     }
 }
+
+// Quando já estamos na página (ex.: colaborador com a agenda aberta recebe
+// uma notificação nova), a navegação só muda a query — a página não remonta,
+// por isso o onMounted sozinho não chega para reagir ao clique.
+watch(
+    () => [route.query.date, route.query.appointment, route.query.staff],
+    () => {
+        if (isInitializing.value) {
+            return
+        }
+
+        goToNotificationTarget()
+    }
+)
 
 onMounted(async () => {
     resetBlockForm()
