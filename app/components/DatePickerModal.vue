@@ -47,11 +47,13 @@ const props = defineProps<{
     selected: string
     minIso?: string
     maxIso?: string
+    unavailableDates?: string[]
 }>()
 
 const emit = defineEmits<{
     'update:open': [value: boolean]
     select: [iso: string]
+    'visible-range-change': [range: { start: string; end: string }]
 }>()
 
 const formatIso = (date: Date) => {
@@ -86,8 +88,14 @@ const monthLabel = computed(() => {
 
 const weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
+const unavailableSet = computed(() => new Set(props.unavailableDates || []))
+
 const isDisabledIso = (iso: string) => {
-    return Boolean((props.minIso && iso < props.minIso) || (props.maxIso && iso > props.maxIso))
+    return Boolean(
+        (props.minIso && iso < props.minIso)
+        || (props.maxIso && iso > props.maxIso)
+        || unavailableSet.value.has(iso)
+    )
 }
 
 const dayCells = computed(() => {
@@ -113,6 +121,21 @@ const dayCells = computed(() => {
 })
 
 const isTodayDisabled = computed(() => isDisabledIso(todayIso))
+
+const gridRange = computed(() => ({
+    start: dayCells.value[0]!.iso,
+    end: dayCells.value[dayCells.value.length - 1]!.iso,
+}))
+
+watch(
+    [gridRange, () => props.open],
+    ([range, isOpen]) => {
+        if (isOpen) {
+            emit('visible-range-change', range)
+        }
+    },
+    { immediate: true }
+)
 
 const canGoPrevMonth = computed(() => {
     if (!props.minIso) {

@@ -241,7 +241,8 @@
                 <div class="screen-body">
                     <div class="day-row">
                         <button v-for="day in days" :key="day.iso" type="button" class="day"
-                            :class="{ selected: selectedDay === day.iso }" @click="selectDay(day.iso)">
+                            :class="{ selected: selectedDay === day.iso }" :disabled="isDateUnavailable(day.iso)"
+                            @click="selectDay(day.iso)">
                             <span class="day-name">{{ day.weekday }}</span>
                             <span class="day-num">{{ day.num }}</span>
                         </button>
@@ -266,8 +267,10 @@
                         :selected="selectedDay || todayIso"
                         :min-iso="todayIso"
                         :max-iso="maxBookableIso"
+                        :unavailable-dates="unavailableDatesList"
                         @update:open="isDatePickerOpen = $event"
                         @select="selectDay"
+                        @visible-range-change="handleVisibleRangeChange"
                     />
 
                     <p v-if="isLoadingSlots" class="slot-state">A procurar horários disponíveis...</p>
@@ -569,6 +572,8 @@ const selectedSlotStartAt = ref<string | null>(null)
 const isLoadingSlots = ref(false)
 const slotsError = ref('')
 const closedReason = ref('')
+const unavailableDates = ref<Set<string>>(new Set())
+const unavailableDatesList = computed(() => Array.from(unavailableDates.value))
 const isSubmitting = ref(false)
 const bookingError = ref('')
 
@@ -627,6 +632,12 @@ const goTo = async (target: number) => {
 
     if (target === 3) {
         await loadAvailableSlots()
+
+        const quickDays = days.value
+
+        if (quickDays.length) {
+            fetchAvailableDays(quickDays[0]!.iso, quickDays[quickDays.length - 1]!.iso)
+        }
     }
 
     if (import.meta.client) {
@@ -906,6 +917,55 @@ const loadAvailableSlots = async () => {
     } finally {
         isLoadingSlots.value = false
     }
+}
+
+const enumerateDates = (start: string, end: string) => {
+    const dates: string[] = []
+    const cursor = new Date(`${start}T00:00:00`)
+    const endDate = new Date(`${end}T00:00:00`)
+
+    while (cursor <= endDate) {
+        dates.push(cursor.toISOString().slice(0, 10))
+        cursor.setDate(cursor.getDate() + 1)
+    }
+
+    return dates
+}
+
+const isDateUnavailable = (iso: string) => unavailableDates.value.has(iso)
+
+const fetchAvailableDays = async (start: string, end: string) => {
+    if (!business.value || !selectedService.value || !hasStaffChoice.value) {
+        return
+    }
+
+    try {
+        let endpoint = `/public/available-days/?business=${encodeURIComponent(business.value.slug)}&service=${selectedService.value.uuid}&start=${start}&end=${end}`
+
+        if (selectedStaff.value) {
+            endpoint += `&staff=${selectedStaff.value.uuid}`
+        }
+
+        const response = await apiFetch<{ available_dates: string[] }>(endpoint, { auth: false })
+        const availableSet = new Set(response.available_dates)
+        const nextUnavailable = new Set(unavailableDates.value)
+
+        for (const iso of enumerateDates(start, end)) {
+            if (availableSet.has(iso)) {
+                nextUnavailable.delete(iso)
+            } else {
+                nextUnavailable.add(iso)
+            }
+        }
+
+        unavailableDates.value = nextUnavailable
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+const handleVisibleRangeChange = (range: { start: string; end: string }) => {
+    fetchAvailableDays(range.start, range.end)
 }
 
 const confirm = async () => {
@@ -1589,6 +1649,11 @@ watch(slug, () => {
     background: var(--tf-black);
     border-color: var(--tf-black);
     color: #fff;
+}
+
+.day:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .day-name {
