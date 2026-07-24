@@ -19,6 +19,7 @@
             <div class="smb-time-axis" :style="{ height: `${totalHeight}px` }">
                 <span
                     v-for="slot in timeSlots"
+                    v-show="slot.minutes > 0"
                     :key="slot.minutes"
                     class="smb-time-label"
                     :style="{ top: `${slot.minutes * PX_PER_MINUTE}px` }"

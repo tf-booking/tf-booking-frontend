@@ -164,6 +164,7 @@
                 <div class="modal-card">
                     <button class="modal-close" type="button" aria-label="Fechar" @click="closeModal">×</button>
 
+                    <div class="modal-body">
                     <div v-if="modalStep === 'choice'" class="modal-choice">
                         <p class="tf-eyebrow">Novo período</p>
                         <h2>O que queres criar?</h2>
@@ -475,6 +476,7 @@
                                 Apagar bloqueio
                             </button>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -2606,24 +2608,33 @@ button:disabled {
 
 .modal-card {
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     min-width: 0;
     max-width: 460px;
     max-height: 88vh;
     max-height: 88dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 32px;
+    overflow: hidden;
     border-radius: 24px;
     background: var(--tf-white);
     box-shadow: 0 40px 90px -30px rgba(11, 11, 15, 0.5);
     box-sizing: border-box;
 }
 
+.modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 32px;
+}
+
 .modal-close {
     position: absolute;
     top: 18px;
     right: 18px;
+    z-index: 2;
     width: 34px;
     height: 34px;
     border: 1px solid var(--tf-border);
@@ -2639,6 +2650,14 @@ button:disabled {
     margin: 4px 0 0;
     font-size: 26px;
     letter-spacing: -0.045em;
+}
+
+.modal-body > .tf-eyebrow,
+.modal-body > h2 {
+    position: sticky;
+    top: 0;
+    background: var(--tf-white);
+    z-index: 1;
 }
 
 .modal-range-label {
@@ -2789,8 +2808,11 @@ button:disabled {
     .modal-card {
         max-width: none;
         max-height: 92dvh;
-        padding: 20px;
         border-radius: 18px;
+    }
+
+    .modal-body {
+        padding: 20px;
     }
 
     .modal-close {

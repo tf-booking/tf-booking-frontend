@@ -135,6 +135,79 @@
                     </div>
                 </article>
 
+                <article class="card">
+                    <h2>Dias de fecho</h2>
+                    <p class="card-hint">
+                        Nestes dias o negócio aparece fechado - os clientes não veem horários
+                        disponíveis, mesmo que os colaboradores tenham horário de trabalho definido.
+                    </p>
+
+                    <label class="toggle-row">
+                        <input v-model="form.close_on_national_holidays" type="checkbox" />
+                        <span>Fechar automaticamente nos feriados nacionais</span>
+                    </label>
+                </article>
+
+                <article class="card closed-dates-card">
+                    <h2>Fechar uma data específica</h2>
+                    <p class="card-hint">
+                        Marca um dia pontual como fechado (ex.: amanhã, uma folga, um imprevisto).
+                        Só é possível se ainda não houver marcações confirmadas nesse dia.
+                    </p>
+
+                    <div class="closed-date-form">
+                        <div>
+                            <label class="label">Data</label>
+                            <DateField v-model="newClosedDate.date" />
+                        </div>
+
+                        <div>
+                            <label class="label">Motivo (opcional)</label>
+                            <input
+                                v-model="newClosedDate.reason"
+                                class="input"
+                                type="text"
+                                placeholder="Folga, evento, obras..."
+                            />
+                        </div>
+
+                        <button
+                            class="btn btn-secondary"
+                            type="button"
+                            :disabled="!newClosedDate.date || isAddingClosedDate"
+                            @click="addClosedDate"
+                        >
+                            {{ isAddingClosedDate ? 'A fechar...' : 'Fechar este dia' }}
+                        </button>
+                    </div>
+
+                    <p v-if="closedDatesError" class="error-message">{{ closedDatesError }}</p>
+
+                    <div v-if="isLoadingClosedDates" class="closed-dates-empty">
+                        A carregar dias de fecho...
+                    </div>
+
+                    <p v-else-if="!closedDates.length" class="closed-dates-empty">
+                        Ainda não fechaste nenhuma data específica.
+                    </p>
+
+                    <ul v-else class="closed-dates-list">
+                        <li v-for="closedDate in closedDates" :key="closedDate.id">
+                            <span class="closed-date-date">{{ formatClosedDate(closedDate.date) }}</span>
+                            <span v-if="closedDate.reason" class="closed-date-reason">{{ closedDate.reason }}</span>
+
+                            <button
+                                class="closed-date-remove"
+                                type="button"
+                                aria-label="Reabrir esta data"
+                                @click="removeClosedDate(closedDate)"
+                            >
+                                ×
+                            </button>
+                        </li>
+                    </ul>
+                </article>
+
                 <p v-if="errorMessage" class="error-message">
                     {{ errorMessage }}
                 </p>
@@ -158,6 +231,14 @@ type SettingsForm = {
     slot_interval_minutes: number
     scheduling_optimization: 'fixed' | 'smart'
     reminder_hours_before: number
+    close_on_national_holidays: boolean
+}
+
+type ClosedDate = {
+    id: number
+    date: string
+    reason: string
+    created_at: string
 }
 
 const { apiFetch } = useApi()
@@ -175,7 +256,14 @@ const form = reactive<SettingsForm>({
     slot_interval_minutes: 30,
     scheduling_optimization: 'fixed',
     reminder_hours_before: 24,
+    close_on_national_holidays: false,
 })
+
+const closedDates = ref<ClosedDate[]>([])
+const isLoadingClosedDates = ref(true)
+const isAddingClosedDate = ref(false)
+const closedDatesError = ref('')
+const newClosedDate = reactive({ date: '', reason: '' })
 
 const minNoticeOptions = [
     { value: 0, label: 'Sem antecedência mínima' },
@@ -287,6 +375,7 @@ const loadSettings = async () => {
         form.slot_interval_minutes = response.slot_interval_minutes
         form.scheduling_optimization = response.scheduling_optimization
         form.reminder_hours_before = response.reminder_hours_before
+        form.close_on_national_holidays = response.close_on_national_holidays
 
         syncSelectFromValue(minNoticeSelect, minNoticeOptions, form.min_booking_notice_minutes)
         syncSelectFromValue(maxHorizonSelect, maxHorizonOptions, form.max_booking_horizon_days)
@@ -322,6 +411,7 @@ const saveSettings = async () => {
                 slot_interval_minutes: form.slot_interval_minutes,
                 scheduling_optimization: form.scheduling_optimization,
                 reminder_hours_before: form.reminder_hours_before,
+                close_on_national_holidays: form.close_on_national_holidays,
             },
         })
 
@@ -331,6 +421,79 @@ const saveSettings = async () => {
         errorMessage.value = formatApiError(error)
     } finally {
         isSaving.value = false
+    }
+}
+
+const formatClosedDate = (iso: string) => {
+    const date = new Date(`${iso}T00:00:00`)
+    return new Intl.DateTimeFormat('pt-PT', {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(date)
+}
+
+const businessQuery = () =>
+    currentBusiness.value?.business_uuid ? { business_uuid: currentBusiness.value.business_uuid } : {}
+
+const loadClosedDates = async () => {
+    try {
+        isLoadingClosedDates.value = true
+
+        closedDates.value = await apiFetch<ClosedDate[]>('/businesses/me-closed-dates/', {
+            query: businessQuery(),
+        })
+    } catch (error) {
+        console.error(error)
+    } finally {
+        isLoadingClosedDates.value = false
+    }
+}
+
+const addClosedDate = async () => {
+    if (!newClosedDate.date) {
+        return
+    }
+
+    closedDatesError.value = ''
+
+    try {
+        isAddingClosedDate.value = true
+
+        const created = await apiFetch<ClosedDate>('/businesses/me-closed-dates/', {
+            method: 'POST',
+            query: businessQuery(),
+            body: {
+                date: newClosedDate.date,
+                reason: newClosedDate.reason,
+            },
+        })
+
+        closedDates.value = [...closedDates.value, created].sort((a, b) => a.date.localeCompare(b.date))
+        newClosedDate.date = ''
+        newClosedDate.reason = ''
+    } catch (error) {
+        console.error(error)
+        closedDatesError.value = formatApiError(error)
+    } finally {
+        isAddingClosedDate.value = false
+    }
+}
+
+const removeClosedDate = async (closedDate: ClosedDate) => {
+    closedDatesError.value = ''
+
+    try {
+        await apiFetch(`/businesses/me-closed-dates/`, {
+            method: 'DELETE',
+            query: { ...businessQuery(), closed_date_id: closedDate.id },
+        })
+
+        closedDates.value = closedDates.value.filter((entry) => entry.id !== closedDate.id)
+    } catch (error) {
+        console.error(error)
+        closedDatesError.value = formatApiError(error)
     }
 }
 
@@ -354,8 +517,9 @@ onBeforeUnmount(() => {
     }
 })
 
-onMounted(() => {
-    loadSettings()
+onMounted(async () => {
+    await loadSettings()
+    await loadClosedDates()
 })
 </script>
 
@@ -446,6 +610,112 @@ onMounted(() => {
     color: var(--tf-muted);
     font-size: 13px;
     line-height: 1.4;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 800;
+    color: var(--tf-black);
+    cursor: pointer;
+}
+
+.toggle-row input {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: #d8d1c3;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.toggle-row input::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--tf-white);
+    transition: transform 0.16s ease;
+}
+
+.toggle-row input:checked {
+    background: var(--tf-black);
+}
+
+.toggle-row input:checked::after {
+    transform: translateX(18px);
+}
+
+.closed-dates-card {
+    grid-column: 1 / -1;
+}
+
+.closed-date-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.closed-dates-empty {
+    margin: 0;
+    color: var(--tf-muted);
+    font-size: 14px;
+}
+
+.closed-dates-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.closed-dates-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+}
+
+.closed-date-date {
+    font-weight: 800;
+}
+
+.closed-date-reason {
+    color: var(--tf-muted);
+    font-size: 14px;
+    flex: 1;
+}
+
+.closed-date-remove {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    margin-left: auto;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: var(--tf-white);
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .closed-date-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 .error-message {

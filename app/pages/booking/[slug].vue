@@ -272,6 +272,9 @@
 
                     <p v-if="isLoadingSlots" class="slot-state">A procurar horários disponíveis...</p>
                     <p v-else-if="slotsError" class="slot-state slot-state-error">{{ slotsError }}</p>
+                    <p v-else-if="closedReason" class="slot-state">
+                        Fechado neste dia - {{ closedReason }}.
+                    </p>
                     <p v-else-if="availableSlots.length === 0" class="slot-state">
                         Sem horários disponíveis para este dia.
                     </p>
@@ -565,6 +568,7 @@ const selectedSlot = ref<string | null>(null)
 const selectedSlotStartAt = ref<string | null>(null)
 const isLoadingSlots = ref(false)
 const slotsError = ref('')
+const closedReason = ref('')
 const isSubmitting = ref(false)
 const bookingError = ref('')
 
@@ -635,6 +639,7 @@ const resetAvailabilitySelection = () => {
     selectedSlot.value = null
     selectedSlotStartAt.value = null
     slotsError.value = ''
+    closedReason.value = ''
     bookingError.value = ''
 }
 
@@ -874,6 +879,7 @@ const loadAvailableSlots = async () => {
     try {
         isLoadingSlots.value = true
         slotsError.value = ''
+        closedReason.value = ''
         selectedSlot.value = null
         selectedSlotStartAt.value = null
 
@@ -883,7 +889,9 @@ const loadAvailableSlots = async () => {
             endpoint += `&staff=${selectedStaff.value.uuid}`
         }
 
-        const response = await apiFetch<{ slots: AvailableSlot[] }>(endpoint, { auth: false })
+        const response = await apiFetch<{ slots: AvailableSlot[]; closed_reason: string | null }>(endpoint, { auth: false })
+
+        closedReason.value = response.closed_reason || ''
 
         const minNoticeMs = (business.value.booking_settings?.min_booking_notice_minutes || 0) * 60000
         const earliestAllowed = Date.now() + minNoticeMs
