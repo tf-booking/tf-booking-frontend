@@ -64,6 +64,49 @@
                             <span>Serviço ativo</span>
                         </label>
 
+                        <label class="toggle-row">
+                            <input v-model="form.allows_overlap" type="checkbox" />
+                            <span>Permite encaixar outra marcação durante parte deste serviço</span>
+                        </label>
+
+                        <div v-if="form.allows_overlap" class="overlap-fields">
+                            <p class="muted-text overlap-hint">
+                                Durante este período, o colaborador fica livre para outra marcação
+                                (ex.: tempo de standby da coloração enquanto a tinta atua).
+                            </p>
+
+                            <div class="two-columns">
+                                <div>
+                                    <label class="label">A partir do minuto</label>
+                                    <input
+                                        v-model.number="form.overlap_start_minutes"
+                                        class="input"
+                                        type="number"
+                                        min="0"
+                                        :max="Math.max(0, form.duration_minutes - 1)"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="label">Até ao minuto</label>
+                                    <input
+                                        v-model.number="form.overlap_end_minutes"
+                                        class="input"
+                                        type="number"
+                                        :min="form.overlap_start_minutes + 1"
+                                        :max="form.duration_minutes"
+                                        :disabled="form.overlap_until_end"
+                                        :placeholder="String(form.duration_minutes)"
+                                    />
+                                </div>
+                            </div>
+
+                            <label class="toggle-row">
+                                <input v-model="form.overlap_until_end" type="checkbox" />
+                                <span>Até ao fim do serviço</span>
+                            </label>
+                        </div>
+
                         <p v-if="errorMessage" class="error-message">
                             {{ errorMessage }}
                         </p>
@@ -121,6 +164,10 @@
                             </div>
 
                             <div class="service-actions">
+                                <small v-if="service.allows_overlap" class="status-pill overlap-pill">
+                                    Permite encaixe
+                                </small>
+
                                 <small class="status-pill" :class="{ inactive: !service.is_active }">
                                     {{ service.is_active ? 'Ativo' : 'Inativo' }}
                                 </small>
@@ -168,6 +215,9 @@ type Service = {
     description: string
     duration_minutes: number
     price: string
+    allows_overlap: boolean
+    overlap_start_minutes: number
+    overlap_end_minutes: number | null
     is_active: boolean
 }
 
@@ -193,6 +243,10 @@ const form = reactive({
     description: '',
     duration_minutes: 30,
     price: '0.00',
+    allows_overlap: false,
+    overlap_start_minutes: 0,
+    overlap_end_minutes: 30,
+    overlap_until_end: true,
     is_active: true,
 })
 
@@ -235,6 +289,10 @@ const resetForm = () => {
     form.description = ''
     form.duration_minutes = 30
     form.price = '0.00'
+    form.allows_overlap = false
+    form.overlap_start_minutes = 0
+    form.overlap_end_minutes = 30
+    form.overlap_until_end = true
     form.is_active = true
 }
 
@@ -325,6 +383,11 @@ const saveService = async () => {
             description: form.description,
             duration_minutes: form.duration_minutes,
             price: String(form.price || '0.00'),
+            allows_overlap: form.allows_overlap,
+            overlap_start_minutes: form.allows_overlap ? form.overlap_start_minutes : 0,
+            overlap_end_minutes: form.allows_overlap && !form.overlap_until_end
+                ? form.overlap_end_minutes
+                : null,
             is_active: form.is_active,
         }
 
@@ -370,6 +433,10 @@ const editService = (service: Service) => {
     form.description = service.description
     form.duration_minutes = service.duration_minutes
     form.price = service.price
+    form.allows_overlap = service.allows_overlap
+    form.overlap_start_minutes = service.overlap_start_minutes
+    form.overlap_until_end = service.overlap_end_minutes === null
+    form.overlap_end_minutes = service.overlap_end_minutes ?? service.duration_minutes
     form.is_active = service.is_active
 
     focusForm()
@@ -559,6 +626,25 @@ onMounted(async () => {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+}
+
+.overlap-fields {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 14px;
+}
+
+.overlap-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.overlap-pill {
+    background: var(--tf-accent);
+    color: var(--tf-black);
 }
 
 .card-title-row {
