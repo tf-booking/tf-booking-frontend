@@ -240,6 +240,9 @@
 
                 <div class="screen-body">
                     <div class="day-row">
+                        <button type="button" class="day-nav" aria-label="Semana anterior" :disabled="!canGoPrevWeek"
+                            @click="shiftDayRow(-7)">‹</button>
+
                         <button v-for="day in days" :key="day.iso" type="button" class="day"
                             :class="{ selected: selectedDay === day.iso }" :disabled="isDateUnavailable(day.iso)"
                             @click="selectDay(day.iso)">
@@ -247,13 +250,12 @@
                             <span class="day-num">{{ day.num }}</span>
                         </button>
 
-                        <button type="button" class="day day-calendar" :class="{ selected: isCustomDaySelected }"
+                        <button type="button" class="day-nav" aria-label="Semana seguinte" :disabled="!canGoNextWeek"
+                            @click="shiftDayRow(7)">›</button>
+
+                        <button type="button" class="day day-calendar"
                             aria-label="Escolher outro dia no calendário" @click="isDatePickerOpen = true">
-                            <template v-if="isCustomDaySelected">
-                                <span class="day-name">{{ selectedDayData?.weekday }}</span>
-                                <span class="day-num">{{ selectedDayData?.num }}</span>
-                            </template>
-                            <svg v-else class="day-calendar-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <svg class="day-calendar-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                 <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6" />
                                 <path d="M3 8H17" stroke="currentColor" stroke-width="1.6" />
                                 <path d="M7 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
@@ -757,28 +759,47 @@ const maxBookableIso = computed(() => {
     return date.toISOString().slice(0, 10)
 })
 
+const addDaysIso = (iso: string, amount: number) => {
+    const date = new Date(`${iso}T00:00:00`)
+    date.setDate(date.getDate() + amount)
+    return date.toISOString().slice(0, 10)
+}
+
+// Início da janela de dias rápidos mostrada antes do botão do calendário -
+// começa em hoje, mas salta para a semana do dia escolhido quando se
+// seleciona uma data fora da janela atual (ex.: via calendário), para essa
+// data ficar sempre visível ali em vez de só aparecer "escondida" lá dentro.
+const dayRowAnchor = ref(todayIso)
+
 const days = computed(() => {
-    const base = new Date()
     const maxHorizonDays = business.value?.booking_settings?.max_booking_horizon_days ?? 4
     const visibleDays = Math.min(4, Math.max(1, maxHorizonDays))
 
-    return Array.from({ length: visibleDays }, (_, index) => {
-        const date = new Date(base)
-        date.setDate(base.getDate() + index)
-        return describeDay(date.toISOString().slice(0, 10))
-    })
+    return Array.from({ length: visibleDays }, (_, index) => describeDay(addDaysIso(dayRowAnchor.value, index)))
 })
 
 const selectedDayData = computed(() =>
     selectedDay.value ? describeDay(selectedDay.value) : days.value[0]
 )
 
-const isCustomDaySelected = computed(() =>
-    Boolean(selectedDay.value) && !days.value.some((day) => day.iso === selectedDay.value)
-)
+const canGoPrevWeek = computed(() => dayRowAnchor.value > todayIso)
+const canGoNextWeek = computed(() => dayRowAnchor.value < maxBookableIso.value)
+
+const shiftDayRow = (amount: number) => {
+    const next = addDaysIso(dayRowAnchor.value, amount)
+    dayRowAnchor.value = next < todayIso
+        ? todayIso
+        : next > maxBookableIso.value
+            ? maxBookableIso.value
+            : next
+}
 
 const selectDay = (iso: string) => {
     selectedDay.value = iso
+
+    if (!days.value.some((day) => day.iso === iso)) {
+        dayRowAnchor.value = iso
+    }
 }
 
 const selectedDayLabel = computed(() => {
@@ -1699,8 +1720,32 @@ watch(slug, () => {
 /* ---- date / time ---- */
 .day-row {
     display: flex;
+    align-items: center;
     gap: 10px;
     margin-bottom: 24px;
+}
+
+.day-nav {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--tf-border);
+    border-radius: 50%;
+    background: #fff;
+    font-weight: 900;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.day-nav:hover {
+    border-color: var(--tf-black);
+}
+
+.day-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .day {

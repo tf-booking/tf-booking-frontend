@@ -103,7 +103,9 @@ const dayCells = computed(() => {
     const month = viewDate.value.getMonth()
 
     const firstOfMonth = new Date(year, month, 1)
-    const startOffset = (firstOfMonth.getDay() + 6) % 7
+    // weekdayLabels começa ao domingo (getDay() já devolve 0 para domingo),
+    // por isso não se remapeia para semana começada à segunda-feira.
+    const startOffset = firstOfMonth.getDay()
     const gridStart = new Date(year, month, 1 - startOffset)
 
     return Array.from({ length: 42 }, (_, index) => {
