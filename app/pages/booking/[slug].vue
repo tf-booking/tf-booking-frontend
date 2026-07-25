@@ -932,12 +932,81 @@ const enumerateDates = (start: string, end: string) => {
     return dates
 }
 
+const getMonthKey = (iso: string) => iso.slice(0, 7)
+
+const getMonthBounds = (monthKey: string) => {
+    const [year, month] = monthKey.split('-').map(Number)
+    const start = new Date(year!, month! - 1, 1)
+    const end = new Date(year!, month!, 0)
+
+    return { start: formatDateIso(start), end: formatDateIso(end) }
+}
+
+const formatDateIso = (date: Date) => date.toISOString().slice(0, 10)
+
 const isDateUnavailable = (iso: string) => unavailableDates.value.has(iso)
 
-const fetchAvailableDays = async (start: string, end: string) => {
+// Disponibilidade cara de calcular no backend (percorre dia a dia), por
+// isso guardamos em cache por mês + combinação serviço/colaborador, para
+// abrir o calendário ou voltar a um mês já visto não repetir o pedido - e
+// evitamos pedidos em duplicado para o mesmo mês já em curso (ex.: cliques
+// rápidos a mudar de mês), que era o que estava a fazer a página encravar.
+const availabilityCache = new Map<string, Set<string>>()
+const pendingMonthFetches = new Set<string>()
+
+const availabilityScope = computed(() =>
+    `${selectedService.value?.uuid || ''}:${selectedStaff.value?.uuid || 'any'}`
+)
+
+const clearAvailabilityCache = () => {
+    availabilityCache.clear()
+    pendingMonthFetches.clear()
+    unavailableDates.value = new Set()
+}
+
+watch(availabilityScope, clearAvailabilityCache)
+
+const applyMonthResult = (monthKey: string, monthStart: string, monthEnd: string, availableDates: string[]) => {
+    const availableSet = new Set(availableDates)
+    const monthUnavailable = new Set<string>()
+
+    for (const iso of enumerateDates(monthStart, monthEnd)) {
+        if (!availableSet.has(iso)) {
+            monthUnavailable.add(iso)
+        }
+    }
+
+    availabilityCache.set(`${availabilityScope.value}:${monthKey}`, monthUnavailable)
+
+    const nextUnavailable = new Set(unavailableDates.value)
+
+    for (const iso of monthUnavailable) {
+        nextUnavailable.add(iso)
+    }
+
+    for (const iso of enumerateDates(monthStart, monthEnd)) {
+        if (availableSet.has(iso)) {
+            nextUnavailable.delete(iso)
+        }
+    }
+
+    unavailableDates.value = nextUnavailable
+}
+
+const fetchMonth = async (monthKey: string) => {
+    const cacheKey = `${availabilityScope.value}:${monthKey}`
+
+    if (availabilityCache.has(cacheKey) || pendingMonthFetches.has(cacheKey)) {
+        return
+    }
+
     if (!business.value || !selectedService.value || !hasStaffChoice.value) {
         return
     }
+
+    const { start, end } = getMonthBounds(monthKey)
+
+    pendingMonthFetches.add(cacheKey)
 
     try {
         let endpoint = `/public/available-days/?business=${encodeURIComponent(business.value.slug)}&service=${selectedService.value.uuid}&start=${start}&end=${end}`
@@ -947,20 +1016,19 @@ const fetchAvailableDays = async (start: string, end: string) => {
         }
 
         const response = await apiFetch<{ available_dates: string[] }>(endpoint, { auth: false })
-        const availableSet = new Set(response.available_dates)
-        const nextUnavailable = new Set(unavailableDates.value)
-
-        for (const iso of enumerateDates(start, end)) {
-            if (availableSet.has(iso)) {
-                nextUnavailable.delete(iso)
-            } else {
-                nextUnavailable.add(iso)
-            }
-        }
-
-        unavailableDates.value = nextUnavailable
+        applyMonthResult(monthKey, start, end, response.available_dates)
     } catch (error) {
         console.error(error)
+    } finally {
+        pendingMonthFetches.delete(cacheKey)
+    }
+}
+
+const fetchAvailableDays = (start: string, end: string) => {
+    const monthKeys = new Set([getMonthKey(start), getMonthKey(end)])
+
+    for (const monthKey of monthKeys) {
+        fetchMonth(monthKey)
     }
 }
 

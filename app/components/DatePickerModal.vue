@@ -122,13 +122,22 @@ const dayCells = computed(() => {
 
 const isTodayDisabled = computed(() => isDisabledIso(todayIso))
 
-const gridRange = computed(() => ({
-    start: dayCells.value[0]!.iso,
-    end: dayCells.value[dayCells.value.length - 1]!.iso,
-}))
+// Emite os limites do mês visível (não a grelha de 42 células, que
+// transborda para o mês anterior/seguinte) para o pai poder pedir e
+// guardar em cache a disponibilidade por mês em vez de recalcular a
+// grelha inteira sempre que o calendário abre ou muda de mês.
+const monthRange = computed(() => {
+    const year = viewDate.value.getFullYear()
+    const month = viewDate.value.getMonth()
+
+    return {
+        start: formatIso(new Date(year, month, 1)),
+        end: formatIso(new Date(year, month + 1, 0)),
+    }
+})
 
 watch(
-    [gridRange, () => props.open],
+    [monthRange, () => props.open],
     ([range, isOpen]) => {
         if (isOpen) {
             emit('visible-range-change', range)

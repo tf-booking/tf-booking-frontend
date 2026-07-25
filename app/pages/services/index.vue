@@ -59,6 +59,21 @@
                             </div>
                         </div>
 
+                        <div>
+                            <label class="label">Colaboradores</label>
+
+                            <p v-if="!staffMembers.length" class="muted-text staff-picker-empty">
+                                Ainda não tens colaboradores neste negócio.
+                            </p>
+
+                            <div v-else class="staff-picker">
+                                <label v-for="staff in staffMembers" :key="staff.id" class="staff-picker-item">
+                                    <input v-model="form.staff_member_ids" type="checkbox" :value="staff.id" />
+                                    <span>{{ staff.name }}</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <label class="toggle-row">
                             <input v-model="form.is_active" type="checkbox" />
                             <span>Serviço ativo</span>
@@ -218,6 +233,14 @@ type Service = {
     allows_overlap: boolean
     overlap_start_minutes: number
     overlap_end_minutes: number | null
+    staff_members: number[]
+    is_active: boolean
+}
+
+type StaffMember = {
+    id: number
+    uuid: string
+    name: string
     is_active: boolean
 }
 
@@ -226,6 +249,7 @@ const { apiFetch } = useApi()
 const businesses = ref<Business[]>([])
 const selectedBusiness = ref<Business | null>(null)
 const services = ref<Service[]>([])
+const staffMembers = ref<StaffMember[]>([])
 const formCardRef = ref<HTMLElement | null>(null)
 
 const isLoadingBusinesses = ref(false)
@@ -247,6 +271,7 @@ const form = reactive({
     overlap_start_minutes: 0,
     overlap_end_minutes: 30,
     overlap_until_end: true,
+    staff_member_ids: [] as number[],
     is_active: true,
 })
 
@@ -293,6 +318,7 @@ const resetForm = () => {
     form.overlap_start_minutes = 0
     form.overlap_end_minutes = 30
     form.overlap_until_end = true
+    form.staff_member_ids = []
     form.is_active = true
 }
 
@@ -328,6 +354,25 @@ const loadBusinesses = async () => {
         errorMessage.value = 'Não foi possível carregar o negócio do utilizador.'
     } finally {
         isLoadingBusinesses.value = false
+    }
+}
+
+const loadStaffMembers = async () => {
+    if (!selectedBusiness.value) {
+        return
+    }
+
+    try {
+        const response = await apiFetch<{
+            count: number
+            next: string | null
+            previous: string | null
+            results: StaffMember[]
+        }>(`/staff/?business=${selectedBusiness.value.id}&is_active=true`)
+
+        staffMembers.value = response.results
+    } catch (error) {
+        console.error(error)
     }
 }
 
@@ -388,6 +433,7 @@ const saveService = async () => {
             overlap_end_minutes: form.allows_overlap && !form.overlap_until_end
                 ? form.overlap_end_minutes
                 : null,
+            staff_members: form.staff_member_ids,
             is_active: form.is_active,
         }
 
@@ -437,6 +483,7 @@ const editService = (service: Service) => {
     form.overlap_start_minutes = service.overlap_start_minutes
     form.overlap_until_end = service.overlap_end_minutes === null
     form.overlap_end_minutes = service.overlap_end_minutes ?? service.duration_minutes
+    form.staff_member_ids = [...service.staff_members]
     form.is_active = service.is_active
 
     focusForm()
@@ -477,7 +524,7 @@ const deleteService = async (service: Service) => {
 
 onMounted(async () => {
     await loadBusinesses()
-    await loadServices()
+    await Promise.all([loadServices(), loadStaffMembers()])
 })
 </script>
 
@@ -645,6 +692,35 @@ onMounted(async () => {
 .overlap-pill {
     background: var(--tf-accent);
     color: var(--tf-black);
+}
+
+.staff-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.staff-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--tf-border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.staff-picker-item:has(input:checked) {
+    border-color: var(--tf-black);
+    background: var(--tf-accent);
+}
+
+.staff-picker-empty {
+    margin: 4px 0 0;
+    font-size: 13px;
 }
 
 .card-title-row {
