@@ -124,8 +124,12 @@
                     <div v-else class="mobile-board-wrapper">
                         <p v-if="isLoadingMobileDay" class="muted-text">A carregar agenda...</p>
 
+                        <p v-if="!isLoadingMobileDay && mobileClosedReason" class="closed-day-banner">
+                            Fechado — {{ mobileClosedReason }}
+                        </p>
+
                         <ScheduleMobileBoard
-                            v-else
+                            v-if="!isLoadingMobileDay"
                             :staff-members="staffMembers"
                             :appointments="mobileAppointments"
                             :blocks="mobileBlocks"
@@ -499,11 +503,12 @@ import type {
 } from '@fullcalendar/core'
 import type {
     Appointment,
+    ClosedDay,
     StaffBlock,
     StaffMember,
     WorkingHour,
 } from '~/types/schedule'
-import { findNextAppointmentId, getAppointmentColors, getBlockColors } from '~/utils/scheduleColors'
+import { findNextAppointmentId, getAppointmentColors, getBlockColors, getClosedDayColors } from '~/utils/scheduleColors'
 
 definePageMeta({
     middleware: 'auth',
@@ -612,6 +617,7 @@ const selectedStaffId = ref<number | null>(null)
 const workingHours = ref<WorkingHour[]>([])
 const blocks = ref<StaffBlock[]>([])
 const appointments = ref<Appointment[]>([])
+const closedDays = ref<ClosedDay[]>([])
 
 const modalStep = ref<ModalStep>('choice')
 const isModalOpen = ref(false)
@@ -717,6 +723,7 @@ const isDatePickerOpen = ref(false)
 const mobileAppointments = ref<Appointment[]>([])
 const mobileBlocks = ref<StaffBlock[]>([])
 const mobileWorkingHours = ref<WorkingHour[]>([])
+const mobileClosedReason = ref<string | null>(null)
 const isLoadingMobileDay = ref(false)
 
 const mobileDateLabel = computed(() => {
@@ -797,6 +804,20 @@ const modalRangeLabel = computed(() => {
 })
 
 const calendarEvents = computed<EventInput[]>(() => {
+    const closedDayColors = getClosedDayColors()
+
+    const closedDayEvents: EventInput[] = closedDays.value.map((closedDay) => ({
+        id: `closed-${closedDay.date}`,
+        title: closedDay.reason,
+        start: `${closedDay.date}T00:00:00`,
+        end: `${closedDay.date}T23:59:59`,
+        display: 'background',
+        backgroundColor: closedDayColors.backgroundColor,
+        extendedProps: {
+            type: 'closed-day',
+        },
+    }))
+
     const workingHourEvents: EventInput[] = workingHours.value.map((hour) => ({
         id: `working-${hour.id}`,
         daysOfWeek: [toFullCalendarWeekday(hour.weekday)],
@@ -846,6 +867,7 @@ const calendarEvents = computed<EventInput[]>(() => {
     })
 
     return [
+        ...closedDayEvents,
         ...workingHourEvents,
         ...blockEvents,
         ...appointmentEvents,
@@ -853,6 +875,13 @@ const calendarEvents = computed<EventInput[]>(() => {
 })
 
 const renderEventContent = (arg: any) => {
+    if (arg.event.extendedProps?.type === 'closed-day') {
+        const label = document.createElement('div')
+        label.className = 'tf-closed-day-label'
+        label.textContent = arg.event.title
+        return { domNodes: [label] }
+    }
+
     const wrapper = document.createElement('div')
     wrapper.className = 'tf-event'
 
@@ -1216,7 +1245,7 @@ const handleDatesSet = async (info: DatesSetArg) => {
     visibleRange.start = formatDateInput(info.start)
     visibleRange.end = formatDateInput(endDate)
 
-    await loadAppointments()
+    await Promise.all([loadAppointments(), loadClosedDays()])
 }
 
 const computeCalendarTitle = (info: DatesSetArg) => {
@@ -1557,6 +1586,25 @@ const loadAppointments = async () => {
     }
 }
 
+const loadClosedDays = async () => {
+    if (!selectedBusiness.value || !visibleRange.start || !visibleRange.end) {
+        closedDays.value = []
+        return
+    }
+
+    try {
+        closedDays.value = await apiFetch<ClosedDay[]>('/businesses/me-closed-days/', {
+            query: {
+                business_uuid: selectedBusiness.value.uuid,
+                start: visibleRange.start,
+                end: visibleRange.end,
+            },
+        })
+    } catch (error) {
+        console.error('Erro ao carregar dias de fecho:', error)
+    }
+}
+
 const handleStaffChange = async () => {
     resetMessages()
     resetBlockForm()
@@ -1578,7 +1626,7 @@ const loadMobileDay = async () => {
         isLoadingMobileDay.value = true
         resetMessages()
 
-        const [appointmentsResponse, blocksResponse, workingHoursResponse] = await Promise.all([
+        const [appointmentsResponse, blocksResponse, workingHoursResponse, closedDaysResponse] = await Promise.all([
             apiFetch<{ results: Appointment[] }>(
                 `/appointments/?business=${selectedBusiness.value.id}&date=${mobileDate.value}`
             ),
@@ -1588,11 +1636,19 @@ const loadMobileDay = async () => {
             apiFetch<{ results: WorkingHour[] }>(
                 `/working-hours/?business=${selectedBusiness.value.id}&weekday=${weekday}&is_active=true`
             ),
+            apiFetch<ClosedDay[]>('/businesses/me-closed-days/', {
+                query: {
+                    business_uuid: selectedBusiness.value.uuid,
+                    start: mobileDate.value,
+                    end: mobileDate.value,
+                },
+            }),
         ])
 
         mobileAppointments.value = appointmentsResponse.results
         mobileBlocks.value = blocksResponse.results
         mobileWorkingHours.value = workingHoursResponse.results
+        mobileClosedReason.value = closedDaysResponse[0]?.reason ?? null
     } catch (error) {
         console.error(error)
         errorMessage.value = 'Não foi possível carregar a agenda do dia.'
@@ -2164,10 +2220,14 @@ onMounted(async () => {
         ])
 
         // Estas 3 dependem do colaborador escolhido (definido dentro de loadStaff).
+        // loadClosedDays não depende do colaborador, mas junta-se aqui porque só
+        // agora o negócio está garantidamente pronto (o datesSet do FullCalendar
+        // pode disparar mais cedo, sem negócio ainda selecionado).
         await Promise.all([
             loadWorkingHours(),
             loadBlocks(),
             loadAppointments(),
+            loadClosedDays(),
         ])
 
         await applyGoogleCalendarFeedbackFromQuery()
@@ -2458,6 +2518,16 @@ onBeforeUnmount(() => {
     min-height: 0;
 }
 
+.closed-day-banner {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(100, 116, 139, 0.14);
+    color: #334155;
+    font-weight: 800;
+    font-size: 13px;
+}
+
 .floating-add {
     display: none;
 }
@@ -2517,6 +2587,23 @@ button:disabled {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.calendar-card :deep(.tf-closed-day-label) {
+    display: inline-block;
+    margin: 2px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #64748b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
 }
 
 .calendar-card :deep(.fc-timegrid-slot) {

@@ -39,6 +39,11 @@ export type StaffBlock = {
     created_at: string
 }
 
+export type ClosedDay = {
+    date: string
+    reason: string
+}
+
 export type Appointment = {
     id: number
     uuid: string

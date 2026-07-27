@@ -27,6 +27,10 @@ export const getBlockColors = (): AppointmentColors => {
     return { backgroundColor: '#fee2e2', borderColor: '#ef4444', textColor: '#991b1b' }
 }
 
+export const getClosedDayColors = (): AppointmentColors => {
+    return { backgroundColor: 'rgba(100, 116, 139, 0.18)', borderColor: '#64748b', textColor: '#334155' }
+}
+
 type AppointmentWithStart = AppointmentLike & { start_at: string }
 
 export const findNextAppointmentId = (appointments: AppointmentWithStart[]): number | null => {
