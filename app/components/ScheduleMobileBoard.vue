@@ -43,6 +43,12 @@
                 ></div>
 
                 <div
+                    v-if="closedReason"
+                    class="smb-closed-day"
+                    :style="{ height: `${totalHeight}px` }"
+                ></div>
+
+                <div
                     v-for="item in layoutItemsByStaff[staff.id] || []"
                     :key="item.key"
                     class="smb-event"
@@ -91,6 +97,7 @@ const props = defineProps<{
     date: string
     slotIntervalMinutes: number
     isPro: boolean
+    closedReason?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -478,6 +485,15 @@ const handleColumnClick = (event: MouseEvent, staffId: number) => {
     left: 0;
     right: 0;
     background: rgba(194, 232, 0, 0.16);
+    pointer-events: none;
+}
+
+.smb-closed-day {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: rgba(100, 116, 139, 0.28);
     pointer-events: none;
 }
 

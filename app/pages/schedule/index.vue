@@ -138,6 +138,7 @@
                             :date="mobileDate"
                             :slot-interval-minutes="slotIntervalMinutes"
                             :is-pro="isPro"
+                            :closed-reason="mobileClosedReason"
                             @open-appointment="handleMobileOpenAppointment"
                             @open-block="handleMobileOpenBlock"
                             @create-at="handleMobileCreateAt"
