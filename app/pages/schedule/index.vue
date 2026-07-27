@@ -125,7 +125,8 @@
                         <p v-if="isLoadingMobileDay" class="muted-text">A carregar agenda...</p>
 
                         <p v-if="!isLoadingMobileDay && mobileClosedReason" class="closed-day-banner">
-                            Fechado — {{ mobileClosedReason }}
+                            <strong>Fechado</strong>
+                            <span>{{ mobileClosedReason }}</span>
                         </p>
 
                         <ScheduleMobileBoard
@@ -2519,13 +2520,28 @@ onBeforeUnmount(() => {
 }
 
 .closed-day-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin: 0 0 12px;
     padding: 10px 14px;
     border-radius: 12px;
-    background: rgba(100, 116, 139, 0.14);
+    background: #e2e8f0;
     color: #334155;
-    font-weight: 800;
     font-size: 13px;
+    font-weight: 700;
+}
+
+.closed-day-banner strong {
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #334155;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .floating-add {
@@ -2590,7 +2606,9 @@ button:disabled {
 }
 
 .calendar-card :deep(.tf-closed-day-label) {
-    display: inline-block;
+    display: block;
+    box-sizing: border-box;
+    max-width: 100%;
     margin: 2px;
     padding: 2px 7px;
     border-radius: 999px;
@@ -2612,6 +2630,7 @@ button:disabled {
 
 .calendar-card :deep(.fc-bg-event) {
     opacity: 1;
+    overflow: hidden;
 }
 
 .calendar-card :deep(.fc-col-header-cell) {
