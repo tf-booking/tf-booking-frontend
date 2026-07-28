@@ -315,6 +315,23 @@
                                                     </div>
                                                 </div>
 
+                                                <label v-if="!editingWorkingHour" class="toggle-row inline-toggle">
+                                                    <input v-model="workingHourForm.has_lunch_break" type="checkbox" />
+                                                    <span>Com pausa de almoço</span>
+                                                </label>
+
+                                                <div v-if="!editingWorkingHour && workingHourForm.has_lunch_break" class="two-columns">
+                                                    <div>
+                                                        <label class="label">Início da pausa</label>
+                                                        <TimeSelect v-model="workingHourForm.lunch_start_time" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="label">Fim da pausa</label>
+                                                        <TimeSelect v-model="workingHourForm.lunch_end_time" />
+                                                    </div>
+                                                </div>
+
                                                 <div class="form-actions">
                                                     <button class="btn btn-accent" type="submit" :disabled="isSavingWorkingHour">
                                                         {{ isSavingWorkingHour ? 'A guardar...' : editingWorkingHour ? 'Guardar alterações' : 'Adicionar horário' }}
@@ -580,6 +597,9 @@ const workingHourForm = reactive({
     weekday: 0,
     start_time: '09:00',
     end_time: '18:00',
+    has_lunch_break: false,
+    lunch_start_time: '13:00',
+    lunch_end_time: '14:00',
     is_active: true,
 })
 
@@ -668,6 +688,9 @@ const resetWorkingHourForm = () => {
     workingHourForm.weekday = 0
     workingHourForm.start_time = '09:00'
     workingHourForm.end_time = '18:00'
+    workingHourForm.has_lunch_break = false
+    workingHourForm.lunch_start_time = '13:00'
+    workingHourForm.lunch_end_time = '14:00'
     workingHourForm.is_active = true
 }
 
@@ -718,9 +741,9 @@ const timeToMinutes = (value: string) => {
      return (hours ?? 0) * 60 + (minutes ?? 0)      
 }
 
-const hasOverlappingWorkingHour = (staffId: number) => {
-    const newStart = timeToMinutes(workingHourForm.start_time)
-    const newEnd = timeToMinutes(workingHourForm.end_time)
+const hasOverlappingWorkingHour = (staffId: number, startTime: string, endTime: string) => {
+    const newStart = timeToMinutes(startTime)
+    const newEnd = timeToMinutes(endTime)
 
     return (workingHoursByStaff[staffId] || []).some((hour) => {
         if (hour.weekday !== workingHourForm.weekday) {
@@ -751,36 +774,68 @@ const saveWorkingHour = async (staffId: number) => {
         return
     }
 
-    if (hasOverlappingWorkingHour(staffId)) {
-        errorMessage.value = 'Já existe um horário para este dia que se sobrepõe a este período.'
-        return
+    const useLunchBreak = workingHourForm.has_lunch_break && !editingWorkingHour.value
+    let intervals: Array<{ start_time: string; end_time: string }>
+
+    if (useLunchBreak) {
+        const { lunch_start_time, lunch_end_time, start_time, end_time } = workingHourForm
+
+        if (!lunch_start_time || !lunch_end_time) {
+            errorMessage.value = 'Preenche a hora de início e fim da pausa de almoço.'
+            return
+        }
+
+        if (lunch_end_time <= lunch_start_time || lunch_start_time <= start_time || lunch_end_time >= end_time) {
+            errorMessage.value = 'A pausa de almoço tem de estar dentro do horário definido.'
+            return
+        }
+
+        intervals = [
+            { start_time, end_time: lunch_start_time },
+            { start_time: lunch_end_time, end_time },
+        ]
+    } else {
+        intervals = [{ start_time: workingHourForm.start_time, end_time: workingHourForm.end_time }]
+    }
+
+    for (const interval of intervals) {
+        if (hasOverlappingWorkingHour(staffId, interval.start_time, interval.end_time)) {
+            errorMessage.value = 'Já existe um horário para este dia que se sobrepõe a este período.'
+            return
+        }
     }
 
     try {
         isSavingWorkingHour.value = true
 
-        const payload = {
-            staff_member: staffId,
-            weekday: workingHourForm.weekday,
-            start_time: workingHourForm.start_time,
-            end_time: workingHourForm.end_time,
-            is_active: workingHourForm.is_active,
-        }
-
         if (editingWorkingHour.value) {
             await apiFetch(`/working-hours/${editingWorkingHour.value.id}/`, {
                 method: 'PUT',
-                body: payload,
+                body: {
+                    staff_member: staffId,
+                    weekday: workingHourForm.weekday,
+                    start_time: workingHourForm.start_time,
+                    end_time: workingHourForm.end_time,
+                    is_active: workingHourForm.is_active,
+                },
             })
 
             successMessage.value = 'Horário atualizado com sucesso.'
         } else {
-            await apiFetch('/working-hours/', {
-                method: 'POST',
-                body: payload,
-            })
+            for (const interval of intervals) {
+                await apiFetch('/working-hours/', {
+                    method: 'POST',
+                    body: {
+                        staff_member: staffId,
+                        weekday: workingHourForm.weekday,
+                        start_time: interval.start_time,
+                        end_time: interval.end_time,
+                        is_active: workingHourForm.is_active,
+                    },
+                })
+            }
 
-            successMessage.value = 'Horário criado com sucesso.'
+            successMessage.value = useLunchBreak ? 'Horários criados com sucesso.' : 'Horário criado com sucesso.'
         }
 
         resetWorkingHourForm()
@@ -799,6 +854,7 @@ const editWorkingHour = (hour: WorkingHour) => {
     workingHourForm.weekday = hour.weekday
     workingHourForm.start_time = hour.start_time.slice(0, 5)
     workingHourForm.end_time = hour.end_time.slice(0, 5)
+    workingHourForm.has_lunch_break = false
     workingHourForm.is_active = hour.is_active
 }
 
