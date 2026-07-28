@@ -255,27 +255,33 @@
                                         <h3>Horário de trabalho</h3>
 
                                         <div class="working-hours-list">
-                                            <p v-if="!workingHoursByStaff[staff.id]?.length" class="muted-text">
+                                            <p v-if="!groupedWorkingHours(staff.id).length" class="muted-text">
                                                 Sem horários definidos.
                                             </p>
 
-                                            <div v-for="hour in workingHoursByStaff[staff.id]" :key="hour.id"
-                                                class="working-hour-row" :class="{ inactive: !hour.is_active }">
-                                                <span class="wh-day">{{ hour.weekday_label }}</span>
-                                                <span class="wh-time">{{ hour.start_time.slice(0, 5) }} - {{ hour.end_time.slice(0, 5) }}</span>
-                                                <span class="wh-status" :class="{ active: hour.is_active, inactive: !hour.is_active }">
-                                                    {{ hour.is_active ? 'Ativo' : 'Inativo' }}
-                                                </span>
+                                            <div v-for="group in groupedWorkingHours(staff.id)" :key="group.weekday"
+                                                class="working-hour-row">
+                                                <span class="wh-day">{{ group.weekday_label }}</span>
 
-                                                <div class="wh-actions">
-                                                    <button class="mini-button" type="button" @click="editWorkingHour(hour)">
-                                                        Editar
-                                                    </button>
+                                                <div class="wh-intervals">
+                                                    <div v-for="hour in group.hours" :key="hour.id"
+                                                        class="wh-interval" :class="{ inactive: !hour.is_active }">
+                                                        <span class="wh-time">{{ hour.start_time.slice(0, 5) }} - {{ hour.end_time.slice(0, 5) }}</span>
+                                                        <span class="wh-status" :class="{ active: hour.is_active, inactive: !hour.is_active }">
+                                                            {{ hour.is_active ? 'Ativo' : 'Inativo' }}
+                                                        </span>
 
-                                                    <button class="mini-button danger" type="button"
-                                                        @click="deleteWorkingHour(staff.id, hour)">
-                                                        Apagar
-                                                    </button>
+                                                        <div class="wh-actions">
+                                                            <button class="mini-button" type="button" @click="editWorkingHour(hour)">
+                                                                Editar
+                                                            </button>
+
+                                                            <button class="mini-button danger" type="button"
+                                                                @click="deleteWorkingHour(staff.id, hour)">
+                                                                Apagar
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -733,6 +739,23 @@ const toggleStaffSchedule = async (staff: StaffMember) => {
     resetWorkingHourForm()
     resetDayBlockForm()
     await loadStaffSchedule(staff.id)
+}
+
+const groupedWorkingHours = (staffId: number) => {
+    const hours = workingHoursByStaff[staffId] || []
+    const groups: { weekday: number; weekday_label: string; hours: WorkingHour[] }[] = []
+
+    for (const hour of hours) {
+        const existingGroup = groups.find((group) => group.weekday === hour.weekday)
+
+        if (existingGroup) {
+            existingGroup.hours.push(hour)
+        } else {
+            groups.push({ weekday: hour.weekday, weekday_label: hour.weekday_label, hours: [hour] })
+        }
+    }
+
+    return groups
 }
 
 const timeToMinutes = (value: string) => {
@@ -1962,16 +1985,30 @@ onBeforeUnmount(() => {
     font-weight: 800;
 }
 
-.working-hour-row.inactive {
-    opacity: 0.6;
-}
-
 .wh-day {
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.wh-intervals {
+    display: flex;
+    flex: 1 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.wh-interval {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.wh-interval.inactive {
+    opacity: 0.6;
 }
 
 .wh-time {
