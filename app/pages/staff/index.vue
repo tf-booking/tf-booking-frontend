@@ -270,25 +270,25 @@
                                                         <span class="wh-status" :class="{ active: hour.is_active, inactive: !hour.is_active }">
                                                             {{ hour.is_active ? 'Ativo' : 'Inativo' }}
                                                         </span>
-
-                                                        <div class="wh-actions">
-                                                            <button class="mini-button" type="button" @click="editWorkingHour(hour)">
-                                                                Editar
-                                                            </button>
-
-                                                            <button class="mini-button danger" type="button"
-                                                                @click="deleteWorkingHour(staff.id, hour)">
-                                                                Apagar
-                                                            </button>
-                                                        </div>
                                                     </div>
+                                                </div>
+
+                                                <div class="wh-actions">
+                                                    <button class="mini-button" type="button" @click="editWorkingHourGroup(group)">
+                                                        Editar
+                                                    </button>
+
+                                                    <button class="mini-button danger" type="button"
+                                                        @click="deleteWorkingHourGroup(staff.id, group)">
+                                                        Apagar
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="panel-subcard">
                                             <p class="panel-subcard-title">
-                                                {{ editingWorkingHour ? 'Editar horário' : 'Novo horário' }}
+                                                {{ editingGroup ? 'Editar horário' : 'Novo horário' }}
                                             </p>
 
                                             <form class="panel-form" @submit.prevent="saveWorkingHour(staff.id)">
@@ -321,12 +321,12 @@
                                                     </div>
                                                 </div>
 
-                                                <label v-if="!editingWorkingHour" class="toggle-row inline-toggle">
+                                                <label class="toggle-row inline-toggle">
                                                     <input v-model="workingHourForm.has_lunch_break" type="checkbox" />
                                                     <span>Com pausa de almoço</span>
                                                 </label>
 
-                                                <div v-if="!editingWorkingHour && workingHourForm.has_lunch_break" class="two-columns">
+                                                <div v-if="workingHourForm.has_lunch_break" class="two-columns">
                                                     <div>
                                                         <label class="label">Início da pausa</label>
                                                         <TimeSelect v-model="workingHourForm.lunch_start_time" />
@@ -340,10 +340,10 @@
 
                                                 <div class="form-actions">
                                                     <button class="btn btn-accent" type="submit" :disabled="isSavingWorkingHour">
-                                                        {{ isSavingWorkingHour ? 'A guardar...' : editingWorkingHour ? 'Guardar alterações' : 'Adicionar horário' }}
+                                                        {{ isSavingWorkingHour ? 'A guardar...' : editingGroup ? 'Guardar alterações' : 'Adicionar horário' }}
                                                     </button>
 
-                                                    <button v-if="editingWorkingHour" class="btn btn-secondary" type="button"
+                                                    <button v-if="editingGroup" class="btn btn-secondary" type="button"
                                                         @click="cancelWorkingHourEdit">
                                                         Cancelar
                                                     </button>
@@ -597,7 +597,7 @@ const isSavingDayBlock = ref(false)
 const workingHoursByStaff = reactive<Record<number, WorkingHour[]>>({})
 const blocksByStaff = reactive<Record<number, StaffBlock[]>>({})
 
-const editingWorkingHour = ref<WorkingHour | null>(null)
+const editingGroup = ref<WorkingHour[] | null>(null)
 
 const workingHourForm = reactive({
     weekday: 0,
@@ -689,7 +689,7 @@ const formatBlockRange = (block: StaffBlock) => {
 }
 
 const resetWorkingHourForm = () => {
-    editingWorkingHour.value = null
+    editingGroup.value = null
 
     workingHourForm.weekday = 0
     workingHourForm.start_time = '09:00'
@@ -767,13 +767,14 @@ const timeToMinutes = (value: string) => {
 const hasOverlappingWorkingHour = (staffId: number, startTime: string, endTime: string) => {
     const newStart = timeToMinutes(startTime)
     const newEnd = timeToMinutes(endTime)
+    const editingIds = new Set((editingGroup.value || []).map((hour) => hour.id))
 
     return (workingHoursByStaff[staffId] || []).some((hour) => {
         if (hour.weekday !== workingHourForm.weekday) {
             return false
         }
 
-        if (editingWorkingHour.value?.id === hour.id) {
+        if (editingIds.has(hour.id)) {
             return false
         }
 
@@ -797,10 +798,9 @@ const saveWorkingHour = async (staffId: number) => {
         return
     }
 
-    const useLunchBreak = workingHourForm.has_lunch_break && !editingWorkingHour.value
     let intervals: Array<{ start_time: string; end_time: string }>
 
-    if (useLunchBreak) {
+    if (workingHourForm.has_lunch_break) {
         const { lunch_start_time, lunch_end_time, start_time, end_time } = workingHourForm
 
         if (!lunch_start_time || !lunch_end_time) {
@@ -831,35 +831,40 @@ const saveWorkingHour = async (staffId: number) => {
     try {
         isSavingWorkingHour.value = true
 
-        if (editingWorkingHour.value) {
-            await apiFetch(`/working-hours/${editingWorkingHour.value.id}/`, {
-                method: 'PUT',
-                body: {
-                    staff_member: staffId,
-                    weekday: workingHourForm.weekday,
-                    start_time: workingHourForm.start_time,
-                    end_time: workingHourForm.end_time,
-                    is_active: workingHourForm.is_active,
-                },
-            })
+        const isEditing = !!editingGroup.value
+        const existingRows = editingGroup.value || []
 
-            successMessage.value = 'Horário atualizado com sucesso.'
-        } else {
-            for (const interval of intervals) {
-                await apiFetch('/working-hours/', {
-                    method: 'POST',
-                    body: {
-                        staff_member: staffId,
-                        weekday: workingHourForm.weekday,
-                        start_time: interval.start_time,
-                        end_time: interval.end_time,
-                        is_active: workingHourForm.is_active,
-                    },
-                })
+        // Reconcilia as linhas existentes do dia com os intervalos alvo por
+        // posição (ordem cronológica) - atualiza o que já existe, cria o que
+        // falta e apaga o que sobra (ex.: ao remover a pausa de almoço).
+        for (let index = 0; index < Math.max(intervals.length, existingRows.length); index += 1) {
+            const interval = intervals[index]
+            const existingRow = existingRows[index]
+
+            const payload = interval
+                ? {
+                      staff_member: staffId,
+                      weekday: workingHourForm.weekday,
+                      start_time: interval.start_time,
+                      end_time: interval.end_time,
+                      is_active: workingHourForm.is_active,
+                  }
+                : null
+
+            if (existingRow && payload) {
+                await apiFetch(`/working-hours/${existingRow.id}/`, { method: 'PUT', body: payload })
+            } else if (payload) {
+                await apiFetch('/working-hours/', { method: 'POST', body: payload })
+            } else if (existingRow) {
+                await apiFetch(`/working-hours/${existingRow.id}/`, { method: 'DELETE' })
             }
-
-            successMessage.value = useLunchBreak ? 'Horários criados com sucesso.' : 'Horário criado com sucesso.'
         }
+
+        successMessage.value = isEditing
+            ? 'Horário atualizado com sucesso.'
+            : intervals.length > 1
+              ? 'Horários criados com sucesso.'
+              : 'Horário criado com sucesso.'
 
         resetWorkingHourForm()
         await loadStaffSchedule(staffId)
@@ -871,14 +876,28 @@ const saveWorkingHour = async (staffId: number) => {
     }
 }
 
-const editWorkingHour = (hour: WorkingHour) => {
-    editingWorkingHour.value = hour
+const editWorkingHourGroup = (group: { weekday: number; weekday_label: string; hours: WorkingHour[] }) => {
+    resetMessages()
+    editingGroup.value = group.hours
 
-    workingHourForm.weekday = hour.weekday
-    workingHourForm.start_time = hour.start_time.slice(0, 5)
-    workingHourForm.end_time = hour.end_time.slice(0, 5)
-    workingHourForm.has_lunch_break = false
-    workingHourForm.is_active = hour.is_active
+    workingHourForm.weekday = group.weekday
+    workingHourForm.is_active = group.hours.every((hour) => hour.is_active)
+
+    if (group.hours.length === 2) {
+        const [first, second] = group.hours
+
+        workingHourForm.start_time = first.start_time.slice(0, 5)
+        workingHourForm.end_time = second.end_time.slice(0, 5)
+        workingHourForm.has_lunch_break = true
+        workingHourForm.lunch_start_time = first.end_time.slice(0, 5)
+        workingHourForm.lunch_end_time = second.start_time.slice(0, 5)
+    } else {
+        const [first] = group.hours
+
+        workingHourForm.start_time = first.start_time.slice(0, 5)
+        workingHourForm.end_time = first.end_time.slice(0, 5)
+        workingHourForm.has_lunch_break = false
+    }
 }
 
 const cancelWorkingHourEdit = () => {
@@ -886,15 +905,19 @@ const cancelWorkingHourEdit = () => {
     resetWorkingHourForm()
 }
 
-const deleteWorkingHour = async (staffId: number, hour: WorkingHour) => {
+const deleteWorkingHourGroup = async (staffId: number, group: { hours: WorkingHour[] }) => {
     try {
-        await apiFetch(`/working-hours/${hour.id}/`, {
-            method: 'DELETE',
-        })
+        const groupIds = group.hours.map((hour) => hour.id)
+
+        for (const hour of group.hours) {
+            await apiFetch(`/working-hours/${hour.id}/`, {
+                method: 'DELETE',
+            })
+        }
 
         successMessage.value = 'Horário apagado com sucesso.'
 
-        if (editingWorkingHour.value?.id === hour.id) {
+        if (editingGroup.value?.some((hour) => groupIds.includes(hour.id))) {
             resetWorkingHourForm()
         }
 
@@ -1995,9 +2018,8 @@ onBeforeUnmount(() => {
 
 .wh-intervals {
     display: flex;
-    flex: 1 0 auto;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 16px;
 }
 
 .wh-interval {
