@@ -129,6 +129,7 @@
                             <span>{{ mobileClosedReason }}</span>
                         </p>
 
+                        
                         <ScheduleMobileBoard
                             v-if="!isLoadingMobileDay"
                             :staff-members="staffMembers"
