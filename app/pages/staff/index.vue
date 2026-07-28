@@ -171,6 +171,14 @@
                         </button>
                     </div>
 
+                    <p v-if="errorMessage" class="error-message">
+                        {{ errorMessage }}
+                    </p>
+
+                    <p v-if="successMessage" class="success-message">
+                        {{ successMessage }}
+                    </p>
+
                     <p v-if="isLoadingStaff" class="muted-text">
                         A carregar colaboradores...
                     </p>
@@ -264,14 +272,15 @@
                                                 <span class="wh-day">{{ group.weekday_label }}</span>
 
                                                 <div class="wh-intervals">
-                                                    <div v-for="hour in group.hours" :key="hour.id"
-                                                        class="wh-interval" :class="{ inactive: !hour.is_active }">
-                                                        <span class="wh-time">{{ hour.start_time.slice(0, 5) }} - {{ hour.end_time.slice(0, 5) }}</span>
-                                                        <span class="wh-status" :class="{ active: hour.is_active, inactive: !hour.is_active }">
-                                                            {{ hour.is_active ? 'Ativo' : 'Inativo' }}
-                                                        </span>
-                                                    </div>
+                                                    <span v-for="hour in group.hours" :key="hour.id"
+                                                        class="wh-time" :class="{ inactive: !hour.is_active }">
+                                                        {{ hour.start_time.slice(0, 5) }} - {{ hour.end_time.slice(0, 5) }}
+                                                    </span>
                                                 </div>
+
+                                                <span class="wh-status" :class="{ active: isGroupActive(group), inactive: !isGroupActive(group) }">
+                                                    {{ isGroupActive(group) ? 'Ativo' : 'Inativo' }}
+                                                </span>
 
                                                 <div class="wh-actions">
                                                     <button class="mini-button" type="button" @click="editWorkingHourGroup(group)">
@@ -757,6 +766,8 @@ const groupedWorkingHours = (staffId: number) => {
 
     return groups
 }
+
+const isGroupActive = (group: { hours: WorkingHour[] }) => group.hours.every((hour) => hour.is_active)
 
 const timeToMinutes = (value: string) => {
     const [hours, minutes] = value.slice(0, 5).split(':').map(Number)
@@ -2022,23 +2033,16 @@ onBeforeUnmount(() => {
     gap: 16px;
 }
 
-.wh-interval {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
-.wh-interval.inactive {
-    opacity: 0.6;
-}
-
 .wh-time {
     flex: 0 0 auto;
     color: var(--tf-muted);
     font-family: var(--tf-mono);
     font-weight: 600;
     font-size: 11px;
+}
+
+.wh-time.inactive {
+    opacity: 0.6;
 }
 
 .wh-status {
