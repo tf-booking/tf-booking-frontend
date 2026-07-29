@@ -2910,12 +2910,14 @@ button:disabled {
     }
 
     .modal-overlay {
+        align-items: flex-start;
         padding: 12px;
+        padding-top: calc(62px + 12px);
     }
 
     .modal-card {
         max-width: none;
-        max-height: 92dvh;
+        max-height: calc(100dvh - 62px - 24px);
         border-radius: 18px;
     }
 
