@@ -167,7 +167,12 @@
         </section>
 
         <Teleport to="body">
-            <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
+            <div
+                v-if="isModalOpen"
+                class="modal-overlay"
+                :class="{ 'modal-overlay--tall': modalStep === 'appointment-form' }"
+                @click.self="closeModal"
+            >
                 <div class="modal-card">
                     <button class="modal-close" type="button" aria-label="Fechar" @click="closeModal">×</button>
 
@@ -2910,15 +2915,22 @@ button:disabled {
     }
 
     .modal-overlay {
-        align-items: flex-start;
         padding: 12px;
+    }
+
+    .modal-overlay--tall {
+        align-items: flex-start;
         padding-top: calc(62px + 12px);
     }
 
     .modal-card {
         max-width: none;
-        max-height: calc(100dvh - 62px - 24px);
+        max-height: 92dvh;
         border-radius: 18px;
+    }
+
+    .modal-overlay--tall .modal-card {
+        max-height: calc(100dvh - 62px - 24px);
     }
 
     .modal-body {
