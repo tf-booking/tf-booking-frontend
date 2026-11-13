@@ -54,6 +54,8 @@ export default defineNuxtConfig({
       apiBase: 'http://127.0.0.1:8000/api',
       googleClientId: '',
       siteUrl: 'https://www.myklenda.com',
+      // Meta Pixel "Klenda - myklenda.com". Para desligar: NUXT_PUBLIC_META_PIXEL_ID=
+      metaPixelId: '1115055461291035',
     },
   },
 })

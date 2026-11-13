@@ -4,4 +4,5 @@
   </NuxtLayout>
 
   <GlobalLoadingOverlay />
+  <CookieConsent />
 </template>

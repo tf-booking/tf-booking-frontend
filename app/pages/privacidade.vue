@@ -105,9 +105,14 @@
 
                 <h2>Cookies</h2>
                 <p>
-                    Usamos apenas cookies/armazenamento local essenciais ao funcionamento do
-                    serviço (manter a tua sessão iniciada). Não usamos cookies de publicidade ou
-                    de rastreio de terceiros.
+                    Usamos cookies/armazenamento local essenciais ao funcionamento do serviço
+                    (manter a tua sessão iniciada). Nas páginas públicas da Klenda (página
+                    inicial, registo e login) usamos também o Pixel da Meta, mas só se o
+                    aceitares no aviso de cookies: serve para medir as visitas e os registos
+                    que vêm dos nossos anúncios no Facebook e no Instagram. Se recusares, o
+                    Pixel não é carregado. Nunca usamos o Pixel nas páginas de marcação dos
+                    negócios nem dentro da área de gestão. Para mudares a tua escolha, apaga
+                    os dados deste site no teu navegador e o aviso volta a aparecer.
                 </p>
 
                 <h2>Segurança</h2>

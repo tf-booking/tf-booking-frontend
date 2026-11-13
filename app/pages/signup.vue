@@ -144,6 +144,7 @@ const route = useRoute()
 const { setTokens, navigateAfterLogin } = useAuth()
 const { apiFetch } = useApi()
 const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
+const { trackRegistration } = useMetaPixel()
 
 const isProPlan = computed(() => route.query.plano === 'pro')
 
@@ -233,6 +234,7 @@ const handleBusinessStep = async () => {
 
         if (mode.value === 'google') {
             const response = await submitGoogleCredential(googleCredential.value, businessName.value)
+            trackRegistration({ content_name: isProPlan.value ? 'pro' : 'gratis', method: 'google' })
             await finishSignup(response)
             return
         }
@@ -248,6 +250,7 @@ const handleBusinessStep = async () => {
             auth: false,
         })
 
+        trackRegistration({ content_name: isProPlan.value ? 'pro' : 'gratis', method: 'email' })
         await finishSignup(response)
     } catch (error: any) {
         console.error(error)

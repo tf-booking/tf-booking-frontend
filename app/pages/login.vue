@@ -128,6 +128,7 @@ definePageMeta({
 
 const { login, setTokens, navigateAfterLogin } = useAuth()
 const { isGoogleConfigured, renderGoogleButton, submitGoogleCredential } = useGoogleAuth()
+const { trackRegistration } = useMetaPixel()
 const route = useRoute()
 
 const form = reactive({
@@ -221,6 +222,8 @@ const handleBusinessStep = async () => {
         isLoading.value = true
 
         const response = await submitGoogleCredential(googleCredential.value, businessName.value)
+        // Conta Google nova a criar o primeiro negócio a partir do login - conta como registo.
+        trackRegistration({ content_name: 'gratis', method: 'google' })
         setTokens(response as { access: string; refresh: string })
         await navigateAfterLogin()
     } catch (error) {
